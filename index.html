@@ -75,5 +75,35 @@ translate();
 // Present the discipline chooser on launch; retain the last selection for future UX.
 show('home');
 })();
-if('serviceWorker' in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  let refreshing = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('./sw.js');
+
+      // Check for a newer version when the app opens.
+      await registration.update();
+
+      // Check again when the user returns to the app.
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) registration.update().catch(() => {});
+      });
+
+      // Also check when internet connectivity returns.
+      window.addEventListener('online', () => {
+        registration.update().catch(() => {});
+      });
+    } catch (error) {
+      console.warn('TrainLab update check failed:', error);
+    }
+  });
+}
 </script></body></html>
