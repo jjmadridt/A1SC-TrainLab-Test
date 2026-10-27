@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07121f">
+<link rel="manifest" href="manifest.webmanifest?v=2400"><link rel="icon" href="icon-192.png"><title>A1SC TrainLab</title>
+<style>
+:root{font-family:system-ui,Arial;background:#07121f;color:#eef6ff}*{box-sizing:border-box}body{margin:0 auto;max-width:800px;padding:0 14px 84px;background:#07121f;min-height:100vh}button{cursor:pointer;color:white;border:1px solid #34516c;background:#172d44;border-radius:12px;padding:11px 13px;font-weight:700}button:disabled{opacity:.42}
+.shell-head{display:flex;align-items:center;justify-content:space-between;padding:14px 0 8px;gap:8px}.shell-brand{display:flex;align-items:center;gap:9px;min-width:0}.shell-brand img{width:46px;height:46px;border-radius:11px}.shell-brand b{display:block;letter-spacing:.1em;font-size:17px}.shell-brand small{color:#76b9eb;letter-spacing:.11em;font-size:10px}.shell-actions{display:flex;gap:6px;align-items:center}.shell-actions select{width:auto;max-width:95px;padding:7px;font-size:13px;background:#132b40;color:white;border:1px solid #36556c;border-radius:9px}.homebtn{font-size:12px;padding:9px}.screen{display:none}.screen.visible{display:block}
+.hero{border-radius:19px;overflow:hidden;position:relative;background:linear-gradient(140deg,#102944,#08111e);border:1px solid #25405a;margin:8px 0 20px;padding:22px 16px 20px;text-align:center}.hero img{width:min(100%,330px);height:auto;display:block;margin:auto}.hero .tag{color:#64c2ff;letter-spacing:.23em;font-size:12px;margin:14px 0 2px}.hero p{color:#a5bcd0;font-size:13px;margin:6px 0 0}
+.section-title{display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px}.section-title h2{font-size:21px;margin:0}.muted{color:#9bb4c9}.section-title small{font-size:12px}.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.module{min-height:170px;position:relative;overflow:hidden;border:1px solid #2d5270;border-radius:16px;background:#12283d;padding:0;text-align:left;display:flex;flex-direction:column;justify-content:end;box-shadow:0 8px 18px #0005}.module img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center center;opacity:.72;pointer-events:none}.module:after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 12%,#061321f2 100%)}.module-content{position:relative;z-index:1;padding:13px}.module-content strong{font-size:19px;display:block;letter-spacing:.03em}.module-content span{display:block;color:#d7e6f2;font-size:12px;margin-top:3px}.module .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#46dfb7;margin-right:5px}.module.pending .dot{background:#f2b35e}.module.wide{grid-column:span 2;min-height:145px}.module:active{transform:scale(.99)}
+.status{border:1px solid #24435b;border-radius:14px;background:#0f2336;padding:14px;margin:18px 0}.status b{color:#e8f4ff}.status p{font-size:13px;color:#a8c0d3;margin:7px 0 0}.module-header{position:relative;border-radius:18px;overflow:hidden;border:1px solid #34526d;min-height:215px;display:flex;align-items:end;margin:10px 0 15px}.module-header>img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center center}.module-header:after{content:'';position:absolute;inset:0;background:linear-gradient(transparent,#051320 95%)}.module-header>div{position:relative;z-index:1;padding:19px}.module-header h1{font-size:29px;margin:0}.module-header p{margin:5px 0;color:#d5e6f4}.coming{border:1px solid #30516d;background:#10273d;border-radius:16px;padding:22px;margin:12px 0}.coming h2{margin:0 0 8px}.coming p{color:#afc4d6;line-height:1.55}.coming .note{color:#74bdea;font-size:13px}.back{width:100%;margin-top:12px;background:#14577c}
+#fitclimb{display:none}#fitclimb.visible{display:block}#fitclimb header{display:none}
+#fitclimb h1{margin:0;font-size:28px}#fitclimb small,#fitclimb .muted{color:#9ab0c4}#fitclimb .card{background:#172a3b;border:1px solid #2b4357;border-radius:15px;padding:16px;margin:12px 0}
+#fitclimb .tabs,#fitclimb .days{display:flex;gap:6px;overflow-x:auto;padding:10px 0}#fitclimb .tabs button,#fitclimb .days button{white-space:nowrap;flex:0 0 auto}#fitclimb .active{background:#2b85ad!important;border-color:#66c6ec!important}
+#fitclimb input,#fitclimb select,#fitclimb textarea{background:#0e1e2c;border:1px solid #426077;color:white;border-radius:8px;padding:10px;width:100%;font-size:16px}
+#fitclimb label{display:block;font-size:13px;color:#bbcad7;margin-bottom:5px}#fitclimb .row{display:flex;gap:10px;align-items:center;justify-content:space-between}#fitclimb .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#fitclimb .pill{border-radius:20px;padding:5px 9px;background:#28495c;color:#b6e9ff;font-size:12px}#fitclimb .exercise h3{margin:0 0 4px}#fitclimb .exercise{margin-bottom:14px}#fitclimb .stat{font-size:25px;font-weight:700}
+#fitclimb .success{color:#76e2b2}#fitclimb .notice{background:#1d3847;border-left:3px solid #6cc8e8;padding:12px;border-radius:6px;margin-top:10px}#fitclimb button.full{width:100%;margin-top:9px}
+#fitclimb .history{font-size:13px;line-height:1.8}#fitclimb .muscles{width:80px;height:102px;flex-shrink:0}#fitclimb .exercise .row>div:first-child{min-width:0}#fitclimb .set-list{margin-top:12px;border-top:1px solid #39556b}#fitclimb .set-row{display:flex;align-items:center;gap:6px;padding:9px 0;border-bottom:1px solid #30495c}#fitclimb .set-text{flex:1;font-size:14px;min-width:0}#fitclimb .set-row button{padding:8px 11px}#fitclimb .set-delete{color:#ffb2b2}#fitclimb .undo-set{margin-top:10px;width:100%;background:#244a56}
+#fitclimb .language{display:none}#fitclimb button.primary{background:#0d87ae}
+.footer{text-align:center;font-size:11px;color:#7998b0;padding:20px 0}.footer b{color:#61baff}
+@media(min-width:600px){.module-grid{grid-template-columns:repeat(3,1fr)}.module.wide{grid-column:span 1;min-height:170px}}
+</style></head>
+<body>
+<div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">EN</option><option value="es">ES</option></select></div></div>
+<section id="landing" class="screen visible">
+ <div class="hero"><img src="brand-logo.png" alt="A1SC TrainLab logo with blue, white and magenta horizontal lines"><p data-i18n="hero">One training platform. Every discipline.</p></div>
+ <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2><small class="muted">V2.5 · PREVIEW</small></div>
+ <div class="module-grid">
+ <button class="module" data-module="strength"><img src="strength.jpg" alt=""><div class="module-content"><strong>FITCLIMB</strong><span><i class="dot"></i><span data-i18n="strength">Strength · Ready to use</span></span></div></button>
+ <button class="module pending" data-module="cycle"><img src="cycle.jpg" alt=""><div class="module-content"><strong>CYCLE</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module pending" data-module="run"><img src="run.jpg" alt=""><div class="module-content"><strong>RUN</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module pending" data-module="swim"><img src="swim.jpg" alt=""><div class="module-content"><strong>SWIM</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module pending wide" data-module="tri"><img src="tri.jpg" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ </div>
+ <div class="status"><b data-i18n="vision">Built for a growing team</b><p data-i18n="visionText">FitClimb is active today. Each additional discipline will be developed with its own volunteer team.</p></div>
+</section>
+<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div class="coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
+<section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>FITCLIMB</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
+<div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
+<script src="app.js"></script>
+<script>
+(function(){
+const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose your discipline',strength:'Strength · Ready to use',soon:'Coming soon',vision:'Built for a growing team',visionText:'FitClimb is active today. Each additional discipline will be developed with its own volunteer team.',inDevelopment:'In development',placeholder:'This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.',previewOnly:'Presentation preview — no workouts or tracking are active in this module yet.',back:'← All disciplines',fitSubtitle:'Strength training · Active module',localData:'Your training data stays on this device. Export backups regularly.',home:'Home'},es:{hero:'Una plataforma de entrenamiento. Todas las disciplinas.',choose:'Selecciona tu disciplina',strength:'Fuerza · Disponible',soon:'Próximamente',vision:'Una plataforma para crecer en equipo',visionText:'FitClimb ya está disponible. Cada nueva disciplina será desarrollada con su propio equipo de voluntarios.',inDevelopment:'En desarrollo',placeholder:'Este espacio está reservado para que un equipo de voluntarios desarrolle rutinas, herramientas y seguimiento de progreso.',previewOnly:'Vista de presentación — este módulo todavía no registra entrenamientos.',back:'← Todas las disciplinas',fitSubtitle:'Entrenamiento de fuerza · Módulo activo',localData:'Tus entrenamientos se guardan en este dispositivo. Descarga respaldos con frecuencia.',home:'Inicio'}};
+const names={cycle:'CYCLE',run:'RUN',swim:'SWIM',tri:'TRIATHLON'};
+const subtitle={en:{cycle:'Ride stronger',run:'Run farther',swim:'Swim stronger',tri:'Train across disciplines'},es:{cycle:'Rueda más fuerte',run:'Corre más lejos',swim:'Nada más fuerte',tri:'Entrena en varias disciplinas'}};
+const lang=document.getElementById('language-toggle');
+function translate(){
+ const l=lang.value;
+ document.documentElement.lang=l;
+ document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=dict[l][el.dataset.i18n]||el.textContent});
+ document.getElementById('home-label').textContent=dict[l].home;
+ const active=Object.keys(names).find(k=>names[k]===document.getElementById('module-title').textContent);
+ if(active)document.getElementById('module-subtitle').textContent=subtitle[l][active];
+}
+function show(name){
+ for(const el of document.querySelectorAll('.screen'))el.classList.remove('visible');
+ document.getElementById('fitclimb').classList.remove('visible');
+ if(name==='strength'){document.getElementById('fitclimb').classList.add('visible')}
+ else if(name==='home'){document.getElementById('landing').classList.add('visible')}
+ else if(names[name]){
+ document.getElementById('module-image').src=name+'.jpg';
+ document.getElementById('module-title').textContent=names[name];
+ document.getElementById('module-subtitle').textContent=subtitle[lang.value][name];
+ document.getElementById('module-page').classList.add('visible');
+ }
+ try{localStorage.setItem('trainlab-last-discipline',name)}catch(e){}
+ window.scrollTo(0,0);
+}
+document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.module)));
+document.getElementById('home-button').addEventListener('click',()=>show('home'));
+document.getElementById('back-button').addEventListener('click',()=>show('home'));
+lang.value=db.settings.lang==='es'?'es':'en';
+lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate()});
+window.trainlabTranslate=translate;
+translate();
+// Present the discipline chooser on launch; retain the last selection for future UX.
+show('home');
+})();
+if('serviceWorker' in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script></body></html>
