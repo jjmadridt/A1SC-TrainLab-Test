@@ -75,8 +75,10 @@ translate();
 // Present the discipline chooser on launch; retain the last selection for future UX.
 show('home');
 })();
+
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   let refreshing = false;
+  let updatePromptShown = false;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!refreshing) {
@@ -85,19 +87,54 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     }
   });
 
+  function showUpdatePrompt(worker) {
+    if (updatePromptShown || !worker) return;
+    updatePromptShown = true;
+
+    const banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:99999;background:#172334;color:white;padding:16px;border-radius:12px;box-shadow:0 4px 18px #0005;font:14px Arial,sans-serif;';
+    banner.innerHTML = '<strong>TrainLab update available</strong><p style="margin:8px 0">A new version is ready.</p>';
+
+    const button = document.createElement('button');
+    button.textContent = 'Update Now';
+    button.style.cssText = 'padding:10px 18px;border:0;border-radius:8px;background:#fff;color:#172334;font-weight:bold;cursor:pointer;';
+    button.onclick = () => {
+      button.disabled = true;
+      button.textContent = 'Updating...';
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    };
+
+    banner.appendChild(button);
+    document.body.appendChild(banner);
+  }
+
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('./sw.js');
 
-      // Check for a newer version when the app opens.
+      function checkWaiting() {
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          showUpdatePrompt(registration.waiting);
+        }
+      }
+
+      checkWaiting();
+
+      registration.addEventListener('updatefound', () => {
+        const worker = registration.installing;
+        if (!worker) return;
+
+        worker.addEventListener('statechange', () => {
+          if (worker.state === 'installed') checkWaiting();
+        });
+      });
+
       await registration.update();
 
-      // Check again when the user returns to the app.
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) registration.update().catch(() => {});
       });
 
-      // Also check when internet connectivity returns.
       window.addEventListener('online', () => {
         registration.update().catch(() => {});
       });
@@ -106,4 +143,5 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     }
   });
 }
+
 </script></body></html>
