@@ -1,0 +1,32 @@
+FITCLIMB — UPDATE 11 — BOTH GENDERS
+
+Files: app.js, index.html, anatomy/ (17 female PNG + 17 male PNG).
+Upload to A1SC-TrainLab-Test on trainlab-update-06 branch only. Preserve all other files.
+
+Both male and female images are cropped from the user-reviewed poster sheets.
+The exercise list is the 17 actual FitClimb exercise keys in Update 10 app.js.
+
+DIRECT EXERCISE MATCHES:
+ - elliptical-warm-up
+ - leg-press
+ - standing-calf-raise
+ - chest-press
+ - seated-cable-row
+ - lat-pulldown
+ - dumbbell-shoulder-press
+ - stationary-bike
+ - glute-bridge
+ - step-up
+ - outdoor-ride
+
+PROVISIONAL ILLUSTRATION MATCHES (poster did not have these exact exercises):
+ - romanian-deadlift -> poster card 4
+ - dead-bug -> poster card 12
+ - pallof-press -> poster card 12
+ - side-plank -> poster card 12
+ - goblet-squat -> poster card 2
+ - farmer-carry -> poster card 11
+
+These provisional matches must be reviewed; do not treat them as clinically accurate exercise-specific illustrations.
+No changes to workout timer, interval settings, logging or export logic.
+Source poster artwork is rasterized; the individual image files are crops, not independently generated originals.

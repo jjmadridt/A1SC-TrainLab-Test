@@ -126,7 +126,7 @@ const anatomySlug={
 function anatomyImage(name,sex){
  const gender=sex==='female'?'female':'male';
  const slug=anatomySlug[name]||'dead-bug';
- return `<img src="anatomy/${slug}-${gender}.svg" loading="lazy" decoding="async" alt="${esc(exerciseName(name))} ${gender} front and rear muscle diagram">`;
+ return `<img src="anatomy/${slug}-${gender}.png" loading="lazy" decoding="async" alt="${esc(exerciseName(name))} ${gender} front and rear muscle diagram">`;
 }
 function athleteIllustration(selection,highlighted){
  const h=highlighted||[];
