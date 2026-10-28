@@ -103,30 +103,37 @@ const groups={
 'Side plank':['core'],'Stationary bike':['legs'],'Goblet squat':['legs','core'],
 'Glute bridge':['legs','core'],'Step-up':['legs'],'Farmer carry':['arms','core'],
 'Outdoor ride':['legs']};
-// Anatomical art from approved athletic reference; selected by Body screen preference.
-// Each exercise maps to the closest available highlighted muscle group.
-const anatomyPanel={
- 'Elliptical warm-up':2,'Romanian deadlift':7,'Leg press':2,
- 'Standing calf raise':5,'Dead bug':1,'Chest press':0,
- 'Seated cable row':5,'Lat pulldown':5,
- 'Dumbbell shoulder press':3,'Pallof press':1,
- 'Side plank':6,'Stationary bike':2,'Goblet squat':2,
- 'Glute bridge':7,'Step-up':2,'Farmer carry':3,
- 'Outdoor ride':2
+// Update 10: exercise-specific, front/rear vector anatomy; Body preference controls sex.
+const anatomySlug={
+ 'Elliptical warm-up':'elliptical-warm-up',
+ 'Romanian deadlift':'romanian-deadlift',
+ 'Leg press':'leg-press',
+ 'Standing calf raise':'standing-calf-raise',
+ 'Dead bug':'dead-bug',
+ 'Chest press':'chest-press',
+ 'Seated cable row':'seated-cable-row',
+ 'Lat pulldown':'lat-pulldown',
+ 'Dumbbell shoulder press':'dumbbell-shoulder-press',
+ 'Pallof press':'pallof-press',
+ 'Side plank':'side-plank',
+ 'Stationary bike':'stationary-bike',
+ 'Goblet squat':'goblet-squat',
+ 'Glute bridge':'glute-bridge',
+ 'Step-up':'step-up',
+ 'Farmer carry':'farmer-carry',
+ 'Outdoor ride':'outdoor-ride'
 };
-function anatomyImage(panel,sex){
+function anatomyImage(name,sex){
  const gender=sex==='female'?'female':'male';
- return `<img src="anatomy/${panel}-${gender}.webp" loading="lazy" decoding="async" alt="${esc(gender==='female'?tr('Female anatomical muscle illustration','Ilustración anatómica femenina'):tr('Male anatomical muscle illustration','Ilustración anatómica masculina'))}">`;
+ const slug=anatomySlug[name]||'dead-bug';
+ return `<img src="anatomy/${slug}-${gender}.svg" loading="lazy" decoding="async" alt="${esc(exerciseName(name))} ${gender} front and rear muscle diagram">`;
 }
 function athleteIllustration(selection,highlighted){
  const h=highlighted||[];
- const panel=h.includes('chest')?0:h.includes('shoulders')?3:h.includes('back')?5:h.includes('core')?1:2;
- return anatomyImage(panel,selection);
+ const name=h.includes('chest')?'Chest press':h.includes('shoulders')?'Dumbbell shoulder press':h.includes('back')?'Lat pulldown':h.includes('core')?'Dead bug':'Goblet squat';
+ return anatomyImage(name,selection);
 }
-function muscleArt(n){
- const panel=anatomyPanel[n]??1;
- return `<div class="muscles">${anatomyImage(panel,db.settings.bodyIllustration)}</div>`;
-}
+function muscleArt(n){return `<div class="muscles">${anatomyImage(n,db.settings.bodyIllustration)}</div>`;}
 function legacyMuscleArt(n){
  const g=groups[n]||['core'];const fill=x=>g.includes(x)?'#42c5a4':'#60778a';
  return `<svg class="muscles" viewBox="0 0 110 140" role="img" aria-label="${esc(tr('Highlighted muscle areas','Grupos musculares destacados'))}">
