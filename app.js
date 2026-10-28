@@ -103,24 +103,29 @@ const groups={
 'Side plank':['core'],'Stationary bike':['legs'],'Goblet squat':['legs','core'],
 'Glute bridge':['legs','core'],'Step-up':['legs'],'Farmer carry':['arms','core'],
 'Outdoor ride':['legs']};
-function athleteIllustration(selection, highlighted){
- const female=selection==='female', active=highlighted||[];
- const color=part=>active.includes(part)?'#ff4c9c':'#668ba2';
- const shoulder=female?34:29, waist=female?41:45, hip=female?35:42;
- return `<svg viewBox="0 0 110 160" role="img" aria-label="${esc(female?tr('Female athletic illustration','Ilustración atlética femenina'):tr('Male athletic illustration','Ilustración atlética masculina'))}" xmlns="http://www.w3.org/2000/svg">
- <circle cx="55" cy="16" r="11" fill="#a2bacb"/><path d="M50 26h10v8H50z" fill="#8da7bb"/>
- <path d="M${shoulder} 37 Q55 29 ${110-shoulder} 37 L${waist+10} 84 L${hip+10} 94 L${100-hip} 94 L${100-waist} 84Z" fill="#476b82" stroke="#b1c5d3" stroke-width="1.2"/>
- <path d="M${shoulder+3} 40 L54 46 L54 62 L${waist+5} 63Z M56 46 L${107-shoulder} 40 L${95-waist} 63 L56 62Z" fill="${color('chest')}"/>
- <path d="M${waist+5} 65 H${95-waist} L${90-hip} 88 H${hip+10}Z" fill="${color('core')}"/>
- <path d="M${shoulder} 38 L${shoulder-12} 84 L${shoulder-4} 87 L${shoulder+8} 49Z M${110-shoulder} 38 L${122-shoulder} 84 L${114-shoulder} 87 L${102-shoulder} 49Z" fill="${color('arms')}" stroke="#9bb3c4" stroke-width="1"/>
- <path d="M${shoulder} 38 L${shoulder+12} 37 L${shoulder+12} 52 L${shoulder-4} 49Z M${110-shoulder} 38 L${98-shoulder} 37 L${98-shoulder} 52 L${114-shoulder} 49Z" fill="${color('shoulders')}"/>
- <path d="M${hip+10} 92 L54 92 L51 151 L37 151Z M56 92 L${90-hip} 92 L73 151 L59 151Z" fill="${color('legs')}" stroke="#a5b9c9" stroke-width="1"/>
- <path d="M48 47v38 M62 47v38 M55 98v48" stroke="#17364c" stroke-width="1.3" opacity=".65" fill="none"/>
- </svg>`;
+// Anatomical art from approved athletic reference; selected by Body screen preference.
+// Each exercise maps to the closest available highlighted muscle group.
+const anatomyPanel={
+ 'Elliptical warm-up':2,'Romanian deadlift':7,'Leg press':2,
+ 'Standing calf raise':5,'Dead bug':1,'Chest press':0,
+ 'Seated cable row':5,'Lat pulldown':5,
+ 'Dumbbell shoulder press':3,'Pallof press':1,
+ 'Side plank':6,'Stationary bike':2,'Goblet squat':2,
+ 'Glute bridge':7,'Step-up':2,'Farmer carry':3,
+ 'Outdoor ride':2
+};
+function anatomyImage(panel,sex){
+ const gender=sex==='female'?'female':'male';
+ return `<img src="anatomy/${panel}-${gender}.webp" loading="lazy" decoding="async" alt="${esc(gender==='female'?tr('Female anatomical muscle illustration','Ilustración anatómica femenina'):tr('Male anatomical muscle illustration','Ilustración anatómica masculina'))}">`;
+}
+function athleteIllustration(selection,highlighted){
+ const h=highlighted||[];
+ const panel=h.includes('chest')?0:h.includes('shoulders')?3:h.includes('back')?5:h.includes('core')?1:2;
+ return anatomyImage(panel,selection);
 }
 function muscleArt(n){
- const g=groups[n]||['core'];
- return `<div class="muscles">${athleteIllustration(db.settings.bodyIllustration==='female'?'female':'male',g)}</div>`;
+ const panel=anatomyPanel[n]??1;
+ return `<div class="muscles">${anatomyImage(panel,db.settings.bodyIllustration)}</div>`;
 }
 function legacyMuscleArt(n){
  const g=groups[n]||['core'];const fill=x=>g.includes(x)?'#42c5a4':'#60778a';
