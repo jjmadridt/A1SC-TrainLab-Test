@@ -10,9 +10,58 @@ function chime(){try{const C=window.AudioContext||window.webkitAudioContext;if(!
 function stop(){if(ticker)clearInterval(ticker);ticker=null;state.running=false;el('start').disabled=false;el('pause').disabled=true;el('pause').textContent='Pause'}
 function values(){const mode=el('mode').value,duration=Number(el('duration').value),cycles=Number(el('cycles').value),peak=Number(el('peak').value),recovery=Number(el('recovery').value);if(mode==='countdown'&&(!Number.isInteger(duration)||duration<1||duration>7200))throw Error('Enter a duration between 1 and 7200 seconds.');if(mode==='interval'&&(!Number.isInteger(cycles)||cycles<1||cycles>10||!Number.isInteger(peak)||peak<30||peak>900||!Number.isInteger(recovery)||recovery<30||recovery>1200))throw Error('Check interval count and peak/recovery durations.');return{mode,duration,cycles,peak,recovery}}
 function reset(){stop();let v;try{v=values()}catch(e){alert(e.message);return}state.mode=v.mode;state.elapsed=0;state.phase=0;state.segments=[];if(v.mode==='interval')for(let i=0;i<v.cycles;i++){state.segments.push({name:`Peak ${i+1}/${v.cycles}`,seconds:v.peak});if(i<v.cycles-1)state.segments.push({name:'Recovery',seconds:v.recovery})}state.remaining=v.mode==='stopwatch'?0:v.mode==='interval'?state.segments[0].seconds:v.duration;el('phase').textContent=v.mode==='interval'?state.segments[0].name:'Ready';el('clock').textContent=clock(state.remaining)}
-function finish(completed=true){stop();if(completed)chime();el('phase').textContent=completed?'Complete':'Stopped early';if(state.origin==='plank'&&state.index!==null){overlay.classList.remove('visible');try{if(typeof tab!=='undefined')tab='Workout';if(typeof render==='function')render();const field=document.getElementById('count-'+state.index);if(field)field.value=String(Math.max(0,state.elapsed));const btn=document.querySelector(`[data-open-timer="plank"][data-exercise-index="${state.index}"]`);if(btn)btn.scrollIntoView({block:'center'});}catch(e){console.warn(e)}alert(completed?'Plank timer complete. Review duration, then press Log Set to save.':'Plank timer stopped. Review actual elapsed duration before logging.')}}
-function tick(){if(!state.running)return;const left=Math.max(0,Math.ceil((state.deadline-performance.now())/1000));if(state.mode==='stopwatch'){state.elapsed=Math.max(0,Math.floor((performance.now()-state.deadline)/1000));el('clock').textContent=clock(state.elapsed);return}state.remaining=left;el('clock').textContent=clock(left);if(left>0)return;state.elapsed+=state.segments.length?state.remaining+Math.max(0,(state.segments[state.phase].seconds-state.remaining)):0;if(state.mode==='interval'&&state.phase<state.segments.length-1){chime();state.phase++;state.remaining=state.segments[state.phase].seconds;state.deadline=performance.now()+state.remaining*1000;el('phase').textContent=state.segments[state.phase].name;el('clock').textContent=clock(state.remaining)}else{if(state.mode==='countdown')state.elapsed=Number(el('duration').value);finish()}}
-function open(mode,index){state.origin=mode;state.index=index;el('mode').value=mode==='bike'?'interval':'countdown';if(mode==='plank'){let e=typeof PROGRAM!=='undefined'?PROGRAM[day]?.ex[index]:null;el('duration').value=e?e[4]:30}if(mode==='bike'){const cfg=typeof db!=='undefined'&&db.bikeIntervals||{};el('cycles').value=Math.max(1,cfg.cycles||1);el('peak').value=cfg.peak||60;el('recovery').value=cfg.recovery||120;if(!cfg.cycles){el('mode').value='countdown';const minutes=document.getElementById('count-'+index);el('duration').value=Math.max(1,Math.round(Number(minutes?.value||60)*60));}}config();overlay.classList.add('visible');reset()}
+function finish(completed=true){
+ stop();if(completed)chime();el('phase').textContent=completed?'Complete':'Stopped early';
+ if(state.origin==='plank'&&state.index!==null){
+  overlay.classList.remove('visible');
+  try{
+   if(typeof tab!=='undefined')tab='Workout';
+   if(typeof render==='function')render();
+   const field=document.getElementById('count-'+state.index);
+   if(field){field.value=String(Math.max(0,Math.round(state.elapsed)));field.dispatchEvent(new Event('change',{bubbles:true}));}
+   const btn=document.querySelector(`[data-open-timer="plank"][data-exercise-index="${state.index}"]`);
+   if(btn)btn.scrollIntoView({block:'center'});
+  }catch(e){console.warn('Unable to return to Plank screen',e)}
+ }
+}
+function tick(){
+ if(!state.running)return;
+ const now=performance.now();
+ if(state.mode==='stopwatch'){state.elapsed=Math.max(0,Math.floor((now-state.deadline)/1000));el('clock').textContent=clock(state.elapsed);return}
+ const left=Math.max(0,Math.ceil((state.deadline-now)/1000));
+ state.remaining=left;el('clock').textContent=clock(left);
+ if(left>0)return;
+ state.elapsed+=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);
+ if(state.mode==='interval'&&state.phase<state.segments.length-1){
+  chime();state.phase++;state.remaining=state.segments[state.phase].seconds;state.deadline=now+state.remaining*1000;
+  el('phase').textContent=state.segments[state.phase].name;el('clock').textContent=clock(state.remaining);
+ }else finish();
+}
+function open(mode,index){
+ state.origin=mode;state.index=index;
+ el('mode').value=mode==='bike'?'interval':'countdown';
+ if(mode==='plank'){
+  const field=document.getElementById('count-'+index);
+  const exercise=typeof PROGRAM!=='undefined'?PROGRAM[day]?.ex[index]:null;
+  const entered=Number(field?.value);
+  el('duration').value=Number.isFinite(entered)&&entered>0?Math.round(entered):(exercise?Number(exercise[4])||60:60);
+ }
+ if(mode==='bike'){
+  const cfg=typeof db!=='undefined'&&db.bikeIntervals||{};
+  el('cycles').value=Math.max(1,cfg.cycles||1);el('peak').value=cfg.peak||60;el('recovery').value=cfg.recovery||120;
+  if(!cfg.cycles){el('mode').value='countdown';const minutes=document.getElementById('count-'+index);el('duration').value=Math.max(1,Math.round(Number(minutes?.value||60)*60));}
+ }
+ if(mode==='manual'){const field=document.querySelector('[data-reps]:focus');if(field&&Number(field.value)>0)el('duration').value=Math.round(Number(field.value));}
+ config();overlay.classList.add('visible');reset();
+}
 function config(){el('config').style.display=el('mode').value==='countdown'?'block':'none';el('interval-config').style.display=el('mode').value==='interval'?'block':'none'}
-launch.onclick=()=>open('manual',null);document.addEventListener('click',e=>{const btn=e.target.closest('[data-open-timer]');if(btn)open(btn.dataset.openTimer,Number(btn.dataset.exerciseIndex))});el('close').onclick=()=>{stop();overlay.classList.remove('visible')};el('mode').onchange=()=>{config();reset()};['duration','cycles','peak','recovery'].forEach(id=>el(id).onchange=reset);el('reset').onclick=reset;el('stop').onclick=()=>{if(state.running)tick();if(state.mode!=='stopwatch'&&state.remaining>0){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining)}finish(false)};el('start').onclick=()=>{if(state.running)return;if(state.mode!=='stopwatch'&&state.remaining<=0)reset();state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').disabled=false;el('phase').textContent=state.mode==='interval'?state.segments[state.phase].name:'Running';chime();ticker=setInterval(tick,150)};el('pause').onclick=()=>{if(state.running){tick();if(state.mode!=='stopwatch'){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining)}stop();el('pause').disabled=false;el('pause').textContent='Resume';el('phase').textContent='Paused'}else{state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').textContent='Pause';el('phase').textContent=state.mode==='interval'?state.segments[state.phase].name:'Running';ticker=setInterval(tick,150)}};
+launch.onclick=()=>open('manual',null);document.addEventListener('click',e=>{const btn=e.target.closest('[data-open-timer]');if(btn)open(btn.dataset.openTimer,Number(btn.dataset.exerciseIndex))});el('close').onclick=()=>{stop();overlay.classList.remove('visible')};el('mode').onchange=()=>{config();reset()};['duration','cycles','peak','recovery'].forEach(id=>el(id).onchange=reset);el('reset').onclick=reset;el('stop').onclick=()=>{
+ if(state.running)tick();
+ if(state.mode!=='stopwatch'){
+  const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);
+  state.elapsed+=Math.max(0,current-state.remaining);
+ }
+ finish(false)
+};
+el('start').onclick=()=>{if(state.running)return;if(state.mode!=='stopwatch'&&state.remaining<=0)reset();state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').disabled=false;el('phase').textContent=state.mode==='interval'?state.segments[state.phase].name:'Running';chime();ticker=setInterval(tick,150)};el('pause').onclick=()=>{if(state.running){tick();if(state.mode!=='stopwatch'){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining);state.segments.length&&(state.segments[state.phase].seconds=state.remaining);if(!state.segments.length)el('duration').value=state.remaining;}stop();el('pause').disabled=false;el('pause').textContent='Resume';el('phase').textContent='Paused'}else{state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').textContent='Pause';el('phase').textContent=state.mode==='interval'?state.segments[state.phase].name:'Running';ticker=setInterval(tick,150)}};
 })();
