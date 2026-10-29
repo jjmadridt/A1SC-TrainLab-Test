@@ -222,7 +222,7 @@ function workout(){
  let p=PROGRAM[day],n=session(day),locked=completed(day,n);
  if(!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
  const dt=new Date(getStart(day,n));const start=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
- app.innerHTML=`${bodyAreaPicker()}<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?ES[EN.indexOf(d)].slice(0,3):d.slice(0,3)}</button>`).join('')}</div>
+ app.innerHTML=`${bodyAreaPicker()}<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
  <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div><span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span></div>
  <div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
  ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Choose a body area above to build your workout.','No hay ejercicios seleccionados para este día. Elige un área del cuerpo arriba para crear tu rutina.')}</div>`}

@@ -43,7 +43,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 
 </style></head>
 <body>
-<div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">EN</option><option value="es">ES</option></select></div></div>
+<div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
  <div class="hero"><img src="brand-logo.png" alt="A1SC TrainLab logo with blue, white and magenta horizontal lines"><p data-i18n="hero">One training platform. Every discipline.</p></div>
  <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2><small class="muted">V2.5 · PREVIEW</small></div>
@@ -106,81 +106,70 @@ show('home');
 })();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  let requestedUpdate = false;
-  let activeBanner = null;
-  let waitingWorker = null;
+  let refreshing = false;
+  let updatePromptShown = false;
 
-  // Do not reload just because a new worker takes control. Reload only
-  // after the user explicitly chooses Update Now.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (requestedUpdate) window.location.reload();
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
   });
 
-  function workoutInProgress() {
-    const timer = document.getElementById('tl-timer-panel');
-    const timerVisible = timer && timer.classList.contains('visible');
-    const runningTimer = timerVisible && (
-      document.getElementById('tl-start')?.disabled ||
-      document.getElementById('tl-pause')?.textContent === 'Resume'
-    );
-    // An open timer, even paused, may contain an unfinished workout.
-    return Boolean(timerVisible || runningTimer);
-  }
-
   function showUpdatePrompt(worker) {
-    if (!worker) return;
-    waitingWorker = worker;
-    if (activeBanner) return;
+    if (updatePromptShown || !worker) return;
+    updatePromptShown = true;
+
     const banner = document.createElement('div');
-    activeBanner = banner;
-    banner.setAttribute('role', 'status');
     banner.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;z-index:99999;background:#172334;color:white;padding:16px;border-radius:12px;box-shadow:0 4px 18px #0005;font:14px Arial,sans-serif;';
-    const title = document.createElement('strong');
-    title.textContent = 'TrainLab update available';
-    const message = document.createElement('p');
-    message.textContent = 'A new version is ready. Your saved activities will remain on this device.';
-    message.style.margin = '8px 0';
-    const now = document.createElement('button');
-    now.type = 'button'; now.textContent = 'Update Now';
-    now.style.cssText = 'padding:10px 18px;border:0;border-radius:8px;background:#fff;color:#172334;font-weight:bold;cursor:pointer;margin-right:10px;';
-    const later = document.createElement('button');
-    later.type = 'button'; later.textContent = 'Later';
-    later.style.cssText = 'padding:10px 18px;border:1px solid #91a4b8;border-radius:8px;background:transparent;color:white;font-weight:bold;cursor:pointer;';
-    later.onclick = () => { banner.remove(); activeBanner = null; };
-    now.onclick = () => {
-      if (workoutInProgress()) {
-        message.textContent = 'Finish or close your workout timer before updating. Choose Later to keep training.';
-        return;
-      }
-      if (!window.confirm('Update TrainLab now? The app will reload. Make sure your workout is finished and any entries are saved.')) return;
-      now.disabled = true;
-      now.textContent = 'Updating…';
-      requestedUpdate = true;
-      waitingWorker?.postMessage({ type: 'SKIP_WAITING' });
+    banner.innerHTML = '<strong>TrainLab update available</strong><p style="margin:8px 0">A new version is ready.</p>';
+
+    const button = document.createElement('button');
+    button.textContent = 'Update Now';
+    button.style.cssText = 'padding:10px 18px;border:0;border-radius:8px;background:#fff;color:#172334;font-weight:bold;cursor:pointer;';
+    button.onclick = () => {
+      button.disabled = true;
+      button.textContent = 'Updating...';
+      worker.postMessage({ type: 'SKIP_WAITING' });
     };
-    banner.append(title, message, now, later);
+
+    banner.appendChild(button);
     document.body.appendChild(banner);
   }
 
   window.addEventListener('load', async () => {
     try {
       const registration = await navigator.serviceWorker.register('./sw.js');
-      const checkWaiting = () => {
-        if (registration.waiting && navigator.serviceWorker.controller) showUpdatePrompt(registration.waiting);
-      };
+
+      function checkWaiting() {
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          showUpdatePrompt(registration.waiting);
+        }
+      }
+
       checkWaiting();
+
       registration.addEventListener('updatefound', () => {
         const worker = registration.installing;
-        worker?.addEventListener('statechange', () => {
+        if (!worker) return;
+
+        worker.addEventListener('statechange', () => {
           if (worker.state === 'installed') checkWaiting();
         });
       });
+
       await registration.update();
+
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) registration.update().catch(() => {});
       });
-      window.addEventListener('online', () => registration.update().catch(() => {}));
-    } catch (error) { console.warn('TrainLab update check failed:', error); }
+
+      window.addEventListener('online', () => {
+        registration.update().catch(() => {});
+      });
+    } catch (error) {
+      console.warn('TrainLab update check failed:', error);
+    }
   });
 }
 
