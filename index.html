@@ -24,6 +24,14 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #fitclimb button.log-activity{background:#13b7e8;color:#061522;font-weight:800;border:2px solid #a5edff;box-shadow:0 0 0 2px rgba(19,183,232,.16)}#fitclimb button.log-activity:disabled{opacity:.45;box-shadow:none}#fitclimb .language{display:none}#fitclimb button.primary{background:#0d87ae}
 .footer{text-align:center;font-size:11px;color:#7998b0;padding:20px 0}.footer b{color:#61baff}
 @media(min-width:600px){.module-grid{grid-template-columns:repeat(3,1fr)}.module.wide{grid-column:span 1;min-height:170px}}
+
+/* Update 13 Step 2: body-area exercise catalog */
+#fitclimb .area-options{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#fitclimb .area-options button{flex:1 1 95px;border:1px solid #42617a;border-radius:12px;background:#20384d;color:#e2eff8;padding:12px 8px;cursor:pointer}
+#fitclimb .area-options button.active{background:#285474;border-color:#ff4c9c;box-shadow:inset 0 0 0 1px #ff4c9c}
+#fitclimb .area-exercise-list{margin-top:12px}
+#fitclimb .area-exercise-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 2px;border-bottom:1px solid #2b4357}
+#fitclimb .area-exercise-item small{font-size:11px;color:#ffacd2;text-align:right}
 </style></head>
 <body>
 <div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">EN</option><option value="es">ES</option></select></div></div>
