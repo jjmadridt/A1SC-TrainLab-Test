@@ -166,7 +166,7 @@ function settings(){
 // Exercise logging and the existing weekday plan are intentionally unchanged.
 const TOTAL_BODY_AREAS={
  'Legs':['Elliptical warm-up','Romanian deadlift','Leg press','Standing calf raise','Stationary bike','Goblet squat','Glute bridge','Step-up','Outdoor ride'],
- 'Torso':['Dead bug','Pallof press','Side plank','Farmer carry'],
+ 'Core':['Dead bug','Pallof press','Side plank','Farmer carry'],
  'Upper Body':['Chest press','Seated cable row','Lat pulldown','Dumbbell shoulder press','Farmer carry']
 };
 let selectedBodyAreas=[];
@@ -203,7 +203,7 @@ function toggleWeeklyExercise(name){
 }
 
 function bodyAreaPicker(){
- const labels={'Legs':tr('Legs','Piernas'),'Torso':tr('Core','Core'),'Upper Body':tr('Upper Body','Tren superior')};
+ const labels={'Legs':tr('Legs','Piernas'),'Core':tr('Core','Core'),'Upper Body':tr('Upper Body','Tren superior')};
  const areas=Object.keys(TOTAL_BODY_AREAS);
  const chosen=new Set(db.weeklyProgram[day]);
  const selected=exerciseCatalog().filter(e=>chosen.has(e[0]));
