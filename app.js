@@ -203,7 +203,7 @@ function toggleWeeklyExercise(name){
 }
 
 function bodyAreaPicker(){
- const labels={'Legs':tr('Legs','Piernas'),'Torso':tr('Torso','Torso'),'Upper Body':tr('Upper Body','Tren superior')};
+ const labels={'Legs':tr('Legs','Piernas'),'Torso':tr('Core','Core'),'Upper Body':tr('Upper Body','Tren superior')};
  const areas=Object.keys(TOTAL_BODY_AREAS);
  const chosen=new Set(db.weeklyProgram[day]);
  const selected=exerciseCatalog().filter(e=>chosen.has(e[0]));
