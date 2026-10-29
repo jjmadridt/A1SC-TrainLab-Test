@@ -166,7 +166,7 @@ function settings(){
 // Exercise logging and the existing weekday plan are intentionally unchanged.
 const TOTAL_BODY_AREAS={
  'Legs':['Elliptical warm-up','Romanian deadlift','Leg press','Standing calf raise','Stationary bike','Goblet squat','Glute bridge','Step-up','Outdoor ride'],
- 'Torso':['Dead bug','Pallof press','Side plank','Farmer carry'],
+ 'Core':['Dead bug','Pallof press','Side plank','Farmer carry'],
  'Upper Body':['Chest press','Seated cable row','Lat pulldown','Dumbbell shoulder press','Farmer carry']
 };
 let selectedBodyAreas=[];
