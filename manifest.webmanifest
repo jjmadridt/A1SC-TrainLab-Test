@@ -1,9 +1,9 @@
 {
   "name": "A1SC TrainLab",
   "short_name": "TrainLab",
-  "description": "Train \u00b7 Track \u00b7 Improve",
-  "start_url": "./",
-  "scope": "./",
+  "description": "Train · Track · Improve",
+  "start_url": "/A1SC-TrainLab-Test/",
+  "scope": "/A1SC-TrainLab-Test/",
   "display": "standalone",
   "background_color": "#07121f",
   "theme_color": "#07121f",
@@ -21,5 +21,5 @@
       "purpose": "any maskable"
     }
   ],
-  "id": "/A1SC-TrainLab/"
+  "id": "/A1SC-TrainLab-Test/"
 }
