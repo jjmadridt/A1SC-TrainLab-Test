@@ -196,13 +196,16 @@ function toggleWeeklyExercise(name){
 function bodyAreaPicker(){
  const labels={'Legs':tr('Legs','Piernas'),'Torso':tr('Torso','Torso'),'Upper Body':tr('Upper Body','Tren superior')};
  const areas=Object.keys(TOTAL_BODY_AREAS);
- const shown=exerciseCatalog().filter(e=>selectedBodyAreas.some(area=>TOTAL_BODY_AREAS[area].includes(e[0])));
  const chosen=new Set(db.weeklyProgram[day]);
+ const selected=exerciseCatalog().filter(e=>chosen.has(e[0]));
+ const available=exerciseCatalog().filter(e=>!chosen.has(e[0])&&selectedBodyAreas.some(area=>TOTAL_BODY_AREAS[area].includes(e[0])));
+ const item=e=>`<label class="area-exercise-item"><span class="area-exercise-thumbnail">${anatomyImage(e[0],db.settings.bodyIllustration)}</span><span class="area-exercise-name">${esc(exerciseName(e[0]))}</span><input type="checkbox" data-weekly-exercise="${esc(e[0])}" ${chosen.has(e[0])?'checked':''} aria-label="${esc(exerciseName(e[0]))}"></label>`;
  return `<div class="card body-area-picker"><h3>${tr('Build your weekly workout','Crea tu rutina semanal')}</h3>
  <p class="muted">${tr('Choose a weekday below, select body areas, then tap exercises to add or remove them. Changes save automatically and repeat every week on that day.','Elige un día de la semana abajo, selecciona áreas del cuerpo y toca ejercicios para agregarlos o quitarlos. Los cambios se guardan automáticamente y se repiten cada semana ese día.')}</p>
+ <div class="area-exercise-list"><strong>${tr('Selected for','Seleccionados para')} ${db.settings.lang==='es'?ES[EN.indexOf(day)]:day} (${chosen.size})</strong>${selected.length?selected.map(item).join(''):`<p class="muted">${tr('No exercises selected yet. Choose a body area below.','Aún no hay ejercicios seleccionados. Elige un área abajo.')}</p>`}</div>
  <div class="area-options">${areas.map(a=>`<button type="button" class="${selectedBodyAreas.includes(a)?'active':''}" data-area="${a}" aria-pressed="${selectedBodyAreas.includes(a)}">${labels[a]}</button>`).join('')}</div>
- ${selectedBodyAreas.length?`<div class="area-exercise-list"><strong>${tr('Tap to add or remove exercises','Toca para agregar o quitar ejercicios')}</strong>${shown.map(e=>`<label class="area-exercise-item"><span class="area-exercise-thumbnail">${anatomyImage(e[0],db.settings.bodyIllustration)}</span><span class="area-exercise-name">${esc(exerciseName(e[0]))}</span><input type="checkbox" data-weekly-exercise="${esc(e[0])}" ${chosen.has(e[0])?'checked':''} aria-label="${esc(exerciseName(e[0]))}"></label>`).join('')}</div>`:''}
- <p class="muted" style="font-size:12px">${tr('Selected for','Seleccionados para')} ${db.settings.lang==='es'?ES[EN.indexOf(day)]:day}: ${chosen.size} · ${tr('Saved automatically','Guardado automático')}</p>
+ ${selectedBodyAreas.length?`<div class="area-exercise-list"><strong>${tr('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(item).join(''):`<p class="muted">${tr('All exercises in these categories are already selected.','Todos los ejercicios de estas categorías ya están seleccionados.')}</p>`}</div>`:''}
+ <p class="muted" style="font-size:12px">${tr('Saved automatically','Guardado automático')}</p>
  </div>`;
 }
 
