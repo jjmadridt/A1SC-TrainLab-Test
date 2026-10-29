@@ -41,7 +41,13 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #fitclimb .area-exercise-name{flex:1;min-width:0;font-size:14px;line-height:1.3}
 #fitclimb .area-exercise-item input[type="checkbox"]{width:22px;height:22px;flex:0 0 22px;accent-color:#ff4c9c;cursor:pointer}
 
-</style></head>
+</style><style>
+.move-launch{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0;padding:14px 16px;background:#14273e;border:1px solid #4271a0;border-radius:16px;color:#fff;text-decoration:none;box-shadow:0 8px 18px #0004}
+.move-launch-brand{display:flex;flex-direction:column;min-width:90px;line-height:1}.move-launch-brand strong{font-size:26px;font-weight:850;font-style:italic;letter-spacing:.03em}.move-launch-brand small{color:#ff5aa6;font-weight:800;font-size:10px;margin-top:5px}
+.move-launch-detail{flex:1;min-width:120px;color:#c6d7e8;font-size:12px;line-height:1.35}.move-launch-action{background:#2264b5;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:750;white-space:nowrap}
+.move-launch:focus-visible{outline:3px solid #ff5aa6;outline-offset:3px}
+</style>
+</head>
 <body>
 <div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
@@ -54,6 +60,11 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
  <button class="module pending" data-module="swim"><img src="swim.jpg" alt=""><div class="module-content"><strong>SWIM</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
  <button class="module pending wide" data-module="tri"><img src="tri.jpg" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
  </div>
+ <a class="move-launch" href="https://jjmadridt.github.io/A1SC-CycleLab-Test/" target="_blank" rel="noopener noreferrer" aria-label="Launch MOVE cycling computer">
+   <span class="move-launch-brand"><strong>MOVE</strong><small>BY A1SC</small></span>
+   <span class="move-launch-detail">Cycling computer · GPS ride recording</span>
+   <span class="move-launch-action">Launch MOVE ↗</span>
+ </a>
  <div class="status"><b data-i18n="vision">Built for a growing team</b><p data-i18n="visionText">Total Body is active today. Each additional discipline will be developed with its own volunteer team.</p></div>
 </section>
 <section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div class="coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
