@@ -39,7 +39,7 @@ function tick(){
 }
 function open(mode,index){
  state.origin=mode;state.index=index;
- el('mode').value=mode==='bike'?'interval':'countdown';
+ el('mode').value=(mode==='bike'||mode==='run-interval')?'interval':'countdown';
  if(mode==='plank'){
   const field=document.getElementById('count-'+index);
   const exercise=typeof PROGRAM!=='undefined'?PROGRAM[day]?.ex[index]:null;

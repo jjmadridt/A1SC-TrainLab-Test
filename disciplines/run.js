@@ -45,7 +45,7 @@
       <div class="run-categories">${Object.keys(CATALOG).map(c=>`<button type="button" class="${categories.includes(c)?'active':''}" data-run-category="${esc(c)}" aria-pressed="${categories.includes(c)}">${esc(label(c))}</button>`).join('')}</div>
       ${categories.length?`<div class="run-list"><strong>${t('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(n=>item(n,false)).join(''):`<p class="muted">${t('All exercises in these categories are selected.','Ya seleccionaste todos los ejercicios de estas categorías.')}</p>`}</div>`:''}
       <p class="muted" style="font-size:12px">${t('Saved automatically on this device','Guardado automáticamente en este dispositivo')}</p></div>
-      <div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${selected.length?selected.map((n,i)=>`<div class="run-program-row"><span>${i+1}. ${esc(label(n))}</span><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>`).join(''):`<p class="muted">${t('Choose exercises above to build this day’s program.','Elige ejercicios arriba para crear el programa de este día.')}</p>`}
+      <div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${selected.length?selected.map((n,i)=>`<div class="run-program-row"><span>${i+1}. ${n==='Short Intervals'?`<button type="button" class="run-title-button" data-open-timer="run-interval" data-exercise-index="0">${esc(label(n))} ⏱</button>`:esc(label(n))}</span><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>`).join(''):`<p class="muted">${t('Choose exercises above to build this day’s program.','Elige ejercicios arriba para crear el programa de este día.')}</p>`}
       ${selected.includes('Easy Run')?`<div class="run-log"><h3>${t('Log Easy Run','Registrar carrera suave')}</h3>
       <form id="run-easy-form"><div class="run-log-fields">
       <label>${t('Duration (minutes)','Duración (minutos)')}<input id="run-minutes" type="number" min="0" max="9999" step="1" required placeholder="30"></label>
@@ -77,5 +77,5 @@
       render();
     });
   }
-  window.TrainLabRun={name:'RUN',version:'0.3.0',status:'easy-run-logging',render};
+  window.TrainLabRun={name:'RUN',version:'0.4.0',status:'easy-run-logging',render};
 })();
