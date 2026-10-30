@@ -47,6 +47,19 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 .move-launch-detail{flex:1;min-width:120px;color:#c6d7e8;font-size:12px;line-height:1.35}.move-launch-action{background:#2264b5;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:750;white-space:nowrap}
 .move-launch:focus-visible{outline:3px solid #ff5aa6;outline-offset:3px}
 </style>
+<style>
+#run-builder .run-days{display:flex;gap:6px;overflow-x:auto;margin:12px 0}
+#run-builder .run-days button{flex:1 0 auto;padding:10px 8px;min-width:40px}
+#run-builder button.active{background:#2b85ad!important;border-color:#ff4c9c!important}
+#run-builder .run-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0}
+#run-builder .run-categories button{padding:12px 7px;min-height:55px;white-space:normal}
+#run-builder .run-exercise{display:flex;align-items:center;gap:12px;min-height:57px;border-bottom:1px solid #2b4357;cursor:pointer;padding:6px 2px}
+#run-builder .run-exercise span:nth-child(2){flex:1}
+#run-builder .run-exercise input{width:22px;height:22px;accent-color:#ff4c9c}
+#run-builder .run-exercise-icon{width:45px;height:45px;display:grid;place-items:center;background:#10283e;border:1px solid #34516c;border-radius:8px}
+#run-builder .run-program-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #2b4357}
+#run-builder .run-program-row small{color:#a8c4d6;text-align:right}
+</style>
 </head>
 <body>
 <div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
@@ -55,8 +68,8 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
  <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2><small class="muted">V2.5 · PREVIEW</small></div>
  <div class="module-grid">
  <button class="module" data-module="strength"><img src="strength.jpg" alt=""><div class="module-content"><strong>TOTAL BODY</strong><span><i class="dot"></i><span data-i18n="strength">Strength · Ready to use</span></span></div></button>
- <button class="module pending" data-module="cycle"><img src="cycle.jpg" alt=""><div class="module-content"><strong>CYCLE</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
- <button class="module pending" data-module="run"><img src="run.jpg" alt=""><div class="module-content"><strong>RUN</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module pending" data-module="cycle"><img src="cycle.jpg" alt=""><div class="module-content"><strong>CYCLE</strong><span><i class="dot"></i><span data-i18n="runReady">Weekly program · Beta</span></span></div></button>
+ <button class="module" data-module="run"><img src="run.jpg" alt=""><div class="module-content"><strong>RUN</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
  <button class="module pending" data-module="swim"><img src="swim.jpg" alt=""><div class="module-content"><strong>SWIM</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
  <button class="module pending wide" data-module="tri"><img src="tri.jpg" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
  </div>
@@ -67,7 +80,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
  </a>
  <div class="status"><b data-i18n="vision">Built for a growing team</b><p data-i18n="visionText">Total Body is active today. Each additional discipline will be developed with its own volunteer team.</p></div>
 </section>
-<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div class="coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
+<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
 <section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
 <div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
 <script src="disciplines/fitclimb.js"></script>
@@ -79,7 +92,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <script src="workout-timer.js"></script>
 <script>
 (function(){
-const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose your discipline',strength:'Strength · Ready to use',soon:'Coming soon',vision:'Built for a growing team',visionText:'Total Body is active today. Each additional discipline will be developed with its own volunteer team.',inDevelopment:'In development',placeholder:'This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.',previewOnly:'Presentation preview — no workouts or tracking are active in this module yet.',back:'← All disciplines',fitSubtitle:'Strength training · Active module',localData:'Your training data stays on this device. Export backups regularly.',home:'Home'},es:{hero:'Una plataforma de entrenamiento. Todas las disciplinas.',choose:'Selecciona tu disciplina',strength:'Fuerza · Disponible',soon:'Próximamente',vision:'Una plataforma para crecer en equipo',visionText:'Total Body ya está disponible. Cada nueva disciplina será desarrollada con su propio equipo de voluntarios.',inDevelopment:'En desarrollo',placeholder:'Este espacio está reservado para que un equipo de voluntarios desarrolle rutinas, herramientas y seguimiento de progreso.',previewOnly:'Vista de presentación — este módulo todavía no registra entrenamientos.',back:'← Todas las disciplinas',fitSubtitle:'Entrenamiento de fuerza · Módulo activo',localData:'Tus entrenamientos se guardan en este dispositivo. Descarga respaldos con frecuencia.',home:'Inicio'}};
+const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose your discipline',strength:'Strength · Ready to use',soon:'Coming soon',runReady:'Weekly program · Beta',vision:'Built for a growing team',visionText:'Total Body is active today. Each additional discipline will be developed with its own volunteer team.',inDevelopment:'In development',placeholder:'This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.',previewOnly:'Presentation preview — no workouts or tracking are active in this module yet.',back:'← All disciplines',fitSubtitle:'Strength training · Active module',localData:'Your training data stays on this device. Export backups regularly.',home:'Home'},es:{hero:'Una plataforma de entrenamiento. Todas las disciplinas.',choose:'Selecciona tu disciplina',strength:'Fuerza · Disponible',soon:'Próximamente',runReady:'Programa semanal · Beta',vision:'Una plataforma para crecer en equipo',visionText:'Total Body ya está disponible. Cada nueva disciplina será desarrollada con su propio equipo de voluntarios.',inDevelopment:'En desarrollo',placeholder:'Este espacio está reservado para que un equipo de voluntarios desarrolle rutinas, herramientas y seguimiento de progreso.',previewOnly:'Vista de presentación — este módulo todavía no registra entrenamientos.',back:'← Todas las disciplinas',fitSubtitle:'Entrenamiento de fuerza · Módulo activo',localData:'Tus entrenamientos se guardan en este dispositivo. Descarga respaldos con frecuencia.',home:'Inicio'}};
 const names={cycle:'CYCLE',run:'RUN',swim:'SWIM',tri:'TRIATHLON'};
 const subtitle={en:{cycle:'Ride stronger',run:'Run farther',swim:'Swim stronger',tri:'Train across disciplines'},es:{cycle:'Rueda más fuerte',run:'Corre más lejos',swim:'Nada más fuerte',tri:'Entrena en varias disciplinas'}};
 const lang=document.getElementById('language-toggle');
@@ -101,6 +114,10 @@ function show(name){
  document.getElementById('module-title').textContent=names[name];
  document.getElementById('module-subtitle').textContent=subtitle[lang.value][name];
  document.getElementById('module-page').classList.add('visible');
+ const isRun=name==='run';
+ document.getElementById('run-builder').style.display=isRun?'block':'none';
+ document.getElementById('module-coming').style.display=isRun?'none':'block';
+ if(isRun && window.TrainLabRun)window.TrainLabRun.render();
  }
  try{localStorage.setItem('trainlab-last-discipline',name)}catch(e){}
  window.scrollTo(0,0);
@@ -109,9 +126,10 @@ document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('clic
 document.getElementById('home-button').addEventListener('click',()=>show('home'));
 document.getElementById('back-button').addEventListener('click',()=>show('home'));
 lang.value=db.settings.lang==='es'?'es':'en';
-lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate()});
+lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(window.TrainLabRun)window.TrainLabRun.render()});
 window.trainlabTranslate=translate;
 translate();
+if(document.getElementById('run-builder').style.display==='block' && window.TrainLabRun)window.TrainLabRun.render();
 // Present the discipline chooser on launch; retain the last selection for future UX.
 show('home');
 })();
