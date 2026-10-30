@@ -1,10 +1,11 @@
 
-const CACHE = 'trainlab-v2.15.0';
+const CACHE = 'trainlab-v2.16.0';
 
 const ASSETS = [
   './',
   './index.html',
   './app.js',
+  './workout-timer.js',
   './disciplines/run.js',
   './anatomy/run/a-skips-female.png',
   './anatomy/run/a-skips-male.png',
