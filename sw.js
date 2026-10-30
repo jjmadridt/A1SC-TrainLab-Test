@@ -1,11 +1,12 @@
 
-const CACHE = 'trainlab-v2.16.1';
+const CACHE = 'trainlab-v2.16.2-bell';
 
 const ASSETS = [
   './',
   './index.html',
   './app.js',
   './workout-timer.js',
+  './boxing-bell-double-ding.wav',
   './disciplines/run.js',
   './anatomy/run/a-skips-female.png',
   './anatomy/run/a-skips-male.png',
