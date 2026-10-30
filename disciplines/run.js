@@ -22,6 +22,24 @@
     'Calf Raises':'Elevaciones de talones','Glute Bridges':'Puentes de glúteos',
     'Dynamic Mobility':'Movilidad dinámica'
   };
+  const INTERVALS=new Set(['Short Intervals','Long Intervals','Hill Repeats','Treadmill Intervals','Strides','Cadence Drills']);
+  const CONTINUOUS=new Set(['Easy Run','Long Run','Recovery Run','Treadmill Run','Tempo Run']);
+  const TIMED_DRILLS=new Set(['High Knees','Butt Kicks','A-Skips','Dynamic Mobility']);
+  const CONTROL_KEY='a1sc-run-controls-v1';
+  let settings={};try{settings=JSON.parse(localStorage.getItem(CONTROL_KEY))||{}}catch(e){}
+  let expanded=null;
+  const kind=n=>INTERVALS.has(n)?'interval':CONTINUOUS.has(n)?'run':TIMED_DRILLS.has(n)?'drill':'strength';
+  function controls(n){
+    const type=kind(n),v=settings[n]||{};
+    const field=(id,title,value,min='0',step='1')=>`<label>${title}<input data-run-field="${id}" type="number" min="${min}" step="${step}" value="${esc(v[id]??value)}"></label>`;
+    const timer=(mode)=>`<button type="button" class="run-save" data-open-timer="${mode}" data-exercise-index="0">⏱ ${t('Open Smart Timer','Abrir temporizador')}</button>`;
+    let fields='';
+    if(type==='run')fields=field('minutes',t('Duration (minutes)','Duración (minutos)'),30)+field('distance',t('Distance','Distancia'),'','0','any')+`<label>${t('Unit','Unidad')}<select data-run-field="unit"><option value="km" ${v.unit==='mi'?'':'selected'}>km</option><option value="mi" ${v.unit==='mi'?'selected':''}>mi</option></select></label>`+(n==='Treadmill Run'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
+    if(type==='interval')fields=field('cycles',t('Cycles','Ciclos'),5,'1')+field('peak',t('Peak (seconds)','Pico (segundos)'),60,'1')+field('recovery',t('Recovery (seconds)','Recuperación (segundos)'),120,'1')+(n==='Treadmill Intervals'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
+    if(type==='drill')fields=field('sets',t('Sets','Series'),2,'1')+field('seconds',t('Duration per set (seconds)','Duración por serie (segundos)'),30,'1');
+    if(type==='strength')fields=field('sets',t('Sets','Series'),3,'1')+field('reps',t('Repetitions','Repeticiones'),10,'1')+(n==='Step-Ups'||n==='Calf Raises'?field('weight',t('Optional weight (kg)','Peso opcional (kg)'),'','0','any'):'');
+    return `<div class="run-controls" data-run-controls="${esc(n)}"><div class="run-log-fields">${fields}</div>${type==='interval'?timer('run-interval'):type==='run'||type==='drill'?timer('run-countdown'):''}<button type="button" class="run-save" data-run-log="${esc(n)}">${t('Log Activity','Registrar actividad')}</button><p class="muted" style="font-size:12px">${t('Settings save automatically. Timer completion does not log an activity.','Los ajustes se guardan automáticamente. El temporizador no registra la actividad por sí solo.')}</p></div>`;
+  }
   const LOG_KEY = 'a1sc-run-activities-v1';
   let activities=[];
   try { const saved=JSON.parse(localStorage.getItem(LOG_KEY)); if(Array.isArray(saved))activities=saved; } catch(e) {}
@@ -45,28 +63,41 @@
       <div class="run-categories">${Object.keys(CATALOG).map(c=>`<button type="button" class="${categories.includes(c)?'active':''}" data-run-category="${esc(c)}" aria-pressed="${categories.includes(c)}">${esc(label(c))}</button>`).join('')}</div>
       ${categories.length?`<div class="run-list"><strong>${t('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(n=>item(n,false)).join(''):`<p class="muted">${t('All exercises in these categories are selected.','Ya seleccionaste todos los ejercicios de estas categorías.')}</p>`}</div>`:''}
       <p class="muted" style="font-size:12px">${t('Saved automatically on this device','Guardado automáticamente en este dispositivo')}</p></div>
-      <div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${selected.length?selected.map((n,i)=>`<div class="run-program-row"><span>${i+1}. ${n==='Short Intervals'?`<button type="button" class="run-title-button" data-open-timer="run-interval" data-exercise-index="0">${esc(label(n))} ⏱</button>`:esc(label(n))}</span><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>`).join(''):`<p class="muted">${t('Choose exercises above to build this day’s program.','Elige ejercicios arriba para crear el programa de este día.')}</p>`}
-      ${selected.includes('Easy Run')?`<div class="run-log"><h3>${t('Log Easy Run','Registrar carrera suave')}</h3>
-      <form id="run-easy-form"><div class="run-log-fields">
-      <label>${t('Duration (minutes)','Duración (minutos)')}<input id="run-minutes" type="number" min="0" max="9999" step="1" required placeholder="30"></label>
-      <label>${t('Seconds','Segundos')}<input id="run-seconds" type="number" min="0" max="59" step="1" value="0" required></label>
-      <label>${t('Distance','Distancia')}<input id="run-distance" type="number" min="0.01" max="9999" step="any" required placeholder="5"></label>
-      <label>${t('Unit','Unidad')}<select id="run-unit"><option value="km">km</option><option value="mi">mi</option></select></label>
-      <label>${t('Effort','Esfuerzo')}<select id="run-effort"><option value="easy">${t('Easy','Suave')}</option><option value="moderate">${t('Moderate','Moderado')}</option><option value="hard">${t('Hard','Intenso')}</option></select></label>
-      </div><p id="run-pace-preview" class="muted">${t('Average pace: —','Ritmo promedio: —')}</p><button type="submit" class="run-save">${t('Log Activity','Registrar actividad')}</button></form></div>`:''}
+      <div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${selected.length?selected.map((n,i)=>`<div class="run-exercise-block"><div class="run-program-row"><button type="button" class="run-title-button" data-run-expand="${esc(n)}" aria-expanded="${expanded===n}">${i+1}. ${esc(label(n))} ${expanded===n?'▾':'▸'}</button><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>${expanded===n?controls(n):''}</div>`).join(''):`<p class="muted">${t('Choose exercises above to build this day’s program.','Elige ejercicios arriba para crear el programa de este día.')}</p>`}
       <div class="run-log"><h3>${t('Recent Run Activities','Actividades recientes de carrera')}</h3>
-      ${activities.length?activities.slice(0,5).map(a=>`<div class="run-program-row"><span>${esc(new Date(a.timestamp).toLocaleDateString())} · ${esc(label(a.exercise))}<br><small>${a.durationSeconds>=60?Math.floor(a.durationSeconds/60)+'m ':''}${a.durationSeconds%60}s · ${a.distance} ${a.unit} · ${esc(a.effort)}</small></span><small>${esc(a.pace)}</small></div>`).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`;
-    const form=el.querySelector('#run-easy-form');
-    if(form){
-      const update=()=>{const mins=Number(el.querySelector('#run-minutes').value)||0, secs=Number(el.querySelector('#run-seconds').value)||0, dist=Number(el.querySelector('#run-distance').value)||0, unit=el.querySelector('#run-unit').value;const total=mins*60+secs;el.querySelector('#run-pace-preview').textContent=t('Average pace: ','Ritmo promedio: ')+(total>0&&dist>0?pace(total,dist*(unit==='mi'?1.609344:1)):'—');};
-      form.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',update));
-      form.onsubmit=e=>{e.preventDefault();const mins=Number(el.querySelector('#run-minutes').value),secs=Number(el.querySelector('#run-seconds').value),dist=Number(el.querySelector('#run-distance').value),unit=el.querySelector('#run-unit').value,effort=el.querySelector('#run-effort').value,total=mins*60+secs;
-        if(!Number.isInteger(mins)||mins<0||!Number.isInteger(secs)||secs<0||secs>59||!Number.isFinite(dist)||dist<=0||total<=0){alert(t('Enter a valid duration and distance.','Ingresa una duración y distancia válidas.'));return;}
-        const entry={timestamp:new Date().toISOString(),exercise:'Easy Run',durationSeconds:total,distance:dist,unit,effort,pace:pace(total,dist*(unit==='mi'?1.609344:1))};
-        const updated=[entry,...activities];
-        try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render();alert(t('Easy Run saved.','Carrera suave guardada.'));}catch(err){alert(t('Could not save the run. Check device storage.','No se pudo guardar la carrera. Revisa el almacenamiento.'));}
+      ${activities.length?activities.slice(0,5).map(a=>`<div class="run-program-row"><span>${esc(new Date(a.timestamp).toLocaleDateString())} · ${esc(label(a.exercise))}<br><small>${a.data?esc(Object.entries(a.data).filter(([k,v])=>v!=='').map(([k,v])=>k+': '+v).join(' · ')):(a.durationSeconds>=60?Math.floor(a.durationSeconds/60)+'m ':'')+(a.durationSeconds%60)+'s · '+a.distance+' '+a.unit+' · '+esc(a.effort)}</small></span><small>${esc(a.pace)}</small></div>`).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`;
+    el.querySelectorAll('[data-run-expand]').forEach(b=>b.onclick=()=>{expanded=expanded===b.dataset.runExpand?null:b.dataset.runExpand;render()});
+    el.querySelectorAll('[data-run-controls]').forEach(panel=>{
+      const n=panel.dataset.runControls;
+      panel.querySelectorAll('[data-run-field]').forEach(input=>input.onchange=()=>{
+        settings[n]={...(settings[n]||{}),[input.dataset.runField]:input.value};
+        try{localStorage.setItem(CONTROL_KEY,JSON.stringify(settings))}catch(e){alert(t('Could not save settings.','No se pudieron guardar los ajustes.'))}
+      });
+      const timer=panel.querySelector('[data-open-timer]');
+      if(timer)timer.addEventListener('click',(event)=>{
+        const get=id=>Number(panel.querySelector(`[data-run-field="${id}"]`)?.value);
+        if(kind(n)==='interval'){
+          const values={cycles:get('cycles'),peak:get('peak'),recovery:get('recovery')};
+          if(!Number.isInteger(values.cycles)||values.cycles<1||values.cycles>10||!Number.isInteger(values.peak)||values.peak<1||values.peak>900||!Number.isInteger(values.recovery)||values.recovery<1||values.recovery>1200){alert(t('Use 1–10 cycles, 1–900 peak seconds and 1–1200 recovery seconds.','Usa 1–10 ciclos, 1–900 segundos de pico y 1–1200 segundos de recuperación.'));event.stopImmediatePropagation();return;}
+          document.getElementById('tl-cycles').value=values.cycles;
+          document.getElementById('tl-peak').value=values.peak;
+          document.getElementById('tl-recovery').value=values.recovery;
+        }else{
+          const seconds=kind(n)==='run'?get('minutes')*60:get('seconds');
+          if(!Number.isFinite(seconds)||seconds<1||seconds>7200){alert(t('Enter a duration between 1 and 7200 seconds.','Ingresa una duración entre 1 y 7200 segundos.'));event.stopImmediatePropagation();return;}
+          document.getElementById('tl-duration').value=Math.round(seconds);
+        }
+      },true);
+      panel.querySelector('[data-run-log]').onclick=()=>{
+        const data={};panel.querySelectorAll('[data-run-field]').forEach(input=>data[input.dataset.runField]=input.value);
+        const nums=Object.entries(data).filter(([k])=>k!=='unit');
+        if(nums.some(([k,v])=>v!==''&&(!Number.isFinite(Number(v))||Number(v)<0))){alert(t('Check the entered values.','Revisa los valores.'));return;}
+        if(kind(n)==='run'&&!(Number(data.minutes)>0)||kind(n)==='interval'&&!(Number(data.cycles)>0&&Number(data.peak)>0&&Number(data.recovery)>0)||kind(n)==='strength'&&!(Number(data.sets)>0&&Number(data.reps)>0)||kind(n)==='drill'&&!(Number(data.sets)>0&&Number(data.seconds)>0)){alert(t('Complete the required workout values.','Completa los valores del entrenamiento.'));return;}
+        const seconds=Number(data.minutes)*60,km=Number(data.distance)*(data.unit==='mi'?1.609344:1);
+        const entry={timestamp:new Date().toISOString(),exercise:n,kind:kind(n),data,durationSeconds:kind(n)==='run'?seconds:0,distance:Number(data.distance)||0,unit:data.unit||'',effort:'',pace:seconds>0&&km>0?pace(seconds,km):''};
+        try{const updated=[entry,...activities];localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render();alert(t('Activity saved.','Actividad guardada.'))}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'))}
       };
-    }
+    });
     el.querySelectorAll('[data-run-day]').forEach(b=>b.onclick=()=>{day=b.dataset.runDay;render()});
     el.querySelectorAll('[data-run-category]').forEach(b=>b.onclick=()=>{const c=b.dataset.runCategory;categories=categories.includes(c)?categories.filter(x=>x!==c):[...categories,c];render()});
     el.querySelectorAll('[data-run-exercise]').forEach(b=>b.onchange=()=>{
@@ -77,5 +108,5 @@
       render();
     });
   }
-  window.TrainLabRun={name:'RUN',version:'0.4.0',status:'easy-run-logging',render};
+  window.TrainLabRun={name:'RUN',version:'0.5.0',status:'all-exercise-controls',render};
 })();

@@ -48,6 +48,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #run-builder .run-save{padding:12px 20px;background:#247fa8;color:#fff;border:1px solid #ff4c9c;border-radius:8px;font-weight:700}
 
 #run-builder .run-title-button{background:transparent;color:#9cd1ff;border:0;padding:8px 0;font:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+#run-builder .run-exercise-block{border-bottom:1px solid #30465b}#run-builder .run-controls{padding:12px;background:#14283c;border-radius:10px;margin-bottom:12px}#run-builder .run-title-button{flex:1;text-align:left}#run-builder .run-controls .run-save{margin:8px 8px 8px 0}
 </style><style>
 .move-launch{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0;padding:14px 16px;background:#14273e;border:1px solid #4271a0;border-radius:16px;color:#fff;text-decoration:none;box-shadow:0 8px 18px #0004}
 .move-launch-brand{display:flex;flex-direction:column;min-width:90px;line-height:1}.move-launch-brand strong{font-size:26px;font-weight:850;font-style:italic;letter-spacing:.03em}.move-launch-brand small{color:#ff5aa6;font-weight:800;font-size:10px;margin-top:5px}
@@ -92,11 +93,11 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
-<script src="disciplines/run.js?v=20261029runinterval1"></script>
+<script src="disciplines/run.js?v=20261029runall1"></script>
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js"></script>
 <script src="app.js"></script>
-<script src="workout-timer.js?v=20261029runinterval1"></script>
+<script src="workout-timer.js?v=20261029runall1"></script>
 <script>
 (function(){
 const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose your discipline',strength:'Strength · Ready to use',soon:'Coming soon',runReady:'Weekly program · Beta',vision:'Built for a growing team',visionText:'Total Body is active today. Each additional discipline will be developed with its own volunteer team.',inDevelopment:'In development',placeholder:'This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.',previewOnly:'Presentation preview — no workouts or tracking are active in this module yet.',back:'← All disciplines',fitSubtitle:'Strength training · Active module',localData:'Your training data stays on this device. Export backups regularly.',home:'Home'},es:{hero:'Una plataforma de entrenamiento. Todas las disciplinas.',choose:'Selecciona tu disciplina',strength:'Fuerza · Disponible',soon:'Próximamente',runReady:'Programa semanal · Beta',vision:'Una plataforma para crecer en equipo',visionText:'Total Body ya está disponible. Cada nueva disciplina será desarrollada con su propio equipo de voluntarios.',inDevelopment:'En desarrollo',placeholder:'Este espacio está reservado para que un equipo de voluntarios desarrolle rutinas, herramientas y seguimiento de progreso.',previewOnly:'Vista de presentación — este módulo todavía no registra entrenamientos.',back:'← Todas las disciplinas',fitSubtitle:'Entrenamiento de fuerza · Módulo activo',localData:'Tus entrenamientos se guardan en este dispositivo. Descarga respaldos con frecuencia.',home:'Inicio'}};
