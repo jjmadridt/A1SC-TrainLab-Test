@@ -2,7 +2,7 @@
 // Kept separate from Total Body data and activity logs.
 (function () {
   const KEY = 'a1sc-run-weekly-v1';
-  const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   const CATALOG = {
     'Endurance': ['Easy Run','Long Run','Recovery Run','Treadmill Run'],
     'Speed & Intervals': ['Tempo Run','Short Intervals','Long Intervals','Hill Repeats','Treadmill Intervals'],
@@ -36,7 +36,7 @@
     const available=all.filter(n=>!selected.includes(n)&&categories.some(c=>CATALOG[c].includes(n)));
     const item=(n,checked)=>`<label class="run-exercise"><span class="run-exercise-icon" aria-hidden="true">🏃</span><span>${esc(label(n))}</span><input type="checkbox" data-run-exercise="${esc(n)}" ${checked?'checked':''}></label>`;
     el.innerHTML=`<div class="card"><h3>${t('Build your weekly run program','Crea tu programa semanal de carrera')}</h3><p class="muted">${t('Choose a day and training categories, then select exercises. Your choices repeat each week and save automatically.','Elige un día y categorías de entrenamiento, luego selecciona ejercicios. Tus opciones se repiten cada semana y se guardan automáticamente.')}</p>
-      <div class="run-days">${DAYS.map((d,i)=>`<button type="button" class="${day===d?'active':''}" data-run-day="${d}">${t(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i],['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][i])}</button>`).join('')}</div>
+      <div class="run-days">${DAYS.map((d,i)=>`<button type="button" class="${day===d?'active':''}" data-run-day="${d}">${t(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][i])}</button>`).join('')}</div>
       <div class="run-list"><strong>${t('Selected for','Seleccionados para')} ${esc(day)} (${selected.length})</strong>${selected.length?selected.map(n=>item(n,true)).join(''):`<p class="muted">${t('No exercises selected yet.','Todavía no hay ejercicios seleccionados.')}</p>`}</div>
       <div class="run-categories">${Object.keys(CATALOG).map(c=>`<button type="button" class="${categories.includes(c)?'active':''}" data-run-category="${esc(c)}" aria-pressed="${categories.includes(c)}">${esc(label(c))}</button>`).join('')}</div>
       ${categories.length?`<div class="run-list"><strong>${t('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(n=>item(n,false)).join(''):`<p class="muted">${t('All exercises in these categories are selected.','Ya seleccionaste todos los ejercicios de estas categorías.')}</p>`}</div>`:''}
