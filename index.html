@@ -3,7 +3,7 @@
 <link rel="manifest" href="manifest.webmanifest?v=2400"><link rel="icon" href="icon-192.png"><title>A1SC TrainLab</title>
 <style>
 :root{font-family:system-ui,Arial;background:#07121f;color:#eef6ff}*{box-sizing:border-box}body{margin:0 auto;max-width:800px;padding:0 14px 84px;background:#07121f;min-height:100vh}button{cursor:pointer;color:white;border:1px solid #34516c;background:#172d44;border-radius:12px;padding:11px 13px;font-weight:700}button:disabled{opacity:.42}
-.shell-head{display:flex;align-items:center;justify-content:space-between;padding:14px 0 8px;gap:8px}.shell-brand{display:flex;align-items:center;gap:9px;min-width:0}.shell-brand img{width:46px;height:46px;border-radius:11px}.shell-brand b{display:block;letter-spacing:.1em;font-size:17px}.shell-brand small{color:#76b9eb;letter-spacing:.11em;font-size:10px}.shell-actions{display:flex;gap:6px;align-items:center;justify-content:space-between;width:100%;min-width:0;flex-wrap:wrap}.shell-actions select{width:auto;max-width:95px;padding:7px;font-size:13px;background:#132b40;color:white;border:1px solid #36556c;border-radius:9px}.homebtn{font-size:12px;padding:9px}.screen{display:none}.screen.visible{display:block}
+.shell-head{display:flex;align-items:center;justify-content:space-between;padding:14px 0 8px;gap:8px}.shell-brand{display:flex;align-items:center;gap:9px;min-width:0}.shell-brand img{width:46px;height:46px;border-radius:11px}.shell-brand b{display:block;letter-spacing:.1em;font-size:17px}.shell-brand small{color:#76b9eb;letter-spacing:.11em;font-size:10px}.shell-actions{display:flex;gap:6px;align-items:center}.shell-actions select{width:auto;max-width:95px;padding:7px;font-size:13px;background:#132b40;color:white;border:1px solid #36556c;border-radius:9px}.homebtn{font-size:12px;padding:9px}.screen{display:none}.screen.visible{display:block}
 .hero{border-radius:19px;overflow:hidden;position:relative;background:linear-gradient(140deg,#102944,#08111e);border:1px solid #25405a;margin:8px 0 20px;padding:22px 16px 20px;text-align:center}.hero img{width:min(100%,330px);height:auto;display:block;margin:auto}.hero .tag{color:#64c2ff;letter-spacing:.23em;font-size:12px;margin:14px 0 2px}.hero p{color:#a5bcd0;font-size:13px;margin:6px 0 0}
 .section-title{display:flex;justify-content:space-between;align-items:center;margin:16px 0 10px}.section-title h2{font-size:21px;margin:0}.muted{color:#9bb4c9}.section-title small{font-size:12px}.module-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.module{min-height:170px;position:relative;overflow:hidden;border:1px solid #2d5270;border-radius:16px;background:#12283d;padding:0;text-align:left;display:flex;flex-direction:column;justify-content:end;box-shadow:0 8px 18px #0005}.module img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center center;opacity:.72;pointer-events:none}.module:after{content:'';position:absolute;inset:0;background:linear-gradient(transparent 12%,#061321f2 100%)}.module-content{position:relative;z-index:1;padding:13px}.module-content strong{font-size:19px;display:block;letter-spacing:.03em}.module-content span{display:block;color:#d7e6f2;font-size:12px;margin-top:3px}.module .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#46dfb7;margin-right:5px}.module.pending .dot{background:#f2b35e}.module.wide{grid-column:span 2;min-height:145px}.module:active{transform:scale(.99)}
 .status{border:1px solid #24435b;border-radius:14px;background:#0f2336;padding:14px;margin:18px 0}.status b{color:#e8f4ff}.status p{font-size:13px;color:#a8c0d3;margin:7px 0 0}.module-header{position:relative;border-radius:18px;overflow:hidden;border:1px solid #34526d;min-height:215px;display:flex;align-items:end;margin:10px 0 15px}.module-header>img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;object-position:center center}.module-header:after{content:'';position:absolute;inset:0;background:linear-gradient(transparent,#051320 95%)}.module-header>div{position:relative;z-index:1;padding:19px}.module-header h1{font-size:29px;margin:0}.module-header p{margin:5px 0;color:#d5e6f4}.coming{border:1px solid #30516d;background:#10273d;border-radius:16px;padding:22px;margin:12px 0}.coming h2{margin:0 0 8px}.coming p{color:#afc4d6;line-height:1.55}.coming .note{color:#74bdea;font-size:13px}.back{width:100%;margin-top:12px;background:#14577c}
@@ -49,26 +49,6 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 
 #run-builder .run-title-button{background:transparent;color:#9cd1ff;border:0;padding:8px 0;font:inherit;font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 #run-builder .run-exercise-block{border-bottom:1px solid #30465b}#run-builder .run-controls{padding:12px;background:#14283c;border-radius:10px;margin-bottom:12px}#run-builder .run-title-button{flex:1;text-align:left}#run-builder .run-controls .run-save{margin:8px 8px 8px 0}
-
-/* Home refresh: compact six-card grid; no changes to workout screens */
-#landing .hero{margin:5px 0 9px;padding:9px 12px 10px;border-radius:17px}
-#landing .hero img{width:min(100%,250px)}
-#landing .hero p{font-size:11px;margin-top:3px}
-#landing .section-title{margin:7px 0 8px}
-#landing .section-title h2{font-size:17px}
-#landing .section-title small{font-size:10px}
-#landing .refreshed-grid{gap:8px}
-#landing .refreshed-grid .module{height:clamp(112px,18.5vh,154px);min-height:0;border-radius:15px;display:flex;color:#fff;text-decoration:none}
-#landing .refreshed-grid .module img{opacity:.95;object-position:center 35%}
-#landing .refreshed-grid .module:after{background:linear-gradient(180deg,transparent 20%,#06132155 47%,#061321f5 100%)}
-#landing .refreshed-grid .module-content{padding:10px 9px}
-#landing .refreshed-grid .module-content strong{font-size:clamp(13px,3.7vw,19px);letter-spacing:0;line-height:1.08}
-#landing .refreshed-grid .module-content span{font-size:clamp(10px,2.5vw,12px);line-height:1.2}
-#landing .refreshed-grid .module-content span span{display:inline}
-#landing .refreshed-grid .module .dot{width:7px;height:7px}
-#landing .refreshed-grid .move-card{background:#12283d}
-#landing .refreshed-grid .move-card:focus-visible{outline:3px solid #ff4eae;outline-offset:2px}
-@media(max-width:390px){#landing .refreshed-grid .module-content{padding:8px 7px}#landing .refreshed-grid .module-content strong{font-size:13px}}
 </style><style>
 .move-launch{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0;padding:14px 16px;background:#14273e;border:1px solid #4271a0;border-radius:16px;color:#fff;text-decoration:none;box-shadow:0 8px 18px #0004}
 .move-launch-brand{display:flex;flex-direction:column;min-width:90px;line-height:1}.move-launch-brand strong{font-size:26px;font-weight:850;font-style:italic;letter-spacing:.03em}.move-launch-brand small{color:#ff5aa6;font-weight:800;font-size:10px;margin-top:5px}
@@ -93,61 +73,35 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #run-builder .run-exercise-icon{overflow:hidden;padding:0}
 #run-builder .run-program-row>.run-anatomy{width:60px;height:60px;flex:0 0 60px;border-radius:8px;object-fit:cover}
 #run-builder .run-program-row .run-title-button{flex:1;text-align:left}
-</style><style>
-/* Shared athlete illustration preference */
-.shell-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.global-gender-label{font-size:12px;color:#c5dce9;white-space:nowrap}
-#global-gender{max-width:105px;min-width:78px;font-size:13px;padding:7px 4px;border-radius:8px;background:#10283e;color:#fff;border:1px solid #45647c}
-/* Same approved artwork; fill the existing Run thumbnail more consistently */
-#run-builder .run-exercise-icon{width:60px;height:64px;flex:0 0 60px;overflow:hidden}
-#run-builder .run-exercise-icon .run-anatomy{width:100%;height:100%;object-fit:cover;object-position:center center}
-#run-builder .run-program-row>.run-anatomy{width:76px;height:78px;flex:0 0 76px;object-fit:cover;object-position:center center}
-#run-builder .run-exercise{gap:10px}
-#run-builder .run-program-row{align-items:center}
-@media(max-width:390px){.global-gender-label{display:none}#global-gender{max-width:90px}}
-</style><style>
-/* Athlete Profile: visually consistent with Total Body cards, phone-first. */
-#athlete-profile{max-width:100%;width:100%;padding:0 0 30px}
-#athlete-profile .module-header{margin-bottom:16px}
-#athlete-profile-content{display:grid;gap:14px}
-#athlete-profile-content .profile-panel{margin:0;padding:16px;border-radius:15px;min-width:0}
-#athlete-profile-content .profile-panel h3{margin:0 0 14px;font-size:18px}
-#athlete-profile-content .profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 16px}
-#athlete-profile-content .profile-field{display:flex;flex-direction:column;gap:7px;min-width:0}
-#athlete-profile-content input,#athlete-profile-content select{width:100%;min-width:0;box-sizing:border-box}
-#athlete-profile-content .profile-unit-note{color:#a9bfd0;font-size:12px;padding-top:7px}
-#athlete-profile-content .primary.full{width:100%;min-height:46px}
-#athlete-profile-content .history{overflow-wrap:anywhere}
-#athlete-profile-content #profile-progress{display:grid;gap:12px;min-width:0}
-#athlete-profile-content #profile-progress>h2{margin:8px 0 0;font-size:20px}
-#athlete-profile-content #profile-progress .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media(max-width:370px){#athlete-profile-content .profile-fields{gap:8px}#athlete-profile-content .profile-panel{padding:12px}}
-</style>
-</head>
+</style></head>
 <body>
-<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
+<div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
  <div class="hero"><img src="brand-logo.png" alt="A1SC TrainLab logo with blue, white and magenta horizontal lines"><p data-i18n="hero">One training platform. Every discipline.</p></div>
  <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2><small class="muted">V2.5 · PREVIEW</small></div>
- <div class="module-grid refreshed-grid">
- <button class="module " data-module="strength"><img src="home-images/total-body.webp" alt=""><div class="module-content"><strong>TOTAL BODY</strong><span><i class="dot"></i><span data-i18n="strength">Strength · Ready to use</span></span></div></button>
- <a class="module move-card" href="https://jjmadridt.github.io/A1SC-CycleLab-Test/" target="_blank" rel="noopener noreferrer" aria-label="Open MOVE cycling computer"><img src="home-images/move.webp" alt=""><div class="module-content"><strong>MOVE</strong><span><i class="dot"></i>Ride · Track · Explore</span></div></a>
- <button class="module pending" data-module="cycle"><img src="home-images/cycle.webp" alt=""><div class="module-content"><strong>CYCLE</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
- <button class="module " data-module="run"><img src="home-images/run.webp" alt=""><div class="module-content"><strong>RUN</strong><span><i class="dot"></i><span data-i18n="runReady">Weekly program · Beta</span></span></div></button>
- <button class="module pending" data-module="swim"><img src="home-images/swim.webp" alt=""><div class="module-content"><strong>SWIM</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
- <button class="module pending" data-module="tri"><img src="home-images/triathlon.webp" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <div class="module-grid">
+ <button class="module" data-module="strength"><img src="strength.jpg" alt=""><div class="module-content"><strong>TOTAL BODY</strong><span><i class="dot"></i><span data-i18n="strength">Strength · Ready to use</span></span></div></button>
+ <button class="module pending" data-module="cycle"><img src="cycle.jpg" alt=""><div class="module-content"><strong>CYCLE</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module" data-module="run"><img src="run.jpg" alt=""><div class="module-content"><strong>RUN</strong><span><i class="dot"></i><span data-i18n="runReady">Weekly program · Beta</span></span></div></button>
+ <button class="module pending" data-module="swim"><img src="swim.jpg" alt=""><div class="module-content"><strong>SWIM</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module pending wide" data-module="tri"><img src="tri.jpg" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
  </div>
+ <a class="move-launch" href="https://jjmadridt.github.io/A1SC-CycleLab-Test/" aria-label="Launch MOVE cycling computer">
+   <span class="move-launch-brand"><strong>MOVE</strong><small>BY A1SC</small></span>
+   <span class="move-launch-detail">Cycling computer · GPS ride recording</span>
+   <span class="move-launch-action">Launch MOVE ↗</span>
+ </a>
  <div class="status"><b data-i18n="vision">Built for a growing team</b><p data-i18n="visionText">Total Body is active today. Each additional discipline will be developed with its own volunteer team.</p></div>
 </section>
 <section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
-<section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
+<section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
 <div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
-<script src="disciplines/run.js?v=20261029gender1"></script>
+<script src="disciplines/run.js?v=20261029runart1"></script>
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js"></script>
-<script src="app.js?v=20261029profilebackup1"></script>
+<script src="app.js"></script>
 <script src="workout-timer.js?v=20261029runall1"></script>
 <script>
 (function(){
@@ -155,19 +109,8 @@ const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose y
 const names={cycle:'CYCLE',run:'RUN',swim:'SWIM',tri:'TRIATHLON'};
 const subtitle={en:{cycle:'Ride stronger',run:'Run farther',swim:'Swim stronger',tri:'Train across disciplines'},es:{cycle:'Rueda más fuerte',run:'Corre más lejos',swim:'Nada más fuerte',tri:'Entrena en varias disciplinas'}};
 const lang=document.getElementById('language-toggle');
-const profileButton=document.getElementById('athlete-profile-button');
-const profileScreen=document.getElementById('athlete-profile');
-profileButton.addEventListener('click',()=>show('profile'));
-function syncGlobalGender(){
- const settings=db.settings||{};
- profileButton.textContent=lang.value==='es'?'Perfil':'Profile';
- document.getElementById('athlete-profile-heading').textContent=lang.value==='es'?'Perfil del atleta':'Athlete Profile';
- document.getElementById('athlete-profile-subtitle').textContent=lang.value==='es'?'Tus medidas y progreso de entrenamiento':'Your measurements and training progress';
-}
-
 function translate(){
  const l=lang.value;
- syncGlobalGender();
  document.documentElement.lang=l;
  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=dict[l][el.dataset.i18n]||el.textContent});
  document.getElementById('home-label').textContent=dict[l].home;
@@ -177,8 +120,7 @@ function translate(){
 function show(name){
  for(const el of document.querySelectorAll('.screen'))el.classList.remove('visible');
  document.getElementById('fitclimb').classList.remove('visible');
- if(name==='profile'){document.getElementById('athlete-profile').classList.add('visible');if(window.renderAthleteProfile)window.renderAthleteProfile()}
- else if(name==='strength'){document.getElementById('fitclimb').classList.add('visible')}
+ if(name==='strength'){document.getElementById('fitclimb').classList.add('visible')}
  else if(name==='home'){document.getElementById('landing').classList.add('visible')}
  else if(names[name]){
  document.getElementById('module-image').src=name+'.jpg';
@@ -197,7 +139,7 @@ document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('clic
 document.getElementById('home-button').addEventListener('click',()=>show('home'));
 document.getElementById('back-button').addEventListener('click',()=>show('home'));
 lang.value=db.settings.lang==='es'?'es':'en';
-lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(document.getElementById('athlete-profile').classList.contains('visible'))window.renderAthleteProfile();if(window.TrainLabRun)window.TrainLabRun.render()});
+lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(window.TrainLabRun)window.TrainLabRun.render()});
 window.trainlabTranslate=translate;
 translate();
 if(document.getElementById('run-builder').style.display==='block' && window.TrainLabRun)window.TrainLabRun.render();
