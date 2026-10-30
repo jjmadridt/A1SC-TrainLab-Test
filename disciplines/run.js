@@ -24,7 +24,7 @@
   };
   let weekly = {};
   try { const saved = JSON.parse(localStorage.getItem(KEY)); if(saved && typeof saved === 'object' && !Array.isArray(saved)) weekly=saved; } catch(e) {}
-  let day=DAYS[new Date().getDay()], categories=[];
+  let day=DAYS[(new Date().getDay()+6)%7], categories=[];
   const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const t=(en,es)=>document.getElementById('language-toggle').value==='es'?es:en;
   const label=s=>t(s,ES[s]||s);
