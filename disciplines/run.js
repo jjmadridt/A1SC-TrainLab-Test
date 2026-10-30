@@ -51,7 +51,7 @@
   const label=s=>t(s,ES[s]||s);
   const pace=(seconds,km)=>{const total=Math.round(seconds/km);return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')} /km`;};
   const runGender=()=>{try{return JSON.parse(localStorage.getItem('fitclimb-v1'))?.settings?.bodyIllustration==='female'?'female':'male'}catch(e){return 'male'}};
-  const runArt=n=>`<img class="run-anatomy" src="anatomy/run/${n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${runGender()}.png" alt="" loading="lazy" decoding="async">`;
+  const runArt=n=>`<img class="run-anatomy" src="anatomy/run/${n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${runGender()}.png?v=20261029gender1" alt="" loading="lazy" decoding="async">`;
   function render() {
     const el=document.getElementById('run-builder');
     if(!el)return;
