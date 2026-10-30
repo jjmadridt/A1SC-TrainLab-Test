@@ -41,6 +41,11 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #fitclimb .area-exercise-name{flex:1;min-width:0;font-size:14px;line-height:1.3}
 #fitclimb .area-exercise-item input[type="checkbox"]{width:22px;height:22px;flex:0 0 22px;accent-color:#ff4c9c;cursor:pointer}
 
+#run-builder .run-log{margin-top:16px;padding-top:12px;border-top:1px solid #34516c}
+#run-builder .run-log-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#run-builder .run-log-fields label{display:flex;flex-direction:column;gap:5px;font-size:13px}
+#run-builder .run-log-fields input,#run-builder .run-log-fields select{width:100%;min-width:0;padding:10px;border-radius:8px;background:#10283e;color:#fff;border:1px solid #567}
+#run-builder .run-save{padding:12px 20px;background:#247fa8;color:#fff;border:1px solid #ff4c9c;border-radius:8px;font-weight:700}
 </style><style>
 .move-launch{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0;padding:14px 16px;background:#14273e;border:1px solid #4271a0;border-radius:16px;color:#fff;text-decoration:none;box-shadow:0 8px 18px #0004}
 .move-launch-brand{display:flex;flex-direction:column;min-width:90px;line-height:1}.move-launch-brand strong{font-size:26px;font-weight:850;font-style:italic;letter-spacing:.03em}.move-launch-brand small{color:#ff5aa6;font-weight:800;font-size:10px;margin-top:5px}
@@ -85,7 +90,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
-<script src="disciplines/run.js?v=20261029runfix2"></script>
+<script src="disciplines/run.js?v=20261029runlog1"></script>
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js"></script>
 <script src="app.js"></script>
