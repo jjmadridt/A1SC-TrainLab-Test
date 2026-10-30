@@ -87,7 +87,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 @media(max-width:390px){.global-gender-label{display:none}#global-gender{max-width:90px}}
 </style></head>
 <body>
-<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><label class="global-gender-label" for="global-gender"><span id="gender-label">Gender</span></label><select id="global-gender" aria-label="Gender / Género"><option value="male">Male</option><option value="female">Female</option></select><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
+<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
  <div class="hero"><img src="brand-logo.png" alt="A1SC TrainLab logo with blue, white and magenta horizontal lines"><p data-i18n="hero">One training platform. Every discipline.</p></div>
  <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2><small class="muted">V2.5 · PREVIEW</small></div>
@@ -106,14 +106,14 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
  <div class="status"><b data-i18n="vision">Built for a growing team</b><p data-i18n="visionText">Total Body is active today. Each additional discipline will be developed with its own volunteer team.</p></div>
 </section>
 <section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
-<section id="athlete-profile" class="screen" style="display:none;padding:16px 0"><h2 id="athlete-profile-heading">Athlete Profile</h2><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
+<section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
 <div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
 <script src="disciplines/run.js?v=20261029gender1"></script>
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js"></script>
-<script src="app.js?v=20261029gender1"></script>
+<script src="app.js?v=20261029profile2"></script>
 <script src="workout-timer.js?v=20261029runall1"></script>
 <script>
 (function(){
@@ -121,29 +121,15 @@ const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose y
 const names={cycle:'CYCLE',run:'RUN',swim:'SWIM',tri:'TRIATHLON'};
 const subtitle={en:{cycle:'Ride stronger',run:'Run farther',swim:'Swim stronger',tri:'Train across disciplines'},es:{cycle:'Rueda más fuerte',run:'Corre más lejos',swim:'Nada más fuerte',tri:'Entrena en varias disciplinas'}};
 const lang=document.getElementById('language-toggle');
-const globalGender=document.getElementById('global-gender');
 const profileButton=document.getElementById('athlete-profile-button');
 const profileScreen=document.getElementById('athlete-profile');
-profileButton.addEventListener('click',()=>{
- const opening=profileScreen.style.display==='none';
- profileScreen.style.display=opening?'block':'none';
- profileButton.setAttribute('aria-expanded',String(opening));
- if(opening && window.renderAthleteProfile)window.renderAthleteProfile();
-});
+profileButton.addEventListener('click',()=>show('profile'));
 function syncGlobalGender(){
  const settings=db.settings||{};
- globalGender.value=settings.bodyIllustration==='female'?'female':'male';
- document.getElementById('gender-label').textContent=lang.value==='es'?'Género':'Gender';
  profileButton.textContent=lang.value==='es'?'Perfil':'Profile';
  document.getElementById('athlete-profile-heading').textContent=lang.value==='es'?'Perfil del atleta':'Athlete Profile';
- for(const opt of globalGender.options){opt.textContent=lang.value==='es'?(opt.value==='male'?'Masculino':'Femenino'):(opt.value==='male'?'Male':'Female')}
+ document.getElementById('athlete-profile-subtitle').textContent=lang.value==='es'?'Tus medidas y progreso de entrenamiento':'Your measurements and training progress';
 }
-globalGender.addEventListener('change',()=>{
- db.settings=db.settings||{};
- db.settings.bodyIllustration=globalGender.value;
- save();render();syncGlobalGender();
- if(window.TrainLabRun)window.TrainLabRun.render();
-});
 
 function translate(){
  const l=lang.value;
@@ -157,7 +143,8 @@ function translate(){
 function show(name){
  for(const el of document.querySelectorAll('.screen'))el.classList.remove('visible');
  document.getElementById('fitclimb').classList.remove('visible');
- if(name==='strength'){document.getElementById('fitclimb').classList.add('visible')}
+ if(name==='profile'){document.getElementById('athlete-profile').classList.add('visible');if(window.renderAthleteProfile)window.renderAthleteProfile()}
+ else if(name==='strength'){document.getElementById('fitclimb').classList.add('visible')}
  else if(name==='home'){document.getElementById('landing').classList.add('visible')}
  else if(names[name]){
  document.getElementById('module-image').src=name+'.jpg';
@@ -176,7 +163,7 @@ document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('clic
 document.getElementById('home-button').addEventListener('click',()=>show('home'));
 document.getElementById('back-button').addEventListener('click',()=>show('home'));
 lang.value=db.settings.lang==='es'?'es':'en';
-lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(window.TrainLabRun)window.TrainLabRun.render()});
+lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(document.getElementById('athlete-profile').classList.contains('visible'))window.renderAthleteProfile();if(window.TrainLabRun)window.TrainLabRun.render()});
 window.trainlabTranslate=translate;
 translate();
 if(document.getElementById('run-builder').style.display==='block' && window.TrainLabRun)window.TrainLabRun.render();
