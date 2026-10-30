@@ -68,7 +68,12 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #run-builder .run-program-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #2b4357}
 #run-builder .run-program-row small{color:#a8c4d6;text-align:right}
 </style>
-</head>
+<style>
+#run-builder .run-anatomy{width:100%;height:100%;object-fit:cover;display:block;border-radius:7px}
+#run-builder .run-exercise-icon{overflow:hidden;padding:0}
+#run-builder .run-program-row>.run-anatomy{width:60px;height:60px;flex:0 0 60px;border-radius:8px;object-fit:cover}
+#run-builder .run-program-row .run-title-button{flex:1;text-align:left}
+</style></head>
 <body>
 <div class="shell-head"><div class="shell-brand"><div><b>A1SC TRAINLAB</b></div></div><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
@@ -93,7 +98,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <div class="footer"><b>A1SC TRAINLAB</b> · A platform for every discipline</div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
-<script src="disciplines/run.js?v=20261029runall1"></script>
+<script src="disciplines/run.js?v=20261029runart1"></script>
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js"></script>
 <script src="app.js"></script>
