@@ -1,9 +1,16 @@
 
-const CACHE = 'trainlab-v2.16.2-bell';
+const CACHE = 'trainlab-v2.17-home-six-cards';
 
 const ASSETS = [
   './',
   './index.html',
+  './home-images/total-body.webp',
+  './home-images/move.webp',
+  './home-images/cycle.webp',
+  './home-images/run.webp',
+  './home-images/swim.webp',
+  './home-images/triathlon.webp',
+
   './app.js',
   './workout-timer.js',
   './boxing-bell-double-ding.wav',
