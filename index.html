@@ -85,7 +85,25 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 #run-builder .run-exercise{gap:10px}
 #run-builder .run-program-row{align-items:center}
 @media(max-width:390px){.global-gender-label{display:none}#global-gender{max-width:90px}}
-</style></head>
+</style><style>
+/* Athlete Profile: visually consistent with Total Body cards, phone-first. */
+#athlete-profile{max-width:100%;width:100%;padding:0 0 30px}
+#athlete-profile .module-header{margin-bottom:16px}
+#athlete-profile-content{display:grid;gap:14px}
+#athlete-profile-content .profile-panel{margin:0;padding:16px;border-radius:15px;min-width:0}
+#athlete-profile-content .profile-panel h3{margin:0 0 14px;font-size:18px}
+#athlete-profile-content .profile-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 16px}
+#athlete-profile-content .profile-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+#athlete-profile-content input,#athlete-profile-content select{width:100%;min-width:0;box-sizing:border-box}
+#athlete-profile-content .profile-unit-note{color:#a9bfd0;font-size:12px;padding-top:7px}
+#athlete-profile-content .primary.full{width:100%;min-height:46px}
+#athlete-profile-content .history{overflow-wrap:anywhere}
+#athlete-profile-content #profile-progress{display:grid;gap:12px;min-width:0}
+#athlete-profile-content #profile-progress>h2{margin:8px 0 0;font-size:20px}
+#athlete-profile-content #profile-progress .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:370px){#athlete-profile-content .profile-fields{gap:8px}#athlete-profile-content .profile-panel{padding:12px}}
+</style>
+</head>
 <body>
 <div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
@@ -113,7 +131,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <script src="disciplines/run.js?v=20261029gender1"></script>
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js"></script>
-<script src="app.js?v=20261029profile2"></script>
+<script src="app.js?v=20261029profilelayout1"></script>
 <script src="workout-timer.js?v=20261029runall1"></script>
 <script>
 (function(){

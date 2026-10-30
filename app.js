@@ -350,11 +350,11 @@ function progress(target=app){
  if($('history-select')){$('history-select').onchange=renderHistory;renderHistory()}
 }
 function body(target=app){
- target.innerHTML=`<h2>${tr('Body composition','Composición corporal')}</h2><div class="card"><label>${tr('Body weight unit','Unidad de peso corporal')}</label><select id="body-unit"><option value="lb" ${db.settings.unit==='lb'?'selected':''}>lb</option><option value="kg" ${db.settings.unit==='kg'?'selected':''}>kg</option></select><div class="grid" style="margin-top:12px"><div><label>${tr('Waist (inches)','Cintura (pulgadas)')}</label><input id="waist" type="number" step="0.1"></div><div><label>${tr('Body weight','Peso corporal')} (${db.settings.unit})</label><input id="mass" type="number" step="0.1"></div></div><button class="primary full" id="save-body">${tr('Save measurement','Guardar medición')}</button></div><div class="card"><h3>${tr('Measurement history','Historial')}</h3><div class="history">${db.body.slice().reverse().map(x=>`${esc(x.date)} · ${tr('Waist','Cintura')} ${x.waist??'—'} in · ${tr('Weight','Peso')} ${x.mass==null?'—':displayed(x.mass)} ${db.settings.unit}`).join('<hr>')||tr('No measurements yet.','Sin mediciones.')}</div></div>`;
-
+ target.innerHTML=`<section class="profile-panel card"><h3>${tr('Body Measurements','Medidas corporales')}</h3><div class="profile-fields"><div class="profile-field"><label for="mass">${tr('Body weight','Peso corporal')}</label><input id="mass" type="number" min="0" step="0.1" inputmode="decimal" placeholder="—"><label for="body-unit">${tr('Weight unit','Unidad de peso')}</label><select id="body-unit"><option value="lb" ${db.settings.unit==='lb'?'selected':''}>lb</option><option value="kg" ${db.settings.unit==='kg'?'selected':''}>kg</option></select></div><div class="profile-field"><label for="waist">${tr('Waist (inches)','Cintura (pulgadas)')}</label><input id="waist" type="number" min="0" step="0.1" inputmode="decimal" placeholder="—"><span class="profile-unit-note">${tr('inches','pulgadas')}</span></div></div><button class="primary full" id="save-body">${tr('Log measurement','Registrar medición')}</button></section><section class="profile-panel card"><h3>${tr('Measurement history','Historial de medidas')}</h3><div class="history">${db.body.slice().reverse().map(x=>`${esc(x.date)} · ${tr('Waist','Cintura')} ${x.waist??'—'} in · ${tr('Weight','Peso')} ${x.mass==null?'—':displayed(x.mass)} ${db.settings.unit}`).join('<hr>')||tr('No measurements yet.','Sin mediciones.')}</div></section>`;
  $('body-unit').onchange=e=>{db.settings.unit=e.target.value;save();target===app?render():renderAthleteProfile()};
  $('save-body').onclick=()=>{let waist=$('waist').value,mass=$('mass').value;if(!waist&&!mass)return;if((waist&&Number(waist)<=0)||(mass&&Number(mass)<=0))return;db.body.push({date:new Date().toISOString().slice(0,10),waist:waist?Number(waist):null,mass:mass?lbs(Number(mass)):null});save();target===app?render():renderAthleteProfile()};
 }
+
 // Fuel Lab export is separate from the full-fidelity device backup.
 // No nutrition recommendations or inferred intensity are included.
 function fuelLabReport(){
@@ -383,7 +383,7 @@ window.renderAthleteProfile=renderAthleteProfile;
 function renderAthleteProfile(){
  const target=document.getElementById('athlete-profile-content');
  if(!target)return;
- target.innerHTML=`<div class="card"><label for="profile-gender">${tr('Gender / anatomy illustration','Género / ilustración anatómica')}</label><select id="profile-gender"><option value="male">${tr('Male','Masculino')}</option><option value="female">${tr('Female','Femenino')}</option></select></div><div id="profile-measurements"></div><div id="profile-progress"></div>`;
+ target.innerHTML=`<section class="profile-panel card"><h3>${tr('Gender','Género')}</h3><label for="profile-gender">${tr('Gender / anatomy illustration','Género / ilustración anatómica')}</label><select id="profile-gender"><option value="male">${tr('Male','Masculino')}</option><option value="female">${tr('Female','Femenino')}</option></select></section><div id="profile-measurements"></div><div id="profile-progress"></div>`;
  const select=document.getElementById('profile-gender');
  select.value=db.settings.bodyIllustration==='female'?'female':'male';
  select.onchange=()=>{db.settings.bodyIllustration=select.value;save();render();if(window.TrainLabRun)window.TrainLabRun.render();};
