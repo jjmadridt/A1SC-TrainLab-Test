@@ -150,6 +150,19 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <script src="app.js?v=20261029profilebackup1"></script>
 <script src="workout-timer.js?v=20261029runall1"></script>
 <script>
+/* Place the existing shared Timer launcher in the top navigation.
+   Reuse the original button and its click handler; leave the timer engine untouched. */
+(function(){
+  const timerButton=document.getElementById('tl-timer-open');
+  const headerActions=document.querySelector('.shell-head .shell-actions');
+  if(!timerButton||!headerActions)return;
+  headerActions.appendChild(timerButton);
+  const style=document.createElement('style');
+  style.textContent='#tl-timer-open{position:static;right:auto;bottom:auto;z-index:auto;box-shadow:none;border-radius:9px;padding:9px 10px;font-size:12px;white-space:nowrap;flex:0 0 auto}.shell-head .shell-actions{justify-content:flex-end;width:100%;gap:6px}.shell-head{padding-top:10px;padding-bottom:8px}';
+  document.head.appendChild(style);
+})();
+</script>
+<script>
 (function(){
 const dict={en:{hero:'One training platform. Every discipline.',choose:'Choose your discipline',strength:'Strength · Ready to use',soon:'Coming soon',runReady:'Weekly program · Beta',vision:'Built for a growing team',visionText:'Total Body is active today. Each additional discipline will be developed with its own volunteer team.',inDevelopment:'In development',placeholder:'This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.',previewOnly:'Presentation preview — no workouts or tracking are active in this module yet.',back:'← All disciplines',fitSubtitle:'Strength training · Active module',localData:'Your training data stays on this device. Export backups regularly.',home:'Home'},es:{hero:'Una plataforma de entrenamiento. Todas las disciplinas.',choose:'Selecciona tu disciplina',strength:'Fuerza · Disponible',soon:'Próximamente',runReady:'Programa semanal · Beta',vision:'Una plataforma para crecer en equipo',visionText:'Total Body ya está disponible. Cada nueva disciplina será desarrollada con su propio equipo de voluntarios.',inDevelopment:'En desarrollo',placeholder:'Este espacio está reservado para que un equipo de voluntarios desarrolle rutinas, herramientas y seguimiento de progreso.',previewOnly:'Vista de presentación — este módulo todavía no registra entrenamientos.',back:'← Todas las disciplinas',fitSubtitle:'Entrenamiento de fuerza · Módulo activo',localData:'Tus entrenamientos se guardan en este dispositivo. Descarga respaldos con frecuencia.',home:'Inicio'}};
 const names={cycle:'CYCLE',run:'RUN',swim:'SWIM',tri:'TRIATHLON'};
