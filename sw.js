@@ -1,9 +1,10 @@
 
-const CACHE = 'trainlab-v2.18-approved-icon';
+const CACHE = 'trainlab-v2.19-registration-preview';
 
 const ASSETS = [
   './',
   './index.html',
+  './registration.html',
   './home-images/total-body.webp',
   './home-images/move.webp',
   './home-images/cycle.webp',
