@@ -132,7 +132,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 </style>
 </head>
 <body>
-<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><a id="registration-link" href="registration.html" class="homebtn" style="text-decoration:none;display:inline-flex;align-items:center">Account / Cuenta</a><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
+<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
 <section id="landing" class="screen visible">
  <div class="hero"><img src="brand-logo.png" alt="A1SC TrainLab logo with blue, white and magenta horizontal lines"><p data-i18n="hero">One training platform. Every discipline.</p></div>
  <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2><small class="muted">V2.5 · PREVIEW</small></div>
@@ -293,4 +293,4 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   });
 }
 
-</script><script>(function(){const link=document.getElementById('registration-link');const lang=document.getElementById('language-toggle');function update(){const es=lang&&lang.value==='es';link.textContent=es?'Cuenta':'Account';link.href='registration.html?lang='+(es?'es':'en')}if(lang)lang.addEventListener('change',update);update()})();</script></body></html>
+</script></body></html>
