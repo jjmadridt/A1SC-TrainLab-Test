@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.21-admin-audit';
+const CACHE = 'trainlab-v2.22-resilient-assets';
 
 const ASSETS = [
   './',
@@ -71,8 +71,16 @@ const ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
-      .then(cache => cache.addAll(ASSETS))
-      
+      .then(async cache => {
+        // Cache files individually: one unavailable legacy asset must not
+        // prevent the service worker from installing or caching other files.
+        await Promise.allSettled(ASSETS.map(async asset => {
+          const request = new Request(asset, { cache: 'reload' });
+          const response = await fetch(request);
+          if (!response.ok) throw new Error(`Unavailable asset: ${asset}`);
+          await cache.put(request, response);
+        }));
+      })
   );
 });
 
