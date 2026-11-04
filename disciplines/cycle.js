@@ -1,3 +1,4 @@
+// A1SC Cycle development preview - initial deployment
 // A1SC TrainLab — CYCLE
 // Independent cycling discipline module.
 // Features will be developed and tested here.
