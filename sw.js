@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.22-resilient-assets';
+const CACHE = 'trainlab-v2.23-cycle-v08-assets';
 
 const ASSETS = [
   './',
@@ -13,6 +13,14 @@ const ASSETS = [
   './home-images/swim.webp',
   './home-images/triathlon.webp',
 
+  './cycle-ui.js',
+  './disciplines/cycle.js',
+  './cycle-icons/spin-male.webp',
+  './cycle-icons/spin-female.webp',
+  './cycle-icons/speed-male.webp',
+  './cycle-icons/speed-female.webp',
+  './cycle-icons/climb-male.webp',
+  './cycle-icons/climb-female.webp',
   './app.js',
   './workout-timer.js',
   './boxing-bell-double-ding.wav',
