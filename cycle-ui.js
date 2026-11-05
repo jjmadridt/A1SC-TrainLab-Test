@@ -1,4 +1,4 @@
-/* A1SC Cycle v0.6 — persistent sessions, wall-clock guided timing, wake lock and accurate activity duration. */
+/* A1SC Cycle v0.7 — persistent sessions, wall-clock guided timing, wake lock and accurate activity duration. */
 (function(root){
  'use strict';
  const KEY='a1sc-cycle-weekly-plan-v03';
@@ -44,6 +44,14 @@
  window.addEventListener('pagehide',()=>{syncSession();persistSession();releaseWake();});
 
  try {const value=JSON.parse(localStorage.getItem(KEY)||'{}');if(value&&typeof value==='object'&&!Array.isArray(value))plan=value;}catch(e){}
+ function illustrationGender(){
+  try {const settings=JSON.parse(localStorage.getItem('fitclimb-v1')||'{}').settings;return settings?.bodyIllustration==='female'?'female':'male';}catch(e){return 'male';}
+ }
+ function workoutIcon(w){
+  const family=w.category==='intervals'?'speed':w.category==='technique'?'climb':'spin';
+  const im=make('img','cy-illustration');im.src='cycle-icons/'+family+'-'+illustrationGender()+'.webp';
+  im.alt='';im.loading='lazy';im.decoding='async';return im;
+ }
  function getWorkouts(){const mod=root.TrainLabCycle;return mod&&Array.isArray(mod.workouts)?mod.workouts:[];}
  function save(){try{localStorage.setItem(KEY,JSON.stringify(plan));return true;}catch(e){return false;}}
  function selected(){return Array.isArray(plan[selectedDay])?plan[selectedDay]:[];}
@@ -113,7 +121,7 @@
  function sessionView(mount){
   if(!session)return;
   const panel=make('section','cy-panel cy-session');const w=session.workout;
-  panel.appendChild(make('h2','',w.name));
+  const sessionHeading=make('div','cy-plan-heading');sessionHeading.appendChild(workoutIcon(w));sessionHeading.appendChild(make('h2','',w.name));panel.appendChild(sessionHeading);
   panel.appendChild(make('p','cy-note',session.mode==='guided'?t('Guided mode · segments advance automatically.','Modo guiado · los segmentos avanzan automáticamente.'):t('Manual mode · use Next to advance.','Modo manual · usa Siguiente para avanzar.')));
   if(session.finished){panel.appendChild(make('h3','',t('Session finished','Sesión finalizada')));}
   else {
@@ -137,7 +145,7 @@
   const notes=make('textarea');notes.rows=2;notes.maxLength=1000;notesLabel.appendChild(notes);logging.appendChild(notesLabel);
   const saveBtn=make('button','cy-start',t('Save activity','Guardar actividad'));saveBtn.type='button';
   saveBtn.addEventListener('click',()=>{
-   const match=/^(\\d{1,4}):(\\d{2})$/.exec(actual.value.trim());const actualSeconds=match?Number(match[1])*60+Number(match[2]):NaN;const rpe=Number(effort.value);
+   const match=/^(\d{1,4}):(\d{2})$/.exec(actual.value.trim());const actualSeconds=match?Number(match[1])*60+Number(match[2]):NaN;const rpe=Number(effort.value);
    if(!Number.isFinite(actualSeconds)||actualSeconds<0||actualSeconds>86400||Number(match?.[2])>59||rpe<1||rpe>10){root.alert(t('Check duration and effort.','Revisa duración y esfuerzo.'));return;}
    const record={id:'cycle-'+Date.now(),date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:Math.floor(actualSeconds/60),actualSeconds,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
    const updated=[record,...history];
@@ -159,7 +167,7 @@
   const summary=make('div','cy-panel');summary.appendChild(make('h3','',t('Selected workouts','Entrenamientos seleccionados')+' — '+(lang()==='es'?DAYS_ES:DAYS)[selectedDay]));
   const current=selected();if(!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
-   const item=make('div','cy-plan-item');item.appendChild(make('strong','',w.name));
+   const item=make('div','cy-plan-item');const heading=make('div','cy-plan-heading');heading.appendChild(workoutIcon(w));heading.appendChild(make('strong','',w.name));item.appendChild(heading);
    const config=make('div','cy-config');config.appendChild(make('span','cy-note',t('Suggested: ','Sugerido: ')+w.defaultDurationMinutes+' min'));
    const duration=make('input');duration.type='number';duration.min='5';duration.max='360';duration.step='1';duration.value=String(w.defaultDurationMinutes);duration.setAttribute('aria-label',t('Session minutes','Minutos de sesión'));
    const mode=make('select');[['guided',t('Guided','Guiado')],['manual',t('Manual','Manual')]].forEach(([v,label])=>{const o=make('option','',label);o.value=v;mode.appendChild(o);});
@@ -170,11 +178,11 @@
   }});mount.appendChild(summary);
   const catalog=make('div','cy-panel');catalog.appendChild(make('h2','',t('Workout library','Biblioteca de entrenamientos')));
   const categories=root.TrainLabCycle.categories||[];const tabs=make('div','cy-cats');categories.forEach(c=>{const b=make('button',c.id===selectedCategory?'cy-active':'',c.name);b.type='button';b.setAttribute('aria-pressed',String(c.id===selectedCategory));b.addEventListener('click',()=>{selectedCategory=c.id;render();});tabs.appendChild(b);});catalog.appendChild(tabs);
-  workouts.filter(w=>w.category===selectedCategory).forEach(w=>{const label=make('label','cy-workout');const cb=make('input');cb.type='checkbox';cb.checked=current.includes(w.id);cb.addEventListener('change',()=>{const next=new Set(selected());if(cb.checked)next.add(w.id);else next.delete(w.id);plan[selectedDay]=workouts.filter(x=>next.has(x.id)).map(x=>x.id);if(!save()){root.alert(t('Could not save your plan. Check browser storage settings.','No se pudo guardar el plan. Revisa el almacenamiento del navegador.'));}render();});const desc=make('span');desc.appendChild(make('strong','',w.name));desc.appendChild(make('small','',w.purpose));label.append(desc,cb);catalog.appendChild(label);});mount.appendChild(catalog);
+  workouts.filter(w=>w.category===selectedCategory).forEach(w=>{const label=make('label','cy-workout');const cb=make('input');cb.type='checkbox';cb.checked=current.includes(w.id);cb.addEventListener('change',()=>{const next=new Set(selected());if(cb.checked)next.add(w.id);else next.delete(w.id);plan[selectedDay]=workouts.filter(x=>next.has(x.id)).map(x=>x.id);if(!save()){root.alert(t('Could not save your plan. Check browser storage settings.','No se pudo guardar el plan. Revisa el almacenamiento del navegador.'));}render();});const desc=make('span');desc.appendChild(make('strong','',w.name));desc.appendChild(make('small','',w.purpose));label.append(workoutIcon(w),desc,cb);catalog.appendChild(label);});mount.appendChild(catalog);
   const logPanel=make('div','cy-panel');logPanel.appendChild(make('h2','',t('Recent Cycle activities','Actividades recientes de ciclismo')));
   if(!history.length)logPanel.appendChild(make('p','cy-note',t('No activities logged yet.','Todavía no hay actividades registradas.')));
   history.slice(0,10).forEach(r=>{const item=make('div','cy-log-item');const date=new Date(r.date);item.appendChild(make('strong','',r.workoutName+' · '+(Number.isNaN(date.getTime())?'':date.toLocaleDateString())));item.appendChild(make('small','',t('Planned ','Planeado ')+r.plannedMinutes+' min · '+t('Actual ','Real ')+(Number.isFinite(r.actualSeconds)?String(Math.floor(r.actualSeconds/60))+'m '+String(r.actualSeconds%60).padStart(2,'0')+'s':r.actualMinutes+' min')+' · RPE '+r.rpe+' · '+(r.completion==='complete'?t('Complete','Completo'):t('Partial','Parcial'))));if(r.notes)item.appendChild(make('small','',r.notes));logPanel.appendChild(item);});mount.appendChild(logPanel);
  }
- const style=document.createElement('style');style.textContent='\n/* Cycle v0.6 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n';document.head.appendChild(style);
+ const style=document.createElement('style');style.textContent='\n/* Cycle v0.7 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n\n#cycle-builder .cy-illustration{width:64px;height:64px;object-fit:cover;border-radius:12px;flex:0 0 64px;background:#071c30}\n#cycle-builder .cy-workout span{flex:1;min-width:0}\n#cycle-builder .cy-workout input[type=checkbox]{margin-left:auto}\n#cycle-builder .cy-plan-heading{display:flex;align-items:center;gap:12px;margin-bottom:8px}\n#cycle-builder .cy-plan-heading .cy-illustration{width:58px;height:58px;flex-basis:58px}\n#cycle-builder .cy-plan-heading h2{margin:0}\n';document.head.appendChild(style);
  root.TrainLabCycleUI={render};
 })(window);
