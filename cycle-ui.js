@@ -1,15 +1,48 @@
-/* A1SC Cycle v0.5 — weekly planning, session timers and local activity logging. */
+/* A1SC Cycle v0.6 — persistent sessions, wall-clock guided timing, wake lock and accurate activity duration. */
 (function(root){
  'use strict';
  const KEY='a1sc-cycle-weekly-plan-v03';
  const LOG_KEY='a1sc-cycle-activity-log-v05';
+ const SESSION_KEY='a1sc-cycle-session-v06';
  let history=[];
  try {const stored=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(Array.isArray(stored))history=stored;}catch(e){}
  const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
  const DAYS_ES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
  let selectedDay=(new Date().getDay()+6)%7, selectedCategory='endurance';
  let plan={};
- let session=null, ticker=null;
+ let session=null, ticker=null, wakeLock=null;
+ async function requestWake(){
+  if(!session?.running||document.visibilityState!=='visible'||!('wakeLock' in navigator))return;
+  try{if(!wakeLock)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}
+ }
+ function releaseWake(){if(wakeLock){const lock=wakeLock;wakeLock=null;lock.release().catch(()=>{});}}
+ function persistSession(){try{if(session)localStorage.setItem(SESSION_KEY,JSON.stringify(session));else localStorage.removeItem(SESSION_KEY);}catch(e){}}
+ function activeMs(){return session?Math.max(0,(session.activeMs||0)+(session.running?Date.now()-session.activeSince:0)):0;}
+ function syncSession(){
+  if(!session||!session.running||session.finished)return;
+  if(session.mode==='guided'){
+   let remainingMs=Math.max(0,session.segmentEndAt-Date.now());
+   while(remainingMs<=0&&!session.finished){
+    session.index++;
+    if(session.index>=session.steps.length){session.activeMs=activeMs();session.activeSince=null;session.finished=true;session.running=false;session.remaining=0;releaseWake();break;}
+    session.segmentEndAt+=session.steps[session.index].duration*1000;
+    remainingMs=Math.max(0,session.segmentEndAt-Date.now());
+   }
+   if(!session.finished)session.remaining=Math.ceil(remainingMs/1000);
+  }else{
+   session.remaining=Math.max(0,Math.ceil((session.segmentEndAt-Date.now())/1000));
+  }
+  persistSession();
+ }
+ try{
+  const stored=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
+  if(stored&&stored.workout&&Array.isArray(stored.steps)&&stored.steps.length&&typeof stored.index==='number'&&stored.index>=0&&stored.index<stored.steps.length&&Number.isFinite(stored.activeMs)&&(!stored.running||Number.isFinite(stored.segmentEndAt))){
+   session=stored;syncSession();
+  }
+ }catch(e){}
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){syncSession();requestWake();render();}else{syncSession();releaseWake();}});
+ window.addEventListener('pagehide',()=>{syncSession();persistSession();releaseWake();});
+
  try {const value=JSON.parse(localStorage.getItem(KEY)||'{}');if(value&&typeof value==='object'&&!Array.isArray(value))plan=value;}catch(e){}
  function getWorkouts(){const mod=root.TrainLabCycle;return mod&&Array.isArray(mod.workouts)?mod.workouts:[];}
  function save(){try{localStorage.setItem(KEY,JSON.stringify(plan));return true;}catch(e){return false;}}
@@ -38,13 +71,45 @@
   const ratio=total/original;
   return raw.map((x,i)=>({name:x.name,duration:secs(x.minutes*ratio),rpe:x.rpe,powerZone:x.powerZone,number:i+1}));
  }
- function elapsed(){return session?Math.max(0,Math.floor((Date.now()-(session.createdAt||Date.now())-(session.pausedMs||0)-(session.running?0:Date.now()-(session.pauseAt||Date.now())))/1000)):0;}
+ function elapsed(){return Math.floor(activeMs()/1000);}
  function stopTick(){if(ticker){clearInterval(ticker);ticker=null;}}
- function timeLeft(){if(!session)return 0;return session.running?Math.max(0,session.remaining-Math.floor((Date.now()-session.startedAt)/1000)):session.remaining;}
- function pause(){if(!session||!session.running)return;session.remaining=timeLeft();session.running=false;session.pauseAt=Date.now();stopTick();render();}
- function next(){if(!session)return;session.index++;if(session.index>=session.steps.length){session.finished=true;session.running=false;session.remaining=0;session.pauseAt=Date.now();stopTick();render();return;}session.remaining=session.steps[session.index].duration;session.startedAt=Date.now();render();}
- function tick(){if(!session||!session.running)return;const left=timeLeft();if(left<=0){if(session.mode==='guided')next();else{session.remaining=0;session.running=false;session.pauseAt=Date.now();stopTick();render();}}else{const display=document.getElementById('cy-countdown');if(display)display.textContent=clock(left);}}
- function startSession(w,minutes,mode){stopTick();session={workout:w,steps:stepsFor(w,minutes),index:0,mode,remaining:0,running:false,finished:false,plannedMinutes:minutes,createdAt:Date.now(),pauseAt:Date.now(),pausedMs:0};session.remaining=session.steps[0].duration;render();}
+ function timeLeft(){if(!session)return 0;return session.running?Math.max(0,Math.ceil((session.segmentEndAt-Date.now())/1000)):session.remaining;}
+ function pause(){
+  if(!session||!session.running)return;
+  syncSession();if(session.finished){stopTick();render();return;}
+  session.remaining=timeLeft();session.activeMs=activeMs();session.activeSince=null;session.running=false;
+  stopTick();releaseWake();persistSession();render();
+ }
+ function next(){
+  if(!session||session.finished)return;
+  syncSession();if(session.finished){stopTick();render();return;}
+  session.index++;
+  if(session.index>=session.steps.length){
+   session.finished=true;session.remaining=0;
+   if(session.running){session.activeMs=activeMs();session.activeSince=null;}
+   session.running=false;stopTick();releaseWake();persistSession();render();return;
+  }
+  session.remaining=session.steps[session.index].duration;
+  if(session.running)session.segmentEndAt=Date.now()+session.remaining*1000;
+  persistSession();render();
+ }
+ function tick(){
+  if(!session||!session.running)return;
+  const oldIndex=session.index;syncSession();
+  if(session.finished||oldIndex!==session.index){stopTick();if(session.running)ticker=setInterval(tick,250);render();return;}
+  const display=document.getElementById('cy-countdown');if(display)display.textContent=clock(timeLeft());
+ }
+ function startSession(w,minutes,mode){
+  stopTick();releaseWake();
+  session={workout:w,steps:stepsFor(w,minutes),index:0,mode,remaining:0,running:false,finished:false,plannedMinutes:minutes,activeMs:0,activeSince:null,segmentEndAt:null};
+  session.remaining=session.steps[0].duration;persistSession();render();
+ }
+ function resume(){
+  if(!session||session.finished)return;
+  session.running=true;session.activeSince=Date.now();session.segmentEndAt=Date.now()+session.remaining*1000;
+  persistSession();requestWake();stopTick();ticker=setInterval(tick,250);render();
+ }
+ if(session?.running){requestWake();ticker=setInterval(tick,250);}
  function sessionView(mount){
   if(!session)return;
   const panel=make('section','cy-panel cy-session');const w=session.workout;
@@ -57,31 +122,31 @@
    panel.appendChild(make('p','cy-rpe',t('RPE — Perceived Effort (1–10): ','Esfuerzo percibido (1–10): ')+st.rpe.join('–')+(st.powerZone?' · '+st.powerZone:'')));
    const actions=make('div','cy-controls');
    function btn(label,fn){const b=make('button','',label);b.type='button';b.addEventListener('click',fn);actions.appendChild(b);}
-   btn(session.running?t('Pause','Pausar'):t('Start / Resume','Iniciar / Continuar'),()=>{if(session.running){pause();return;}session.pausedMs+=Date.now()-session.pauseAt;session.startedAt=Date.now();session.running=true;stopTick();ticker=setInterval(tick,250);render();});
+   btn(session.running?t('Pause','Pausar'):t('Start / Resume','Iniciar / Continuar'),()=>{if(session.running)pause();else resume();});
    btn(t('Next segment','Siguiente segmento'),next);
    panel.appendChild(actions);
-   panel.appendChild(make('p','cy-note',t('Timers run locally. Keep the app open during a session; closing or reloading ends the session.','El cronómetro funciona localmente. Mantén la aplicación abierta; cerrar o recargar termina la sesión.')));
+   panel.appendChild(make('p','cy-note',t('Your session is saved on this device. The clock continues when you switch screens. Screen Awake is requested when supported.','La sesión se guarda en este dispositivo. El tiempo continúa al cambiar de pantalla. Se solicita mantener la pantalla activa cuando sea compatible.')));
   }
   const logging=make('div','cy-logging');
   logging.appendChild(make('h3','',t('Log activity','Registrar actividad')));
-  const actualLabel=make('label','',t('Actual duration (minutes)','Duración real (minutos)'));
-  const actual=make('input');actual.type='number';actual.min='0';actual.max='1440';actual.step='1';actual.value=String(Math.round(elapsed()/60));actualLabel.appendChild(actual);logging.appendChild(actualLabel);
+  const actualLabel=make('label','',t('Actual duration (mm:ss) — automatically measured; editable','Duración real (mm:ss) — automática; editable'));
+  const actual=make('input');actual.type='text';actual.inputMode='numeric';actual.value=String(Math.floor(elapsed()/60)).padStart(2,'0')+':'+String(elapsed()%60).padStart(2,'0');let manuallyEdited=false;actual.addEventListener('input',()=>{manuallyEdited=true;});actualLabel.appendChild(actual);logging.appendChild(actualLabel);
   const effortLabel=make('label','',t('Actual effort (RPE 1–10)','Esfuerzo real (1–10)'));
   const effort=make('select');for(let i=1;i<=10;i++){const option=make('option','',String(i));option.value=String(i);if(i===5)option.selected=true;effort.appendChild(option);}effortLabel.appendChild(effort);logging.appendChild(effortLabel);
   const notesLabel=make('label','',t('Notes (optional)','Notas (opcional)'));
   const notes=make('textarea');notes.rows=2;notes.maxLength=1000;notesLabel.appendChild(notes);logging.appendChild(notesLabel);
   const saveBtn=make('button','cy-start',t('Save activity','Guardar actividad'));saveBtn.type='button';
   saveBtn.addEventListener('click',()=>{
-   const minutes=Number(actual.value),rpe=Number(effort.value);
-   if(!Number.isFinite(minutes)||minutes<0||minutes>1440||!Number.isInteger(minutes)||rpe<1||rpe>10){root.alert(t('Check duration and effort.','Revisa duración y esfuerzo.'));return;}
-   const record={id:'cycle-'+Date.now(),date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:minutes,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
+   const match=/^(\\d{1,4}):(\\d{2})$/.exec(actual.value.trim());const actualSeconds=match?Number(match[1])*60+Number(match[2]):NaN;const rpe=Number(effort.value);
+   if(!Number.isFinite(actualSeconds)||actualSeconds<0||actualSeconds>86400||Number(match?.[2])>59||rpe<1||rpe>10){root.alert(t('Check duration and effort.','Revisa duración y esfuerzo.'));return;}
+   const record={id:'cycle-'+Date.now(),date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:Math.floor(actualSeconds/60),actualSeconds,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
    const updated=[record,...history];
    try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));history=updated;}catch(e){root.alert(t('Could not save activity. Check browser storage.','No se pudo guardar la actividad. Revisa el almacenamiento.'));return;}
-   stopTick();session=null;render();
+   stopTick();releaseWake();session=null;persistSession();render();
   });logging.appendChild(saveBtn);
   logging.appendChild(make('p','cy-note',t('Saving stores this activity only on this device.','El registro se guarda únicamente en este dispositivo.')));
   panel.appendChild(logging);
-  const end=make('button','cy-end',t('Close session','Cerrar sesión'));end.type='button';end.addEventListener('click',()=>{stopTick();session=null;render();});panel.appendChild(end);
+  const end=make('button','cy-end',t('Close session','Cerrar sesión'));end.type='button';end.addEventListener('click',()=>{stopTick();releaseWake();session=null;persistSession();render();});panel.appendChild(end);
   mount.appendChild(panel);
  }
  function render(){
@@ -108,8 +173,8 @@
   workouts.filter(w=>w.category===selectedCategory).forEach(w=>{const label=make('label','cy-workout');const cb=make('input');cb.type='checkbox';cb.checked=current.includes(w.id);cb.addEventListener('change',()=>{const next=new Set(selected());if(cb.checked)next.add(w.id);else next.delete(w.id);plan[selectedDay]=workouts.filter(x=>next.has(x.id)).map(x=>x.id);if(!save()){root.alert(t('Could not save your plan. Check browser storage settings.','No se pudo guardar el plan. Revisa el almacenamiento del navegador.'));}render();});const desc=make('span');desc.appendChild(make('strong','',w.name));desc.appendChild(make('small','',w.purpose));label.append(desc,cb);catalog.appendChild(label);});mount.appendChild(catalog);
   const logPanel=make('div','cy-panel');logPanel.appendChild(make('h2','',t('Recent Cycle activities','Actividades recientes de ciclismo')));
   if(!history.length)logPanel.appendChild(make('p','cy-note',t('No activities logged yet.','Todavía no hay actividades registradas.')));
-  history.slice(0,10).forEach(r=>{const item=make('div','cy-log-item');const date=new Date(r.date);item.appendChild(make('strong','',r.workoutName+' · '+(Number.isNaN(date.getTime())?'':date.toLocaleDateString())));item.appendChild(make('small','',t('Planned ','Planeado ')+r.plannedMinutes+' min · '+t('Actual ','Real ')+r.actualMinutes+' min · RPE '+r.rpe+' · '+(r.completion==='complete'?t('Complete','Completo'):t('Partial','Parcial'))));if(r.notes)item.appendChild(make('small','',r.notes));logPanel.appendChild(item);});mount.appendChild(logPanel);
+  history.slice(0,10).forEach(r=>{const item=make('div','cy-log-item');const date=new Date(r.date);item.appendChild(make('strong','',r.workoutName+' · '+(Number.isNaN(date.getTime())?'':date.toLocaleDateString())));item.appendChild(make('small','',t('Planned ','Planeado ')+r.plannedMinutes+' min · '+t('Actual ','Real ')+(Number.isFinite(r.actualSeconds)?String(Math.floor(r.actualSeconds/60))+'m '+String(r.actualSeconds%60).padStart(2,'0')+'s':r.actualMinutes+' min')+' · RPE '+r.rpe+' · '+(r.completion==='complete'?t('Complete','Completo'):t('Partial','Parcial'))));if(r.notes)item.appendChild(make('small','',r.notes));logPanel.appendChild(item);});mount.appendChild(logPanel);
  }
- const style=document.createElement('style');style.textContent='\n/* Cycle v0.5 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n';document.head.appendChild(style);
+ const style=document.createElement('style');style.textContent='\n/* Cycle v0.6 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n';document.head.appendChild(style);
  root.TrainLabCycleUI={render};
 })(window);
