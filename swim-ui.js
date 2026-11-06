@@ -1,6 +1,7 @@
 /* Swim v0.2 planning UI. Isolated localStorage key; no activity logging. */
 (function(root){'use strict';
 const KEY='a1sc-swim-weekly-plan-v01',SETTINGS='a1sc-swim-settings-v01';
+const ACTIVE='a1sc-swim-active-v01',HISTORY='a1sc-swim-activity-history-v01';
 const days={en:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],es:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']};
 let day=(new Date().getDay()+6)%7,category='endurance';
 function load(key,fallback){try{const v=JSON.parse(localStorage.getItem(key));return v&&typeof v==='object'?v:fallback;}catch(e){return fallback;}}
@@ -34,6 +35,49 @@ selected().forEach((entry)=>{const w=data.workouts.find(x=>x.id===entry.id);if(!
 [['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{const wrapper=el('label','',label);const input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});wrapper.append(input);fields.append(wrapper);});line.append(fields);line.append(el('small','',t('Planned distance: ','Distancia planeada: ')+distance(entry)+' '+settings.unit));summary.append(line);});
 const total=selected().reduce((sum,x)=>sum+distance(x),0);summary.append(el('p','sw-total',t('Total planned: ','Total planeado: ')+total+' '+settings.unit));
 if(settings.environment==='pool'){const lengths=total/settings.pool;summary.append(el('p','sw-note',t('Equivalent pool lengths: ','Largos equivalentes: ')+(Number.isInteger(lengths)?lengths:lengths.toFixed(2))));}
+
+// Activity recorder: separate storage; does not modify weekly plans or Total Body logs.
+const activityPanel=panel(t('Activity recording','Registro de actividad'));
+const style=(node)=>{node.style.cssText='width:100%;margin:6px 0;padding:11px;border:1px solid #42607a;border-radius:9px;background:#091d2e;color:#fff';return node;};
+const active=load(ACTIVE,null);
+const now=Date.now();
+const elapsed=(a,at)=>Math.max(0,Math.floor(((a.accumulatedMs||0)+(a.status==='running'?Math.max(0,at-a.startedAt):0))/1000));
+const time=(sec)=>{const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');};
+const saveActive=(a)=>{try{if(a)localStorage.setItem(ACTIVE,JSON.stringify(a));else localStorage.removeItem(ACTIVE);}catch(e){alert(t('Device storage unavailable. Do not close the app.','Almacenamiento no disponible. No cierres la aplicación.'));}};
+const recorderButton=(text,action)=>{const b=button(text,action);b.style.margin='4px 6px 4px 0';activityPanel.append(b);return b;};
+const clock=el('div','',time(active?elapsed(active,now):0));clock.style.cssText='font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center;margin:12px 0';activityPanel.append(clock);
+if(active?.status==='running'){const tick=()=>{if(clock.isConnected)clock.textContent=time(elapsed(active,Date.now()));else clearInterval(timer);};const timer=setInterval(tick,1000);}
+if(!active){
+ activityPanel.append(el('p','sw-note',t('Start a timed session or enter a completed workout manually.','Inicia una sesión cronometrada o registra un entrenamiento manualmente.')));
+ recorderButton(t('START','INICIAR'),()=>{if(!selected().length){alert(t('Select at least one workout for this day first.','Selecciona al menos un entrenamiento para este día.'));return;}
+ const snapshot=selected().map(x=>({...x}));saveActive({status:'running',startedAt:Date.now(),accumulatedMs:0,day,environment:settings.environment,unit:settings.unit,pool:settings.pool,workouts:snapshot,createdAt:new Date().toISOString()});render();});
+ recorderButton(t('MANUAL ENTRY','REGISTRO MANUAL'),()=>{saveActive({status:'review',startedAt:0,accumulatedMs:0,day,environment:settings.environment,unit:settings.unit,pool:settings.pool,workouts:selected().map(x=>({...x})),createdAt:new Date().toISOString(),manual:true});render();});
+}else if(active.status==='running'){
+ activityPanel.append(el('p','sw-note',t('Timer running. You can lock your phone and return later.','Cronómetro activo. Puedes bloquear el teléfono y regresar después.')));
+ recorderButton(t('PAUSE','PAUSAR'),()=>{active.accumulatedMs+=Date.now()-active.startedAt;active.status='paused';active.startedAt=0;saveActive(active);render();});
+ recorderButton(t('FINISH','FINALIZAR'),()=>{if(!confirm(t('Finish this swimming session?','¿Finalizar esta sesión de natación?')))return;active.accumulatedMs+=Date.now()-active.startedAt;active.status='review';active.startedAt=0;saveActive(active);render();});
+}else if(active.status==='paused'){
+ activityPanel.append(el('p','sw-note',t('Session paused.','Sesión en pausa.')));
+ recorderButton(t('RESUME','REANUDAR'),()=>{active.startedAt=Date.now();active.status='running';saveActive(active);render();});
+ recorderButton(t('FINISH','FINALIZAR'),()=>{if(!confirm(t('Finish this swimming session?','¿Finalizar esta sesión de natación?')))return;active.status='review';saveActive(active);render();});
+}else if(active.status==='review'){
+ activityPanel.append(el('p','sw-note',t('Review actual results before saving.','Revisa los resultados reales antes de guardar.')));
+ const field=(label,value,min,step)=>{const wrap=el('label','',label);wrap.style.cssText='display:block;margin:9px 0';const input=style(el('input'));input.type='number';input.min=String(min);input.step=String(step);input.value=String(value);wrap.append(input);activityPanel.append(wrap);return input;};
+ const planned=active.workouts.reduce((n,w)=>n+distance(w),0);
+ const dist=field(t('Actual distance ('+active.unit+')','Distancia real ('+active.unit+')'),planned,0,1);
+ const sets=field(t('Completed sets','Series completadas'),active.workouts.reduce((n,w)=>n+(Number(w.sets)||0),0),0,1);
+ const duration=field(t('Elapsed time (minutes)','Tiempo transcurrido (minutos)'),Math.round(elapsed(active,now)/60*100)/100,0,0.01);
+ activityPanel.append(el('p','sw-note',t('Pool/open-water mode and pool length are saved with the record.','Se guardan el tipo de natación y la longitud de alberca.')));
+ recorderButton(t('SAVE ACTIVITY','GUARDAR ACTIVIDAD'),()=>{const d=Number(dist.value),s=Number(sets.value),mins=Number(duration.value);if(![d,s,mins].every(Number.isFinite)||d<0||s<0||!Number.isInteger(s)||mins<0){alert(t('Enter valid results.','Ingresa resultados válidos.'));return;}
+ const history=load(HISTORY,[]);if(!Array.isArray(history)){alert(t('Activity history cannot be read.','No se puede leer el historial.'));return;}
+ const record={id:'swim-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),savedAt:new Date().toISOString(),startedAt:active.createdAt,day:active.day,environment:active.environment,unit:active.unit,pool:active.environment==='pool'?active.pool:null,workouts:active.workouts,distance:d,completedSets:s,durationSeconds:Math.round(mins*60),manual:!!active.manual};
+ try{localStorage.setItem(HISTORY,JSON.stringify([...history,record]));localStorage.removeItem(ACTIVE);render();alert(t('SWIM activity saved on this device.','Actividad de natación guardada en este dispositivo.'));}catch(e){alert(t('Save failed. Your session has not been cleared.','No se pudo guardar. Tu sesión sigue disponible.'));}
+ });
+ recorderButton(t('BACK TO PAUSED','VOLVER A PAUSA'),()=>{if(active.manual){if(confirm(t('Discard manual entry?','¿Descartar registro manual?'))){saveActive(null);render();}}else{active.status='paused';saveActive(active);render();}});
+}
+const records=load(HISTORY,[]);
+if(Array.isArray(records)&&records.length){const h=el('div','sw-plan');h.append(el('strong','',t('Recent SWIM activities','Actividades recientes de natación')));records.slice(-5).reverse().forEach(r=>{const date=new Date(r.savedAt);h.append(el('p','sw-note',date.toLocaleDateString(lang()==='es'?'es-MX':'en-US')+' · '+r.distance+' '+r.unit+' · '+time(r.durationSeconds||0)));});activityPanel.append(h);}
+
 }
 root.TrainLabSwimUI={render};
 })(window);
