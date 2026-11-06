@@ -1,4 +1,4 @@
-/* Swim v0.2 planning UI. Isolated localStorage key; no activity logging. */
+/* SWIM planning and activity recording. Isolated storage keys. */
 (function(root){'use strict';
 const KEY='a1sc-swim-weekly-plan-v01',SETTINGS='a1sc-swim-settings-v01';
 const ACTIVE='a1sc-swim-active-v01',HISTORY='a1sc-swim-activity-history-v01';
@@ -67,16 +67,34 @@ if(!active){
  const dist=field(t('Actual distance ('+active.unit+')','Distancia real ('+active.unit+')'),planned,0,1);
  const sets=field(t('Completed sets','Series completadas'),active.workouts.reduce((n,w)=>n+(Number(w.sets)||0),0),0,1);
  const duration=field(t('Elapsed time (minutes)','Tiempo transcurrido (minutos)'),Math.round(elapsed(active,now)/60*100)/100,0,0.01);
+ const notesWrap=el('label','',t('Personal notes (optional)','Notas personales (opcional)'));notesWrap.style.cssText='display:block;margin:9px 0';const notes=style(el('textarea'));notes.rows=3;notes.maxLength=1000;notes.placeholder=t('How did the workout feel?','¿Cómo te sentiste durante el entrenamiento?');notes.value=active.notes||'';notes.addEventListener('input',()=>{active.notes=notes.value;saveActive(active);});notesWrap.append(notes);activityPanel.append(notesWrap);
  activityPanel.append(el('p','sw-note',t('Pool/open-water mode and pool length are saved with the record.','Se guardan el tipo de natación y la longitud de alberca.')));
  recorderButton(t('SAVE ACTIVITY','GUARDAR ACTIVIDAD'),()=>{const d=Number(dist.value),s=Number(sets.value),mins=Number(duration.value);if(![d,s,mins].every(Number.isFinite)||d<0||s<0||!Number.isInteger(s)||mins<0){alert(t('Enter valid results.','Ingresa resultados válidos.'));return;}
  const history=load(HISTORY,[]);if(!Array.isArray(history)){alert(t('Activity history cannot be read.','No se puede leer el historial.'));return;}
- const record={id:'swim-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),savedAt:new Date().toISOString(),startedAt:active.createdAt,day:active.day,environment:active.environment,unit:active.unit,pool:active.environment==='pool'?active.pool:null,workouts:active.workouts,distance:d,completedSets:s,durationSeconds:Math.round(mins*60),manual:!!active.manual};
+ const workoutDetails=active.workouts.map(w=>{const definition=data.workouts.find(x=>x.id===w.id);return {id:w.id,category:definition?.category||'',en:definition?.en||w.id,es:definition?.es||definition?.en||w.id};});
+ const record={id:'swim-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),savedAt:new Date().toISOString(),startedAt:active.createdAt,day:active.day,environment:active.environment,unit:active.unit,pool:active.environment==='pool'?active.pool:null,workouts:active.workouts,workoutDetails,notes:notes.value.trim(),distance:d,completedSets:s,durationSeconds:Math.round(mins*60),manual:!!active.manual};
  try{localStorage.setItem(HISTORY,JSON.stringify([...history,record]));localStorage.removeItem(ACTIVE);render();alert(t('SWIM activity saved on this device.','Actividad de natación guardada en este dispositivo.'));}catch(e){alert(t('Save failed. Your session has not been cleared.','No se pudo guardar. Tu sesión sigue disponible.'));}
  });
  recorderButton(t('BACK TO PAUSED','VOLVER A PAUSA'),()=>{if(active.manual){if(confirm(t('Discard manual entry?','¿Descartar registro manual?'))){saveActive(null);render();}}else{active.status='paused';saveActive(active);render();}});
 }
 const records=load(HISTORY,[]);
-if(Array.isArray(records)&&records.length){const h=el('div','sw-plan');h.append(el('strong','',t('Recent SWIM activities','Actividades recientes de natación')));records.slice(-5).reverse().forEach(r=>{const date=new Date(r.savedAt);h.append(el('p','sw-note',date.toLocaleDateString(lang()==='es'?'es-MX':'en-US')+' · '+r.distance+' '+r.unit+' · '+time(r.durationSeconds||0)));});activityPanel.append(h);}
+if(Array.isArray(records)&&records.length){
+ const h=el('div','sw-plan');h.append(el('strong','',t('Recent SWIM activities','Actividades recientes de natación')));
+ records.slice(-5).reverse().forEach(r=>{
+  const item=el('div','sw-plan');
+  // Older records do not have workoutDetails. Resolve their saved workout IDs using the catalog.
+  const details=Array.isArray(r.workoutDetails)&&r.workoutDetails.length?r.workoutDetails:(Array.isArray(r.workouts)?r.workouts.map(w=>{const def=data.workouts.find(x=>x.id===w.id);return {id:w.id,category:def?.category||'',en:def?.en||w.id,es:def?.es||def?.en||w.id};}):[]);
+  const names=details.map(w=>w[lang()]||w.en||w.id).filter(Boolean);
+  item.append(el('strong','',names.length?names.join(' · '):t('SWIM activity','Actividad de natación')));
+  const categories=[...new Set(details.map(w=>data.categories.find(c=>c.id===w.category)?.[lang()]||w.category).filter(Boolean))];
+  const mode=r.environment==='open'?t('Open water','Aguas abiertas'):t('Pool','Alberca');
+  item.append(el('small','',categories.concat(mode).join(' · ')));
+  const date=new Date(r.savedAt);const dateText=Number.isNaN(date.getTime())?'':date.toLocaleDateString(lang()==='es'?'es-MX':'en-US');
+  item.append(el('p','sw-note',dateText+' · '+r.distance+' '+r.unit+' · '+time(r.durationSeconds||0)+' · '+(r.completedSets??0)+' '+t('sets','series')));
+  if(typeof r.notes==='string'&&r.notes.trim())item.append(el('p','sw-note',t('Note: ','Nota: ')+r.notes));
+  h.append(item);
+ });activityPanel.append(h);
+}
 
 }
 root.TrainLabSwimUI={render};
