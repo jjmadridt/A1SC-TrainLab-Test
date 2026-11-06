@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.26-unified-history';
+const CACHE = 'trainlab-v2.27-card-labels';
 
 const ASSETS = [
   './',
