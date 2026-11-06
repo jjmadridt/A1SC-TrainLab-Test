@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.25-swim-offline';
+const CACHE = 'trainlab-v2.26-unified-history';
 
 const ASSETS = [
   './',
@@ -67,6 +67,7 @@ const ASSETS = [
   './swim-icons/technique-male.webp',
   './swim-icons/technique-female.webp',
   './app.js',
+  './unified-history.js',
   './workout-timer.js',
   './boxing-bell-double-ding.wav',
   './disciplines/run.js',

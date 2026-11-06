@@ -136,6 +136,24 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <style>
 #swim-builder{color:#eaf4ff}#swim-builder .sw-panel{background:#10273d;border:1px solid #30516d;border-radius:15px;padding:16px;margin:12px 0}#swim-builder h2{font-size:19px;margin:0 0 12px}#swim-builder .sw-buttons{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}#swim-builder button{min-height:42px;padding:8px 10px}#swim-builder .sw-active{background:#267da9;border-color:#ff4c9c}#swim-builder .sw-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}#swim-builder .sw-days button{min-width:0;padding:8px 1px;font-size:12px}#swim-builder .sw-settings,#swim-builder .sw-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:10px 0}#swim-builder label{font-size:12px}#swim-builder input[type=number],#swim-builder select{display:block;width:100%;box-sizing:border-box;padding:9px;background:#091d2e;color:white;border:1px solid #42607a;border-radius:8px;margin-top:5px}#swim-builder .sw-workout{display:flex;gap:10px;align-items:center;border-top:1px solid #29465e;padding:10px 0}#swim-builder .sw-workout input{accent-color:#ff4c9c;width:20px;height:20px}#swim-builder .sw-icon{width:72px;height:65px;object-fit:cover;border-radius:8px}#swim-builder .sw-workout span{flex:1}#swim-builder .sw-workout strong,#swim-builder .sw-workout small{display:block}#swim-builder .sw-workout small,#swim-builder .sw-note{color:#a8c4d6;font-size:12px;line-height:1.5}#swim-builder .sw-plan{border-top:1px solid #29465e;padding:12px 0}#swim-builder .sw-plan small{display:block;color:#a8c4d6}#swim-builder .sw-fields{grid-template-columns:repeat(3,minmax(0,1fr))}#swim-builder .sw-total{font-weight:700;color:#fff}
 </style>
+<style>
+#unified-history .uh-summary{color:#a8c4d6;font-size:13px;margin-bottom:12px}
+#unified-history .uh-filters{display:grid;gap:9px;margin-bottom:12px}
+#unified-history .uh-tabs{display:flex;flex-wrap:wrap;gap:6px}
+#unified-history .uh-tabs button{font-size:12px;padding:8px 10px}
+#unified-history .uh-tabs button.uh-selected{background:#267da9;border-color:#ff4c9c}
+#unified-history .uh-filters select{background:#10283e;color:white;border:1px solid #45647c;border-radius:9px;padding:10px;width:100%}
+#unified-history .uh-entry{border-top:1px solid #34516c;padding:10px 0}
+#unified-history .uh-entry summary{cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:center}
+#unified-history .uh-entry summary strong{grid-column:1;grid-row:2;overflow-wrap:anywhere}
+#unified-history .uh-entry summary small{grid-column:2;grid-row:2;color:#a8c4d6}
+#unified-history .uh-tag{font-size:11px;font-weight:700;color:#80cfff}
+#unified-history .uh-desc{grid-column:1/-1;font-size:12px;color:#afc4d6}
+#unified-history .uh-detail{font-size:13px;color:#d7e7f3;overflow-wrap:anywhere;padding:7px 3px}
+#unified-history .uh-detail ul{margin:5px 0;padding-left:19px}
+#unified-history .uh-detail li{margin:4px 0}
+#unified-history .uh-note{font-size:11px;color:#9bb4c9;margin-top:14px}
+</style>
 </head>
 <body>
 <div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
@@ -163,6 +181,7 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
 <script src="swim-ui.js?v=20261105swim1"></script>
 <script src="app.js?v=20261029profilebackup1"></script>
 <script src="cycle-ui.js?v=20261104v03"></script>
+<script src="unified-history.js?v=20261106v1"></script>
 <script src="workout-timer.js?v=20261029runall1"></script>
 <script>
 /* Place the existing shared Timer launcher in the top navigation.
