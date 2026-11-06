@@ -67,7 +67,15 @@
       <p class="muted" style="font-size:12px">${t('Saved automatically on this device','Guardado automáticamente en este dispositivo')}</p></div>
       <div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${selected.length?selected.map((n,i)=>`<div class="run-exercise-block"><div class="run-program-row">${runArt(n)}<button type="button" class="run-title-button" data-run-expand="${esc(n)}" aria-expanded="${expanded===n}">${i+1}. ${esc(label(n))} ${expanded===n?'▾':'▸'}</button><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>${expanded===n?controls(n):''}</div>`).join(''):`<p class="muted">${t('Choose exercises above to build this day’s program.','Elige ejercicios arriba para crear el programa de este día.')}</p>`}
       <div class="run-log"><h3>${t('Recent Run Activities','Actividades recientes de carrera')}</h3>
-      ${activities.length?activities.slice(0,5).map(a=>`<div class="run-program-row"><span>${esc(new Date(a.timestamp).toLocaleDateString())} · ${esc(label(a.exercise))}<br><small>${a.data?esc(Object.entries(a.data).filter(([k,v])=>v!=='').map(([k,v])=>k+': '+v).join(' · ')):(a.durationSeconds>=60?Math.floor(a.durationSeconds/60)+'m ':'')+(a.durationSeconds%60)+'s · '+a.distance+' '+a.unit+' · '+esc(a.effort)}</small></span><small>${esc(a.pace)}</small></div>`).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`;
+      ${activities.length?activities.slice(0,5).map((a,i)=>`<div class="run-program-row"><span>${esc(new Date(a.timestamp).toLocaleDateString())} · ${esc(label(a.exercise))}<br><small>${a.data?esc(Object.entries(a.data).filter(([k,v])=>v!=='').map(([k,v])=>k+': '+v).join(' · ')):(a.durationSeconds>=60?Math.floor(a.durationSeconds/60)+'m ':'')+(a.durationSeconds%60)+'s · '+a.distance+' '+a.unit+' · '+esc(a.effort)}</small></span><small>${esc(a.pace)}</small><button type="button" data-run-delete="${i}" style="padding:7px 9px;color:#ffb5b5">${t('Delete','Eliminar')}</button></div>`).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`;
+    el.querySelectorAll('[data-run-delete]').forEach(button=>button.onclick=()=>{
+      const index=Number(button.dataset.runDelete);
+      if(!Number.isInteger(index)||index<0||index>=activities.length)return;
+      if(!confirm(t('Delete this Run activity? This cannot be undone.','¿Eliminar esta actividad de carrera? No se puede deshacer.')))return;
+      const updated=activities.filter((_,i)=>i!==index);
+      try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render();}
+      catch(e){alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
+    });
     el.querySelectorAll('[data-run-expand]').forEach(b=>b.onclick=()=>{expanded=expanded===b.dataset.runExpand?null:b.dataset.runExpand;render()});
     el.querySelectorAll('[data-run-controls]').forEach(panel=>{
       const n=panel.dataset.runControls;
