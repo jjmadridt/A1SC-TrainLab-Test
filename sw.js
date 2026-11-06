@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.24-cycle-v08-totalbody-offline';
+const CACHE = 'trainlab-v2.25-swim-offline';
 
 const ASSETS = [
   './',
@@ -57,6 +57,15 @@ const ASSETS = [
   './cycle-icons/speed-female.webp',
   './cycle-icons/climb-male.webp',
   './cycle-icons/climb-female.webp',
+  // SWIM planning module and approved swimmer artwork.
+  './swim-ui.js',
+  './disciplines/swim.js',
+  './swim-icons/endurance-male.webp',
+  './swim-icons/endurance-female.webp',
+  './swim-icons/intervals-male.webp',
+  './swim-icons/intervals-female.webp',
+  './swim-icons/technique-male.webp',
+  './swim-icons/technique-female.webp',
   './app.js',
   './workout-timer.js',
   './boxing-bell-double-ding.wav',
