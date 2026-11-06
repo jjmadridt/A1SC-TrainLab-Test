@@ -1,9 +1,6 @@
-// A1SC TrainLab — SWIM
-// Independent swimming discipline module.
-// Features will be developed and tested here.
-
-window.TrainLabSwim = {
-  name: 'SWIM',
-  version: '0.1.0',
-  status: 'development'
-};
+/* A1SC Swim v0.2: planning data; no live timer or activity logging. */
+(function(root){'use strict';
+const workouts=[{"category": "endurance", "id": "continuous", "en": "Continuous Swim", "es": "Nado continuo", "perSet": 800, "sets": 1, "rest": 0}, {"category": "endurance", "id": "aerobic", "en": "Aerobic Intervals", "es": "Intervalos aeróbicos", "perSet": 100, "sets": 8, "rest": 30}, {"category": "endurance", "id": "progression", "en": "Distance Progression", "es": "Progresión de distancia", "perSet": 200, "sets": 4, "rest": 30}, {"category": "endurance", "id": "recovery", "en": "Recovery Swim", "es": "Nado de recuperación", "perSet": 400, "sets": 1, "rest": 0}, {"category": "intervals", "id": "sprints", "en": "Short Sprints", "es": "Sprints cortos", "perSet": 25, "sets": 8, "rest": 45}, {"category": "intervals", "id": "pace", "en": "Pace Intervals", "es": "Intervalos de ritmo", "perSet": 100, "sets": 6, "rest": 30}, {"category": "intervals", "id": "threshold", "en": "Threshold Sets", "es": "Series de umbral", "perSet": 200, "sets": 4, "rest": 45}, {"category": "intervals", "id": "speedendurance", "en": "Speed Endurance", "es": "Resistencia de velocidad", "perSet": 50, "sets": 10, "rest": 40}, {"category": "technique", "id": "freestyle", "en": "Freestyle Technique", "es": "Técnica de estilo libre", "perSet": 50, "sets": 6, "rest": 20}, {"category": "technique", "id": "breathing", "en": "Breathing Control", "es": "Control de respiración", "perSet": 50, "sets": 6, "rest": 25}, {"category": "technique", "id": "kickboard", "en": "Kickboard Drills", "es": "Ejercicios con tabla", "perSet": 50, "sets": 6, "rest": 20}, {"category": "technique", "id": "pullbuoy", "en": "Pull Buoy Drills", "es": "Ejercicios con pull buoy", "perSet": 50, "sets": 6, "rest": 20}, {"category": "technique", "id": "coordination", "en": "Stroke Coordination", "es": "Coordinación de brazada", "perSet": 50, "sets": 6, "rest": 25}];
+root.TrainLabSwim={name:'SWIM',version:'0.2.0',status:'development',workouts,
+ categories:[{id:'endurance',en:'Endurance',es:'Resistencia'},{id:'intervals',en:'Speed & Intervals',es:'Velocidad e intervalos'},{id:'technique',en:'Technique & Drills',es:'Técnica y ejercicios'}]};
+})(window);
