@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.27-card-labels';
+const CACHE = 'trainlab-v2.29-wakelock-diagnostic';
 
 const ASSETS = [
   './',

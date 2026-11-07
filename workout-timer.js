@@ -3,7 +3,7 @@
 'use strict';
 const style=document.createElement('style');style.textContent=`#tl-timer-open{position:fixed;right:16px;bottom:18px;z-index:990;background:#1465dc;color:white;border:1px solid #8db7ff;border-radius:24px;padding:12px 18px;font-weight:700;box-shadow:0 4px 18px #0008}#tl-timer-panel{position:fixed;inset:0;background:#000c;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}#tl-timer-panel.visible{display:flex}#tl-timer-panel .timer-card{background:#151c29;color:white;border:1px solid #52637d;border-radius:18px;padding:22px;width:min(440px,100%);max-height:90vh;overflow:auto}#tl-timer-panel button{margin:5px;padding:10px 14px;border-radius:8px;background:#246ce4;color:white;border:0}#tl-timer-panel button:disabled{opacity:.45}#tl-timer-panel input,#tl-timer-panel select{width:100%;padding:9px;margin:5px 0 12px;background:#fff;color:#111;border-radius:6px}#tl-clock{font-size:54px;font-variant-numeric:tabular-nums;text-align:center;font-weight:800}#tl-phase{text-align:center;color:#9cd1ff}#tl-timer-panel label{display:block;font-size:13px}`;document.head.append(style);
 const launch=document.createElement('button');launch.id='tl-timer-open';launch.type='button';launch.textContent='⏱ Timer';document.body.append(launch);
-const overlay=document.createElement('div');overlay.id='tl-timer-panel';overlay.innerHTML=`<div class="timer-card" role="dialog" aria-modal="true" aria-label="Workout timer"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Workout Timer</h2><button id="tl-close" type="button">✕</button></div><label>Mode<select id="tl-mode"><option value="countdown">Countdown</option><option value="stopwatch">Stopwatch</option><option value="interval">Intervals</option></select></label><div id="tl-config"><label>Duration<div data-time-editor="duration"></div><input id="tl-duration" type="hidden" value="60"></label></div><div id="tl-interval-config" style="display:none"><label>Peak cycles (1–10)<input id="tl-cycles" type="number" min="1" max="10" value="5"></label><label>Peak duration<div data-time-editor="peak"></div><input id="tl-peak" type="hidden" value="60"></label><label>Recovery duration<div data-time-editor="recovery"></div><input id="tl-recovery" type="hidden" value="120"></label></div><p id="tl-validation" role="status" aria-live="polite" style="display:none;color:#ffd29c;font-size:13px;margin:8px 0"></p><div id="tl-phase">Ready</div><div id="tl-clock">01:00</div><div style="text-align:center"><button id="tl-start">Start</button><button id="tl-pause" disabled>Pause</button><button id="tl-stop">Stop</button><button id="tl-reset">Reset</button></div><p style="font-size:12px;color:#bdc9da">A double-ding boxing bell marks phase changes. Workout logging always requires confirmation.</p></div>`;document.body.append(overlay);
+const overlay=document.createElement('div');overlay.id='tl-timer-panel';overlay.innerHTML=`<div class="timer-card" role="dialog" aria-modal="true" aria-label="Workout timer"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Workout Timer</h2><button id="tl-close" type="button">✕</button></div><label>Mode<select id="tl-mode"><option value="countdown">Countdown</option><option value="stopwatch">Stopwatch</option><option value="interval">Intervals</option></select></label><div id="tl-config"><label>Duration<div data-time-editor="duration"></div><input id="tl-duration" type="hidden" value="60"></label></div><div id="tl-interval-config" style="display:none"><label>Peak cycles (1–10)<input id="tl-cycles" type="number" min="1" max="10" value="5"></label><label>Peak duration<div data-time-editor="peak"></div><input id="tl-peak" type="hidden" value="60"></label><label>Recovery duration<div data-time-editor="recovery"></div><input id="tl-recovery" type="hidden" value="120"></label></div><p id="tl-validation" role="status" aria-live="polite" style="display:none;color:#ffd29c;font-size:13px;margin:8px 0"></p><div id="tl-phase">Ready</div><div id="tl-clock">01:00</div><p id="tl-wake-status" role="status" aria-live="polite" style="text-align:center;font-size:12px;color:#bdc9da;margin:5px 0">Screen awake: waiting</p><div style="text-align:center"><button id="tl-wake-retry" type="button" style="display:none">Retry screen awake</button></div><div style="text-align:center"><button id="tl-start">Start</button><button id="tl-pause" disabled>Pause</button><button id="tl-stop">Stop</button><button id="tl-reset">Reset</button></div><p style="font-size:12px;color:#bdc9da">A double-ding boxing bell marks phase changes. Workout logging always requires confirmation.</p></div>`;document.body.append(overlay);
 // Bilingual labels follow Train Lab's existing EN/ES selector. No timer logic is changed.
 const timerEnglish=new Map();
 const timerLabels={
@@ -22,7 +22,14 @@ const timerLabels={
  'Check interval count and peak/recovery durations.':'Revisa los ciclos y las duraciones de esfuerzo y recuperación.',
  'Increase minutes':'Aumentar minutos','Decrease minutes':'Disminuir minutos',
  'Increase seconds':'Aumentar segundos','Decrease seconds':'Disminuir segundos',
- 'Workout timer':'Temporizador de entrenamiento'
+ 'Workout timer':'Temporizador de entrenamiento',
+ 'Retry screen awake':'Reintentar mantener pantalla activa',
+ 'Screen awake: waiting':'Pantalla activa: en espera',
+ 'Screen awake: active':'Pantalla activa: funcionando',
+ 'Screen awake: requesting':'Pantalla activa: solicitando permiso',
+ 'Screen awake: unsupported':'Pantalla activa: no compatible',
+ 'Screen awake: unavailable — tap Retry':'Pantalla activa: no disponible — pulsa Reintentar',
+ 'Screen awake: inactive':'Pantalla activa: inactiva'
 };
 const timerLanguage=()=>{
  const selector=document.getElementById('language-toggle');
@@ -77,10 +84,60 @@ for(const id of Object.keys(limits)){
  syncEditor(id);
 }
 const el=id=>document.getElementById('tl-'+id);let state={mode:'countdown',remaining:60,elapsed:0,running:false,phase:0,segments:[],origin:null,index:null,deadline:0};let ticker=null;
+// Request wake lock directly from the athlete's Start/Resume gesture.
+// Show an explicit status so device-level rejection is never mistaken for success.
+let timerWakeLock=null;
+let timerWakeRequestPending=false;
+const wakeStatus=el('wake-status'),wakeRetry=el('wake-retry');
+function wakeMessage(message, retry=false){
+ wakeStatus.textContent=timerTranslateText(message);
+ wakeRetry.style.display=retry?'inline-block':'none';
+ wakeRetry.textContent=timerTranslateText('Retry screen awake');
+}
+async function requestTimerWakeLock(){
+ if(!state.running||document.visibilityState!=='visible')return;
+ if(timerWakeLock&&!timerWakeLock.released){wakeMessage('Screen awake: active');return;}
+ if(timerWakeRequestPending)return;
+ if(!navigator.wakeLock||typeof navigator.wakeLock.request!=='function'){
+  wakeMessage('Screen awake: unsupported');return;
+ }
+ timerWakeRequestPending=true;
+ wakeMessage('Screen awake: requesting');
+ try{
+  const lock=await navigator.wakeLock.request('screen');
+  if(!state.running||document.visibilityState!=='visible'){
+   await lock.release();
+   wakeMessage('Screen awake: inactive');
+  }else{
+   timerWakeLock=lock;
+   wakeMessage('Screen awake: active');
+   lock.addEventListener('release',()=>{
+    if(timerWakeLock===lock){
+     timerWakeLock=null;
+     if(state.running&&document.visibilityState==='visible')wakeMessage('Screen awake: unavailable — tap Retry',true);
+    }
+   });
+  }
+ }catch(e){
+  console.warn('Train Lab screen wake lock rejected:',e?.name,e?.message);
+  wakeMessage('Screen awake: unavailable — tap Retry',true);
+ }finally{timerWakeRequestPending=false;}
+}
+function releaseTimerWakeLock(){
+ const lock=timerWakeLock;timerWakeLock=null;
+ if(lock&&!lock.released)lock.release().catch(()=>{});
+ wakeMessage('Screen awake: inactive');
+}
+wakeRetry.onclick=()=>requestTimerWakeLock();
+document.addEventListener('visibilitychange',()=>{
+ if(document.visibilityState==='visible')requestTimerWakeLock();
+ else releaseTimerWakeLock();
+});
+window.addEventListener('pagehide',releaseTimerWakeLock);
 const clock=n=>`${String(Math.floor(Math.max(0,n)/60)).padStart(2,'0')}:${String(Math.max(0,n)%60).padStart(2,'0')}`;
 const bellAudio=new Audio('./boxing-bell-double-ding.wav');bellAudio.preload='auto';
 function chime(){try{bellAudio.pause();bellAudio.currentTime=0;const playback=bellAudio.play();if(playback&&playback.catch)playback.catch(()=>{});}catch(e){}}
-function stop(){if(ticker)clearInterval(ticker);ticker=null;state.running=false;el('start').disabled=false;el('pause').disabled=true;el('pause').textContent=timerTranslateText('Pause')}
+function stop(){releaseTimerWakeLock();if(ticker)clearInterval(ticker);ticker=null;state.running=false;el('start').disabled=false;el('pause').disabled=true;el('pause').textContent=timerTranslateText('Pause')}
 function values(){const mode=el('mode').value,duration=Number(el('duration').value),cycles=Number(el('cycles').value),peak=Number(el('peak').value),recovery=Number(el('recovery').value);if(mode==='countdown'&&(!Number.isInteger(duration)||duration<1||duration>7200))throw Error('Enter a duration between 1 and 7200 seconds.');if(mode==='interval'&&(!Number.isInteger(cycles)||cycles<1||cycles>10||!Number.isInteger(peak)||peak<1||peak>900||!Number.isInteger(recovery)||recovery<1||recovery>1200))throw Error('Check interval count and peak/recovery durations.');return{mode,duration,cycles,peak,recovery}}
 function reset(){stop();let v;try{v=values();el('validation').style.display='none';el('validation').textContent=''}catch(e){el('validation').textContent=timerTranslateText(e.message);el('validation').style.display='block';el('phase').textContent=timerTranslateText('Adjust timer settings');el('start').disabled=true;return false}state.mode=v.mode;state.elapsed=0;state.phase=0;state.segments=[];if(v.mode==='interval')for(let i=0;i<v.cycles;i++){state.segments.push({name:`Peak ${i+1}/${v.cycles}`,seconds:v.peak});if(i<v.cycles-1)state.segments.push({name:'Recovery',seconds:v.recovery})}state.remaining=v.mode==='stopwatch'?0:v.mode==='interval'?state.segments[0].seconds:v.duration;el('phase').textContent=timerTranslateText(v.mode==='interval'?state.segments[0].name:'Ready');el('clock').textContent=clock(state.remaining);return true}
 function finish(completed=true){
@@ -140,5 +197,5 @@ timerApplyLanguage();launch.onclick=()=>open('manual',null);document.addEventLis
  }
  finish(false)
 };
-el('start').onclick=()=>{if(state.running)return;if(state.elapsed===0){if(!reset())return}else if(state.mode!=='stopwatch'&&state.remaining<=0){if(!reset())return}state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').disabled=false;el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');chime();ticker=setInterval(tick,150)};el('pause').onclick=()=>{if(state.running){tick();if(state.mode!=='stopwatch'){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining);state.segments.length&&(state.segments[state.phase].seconds=state.remaining);if(!state.segments.length){el('duration').value=state.remaining;syncEditor('duration');}}stop();el('pause').disabled=false;el('pause').textContent=timerTranslateText('Resume');el('phase').textContent=timerTranslateText('Paused')}else{state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').textContent=timerTranslateText('Pause');el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');ticker=setInterval(tick,150)}};
+el('start').onclick=()=>{if(state.running)return;if(state.elapsed===0){if(!reset())return}else if(state.mode!=='stopwatch'&&state.remaining<=0){if(!reset())return}state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').disabled=false;el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');requestTimerWakeLock();chime();ticker=setInterval(tick,150)};el('pause').onclick=()=>{if(state.running){tick();if(state.mode!=='stopwatch'){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining);state.segments.length&&(state.segments[state.phase].seconds=state.remaining);if(!state.segments.length){el('duration').value=state.remaining;syncEditor('duration');}}stop();el('pause').disabled=false;el('pause').textContent=timerTranslateText('Resume');el('phase').textContent=timerTranslateText('Paused')}else{state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').textContent=timerTranslateText('Pause');el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');requestTimerWakeLock();ticker=setInterval(tick,150)}};
 })();
