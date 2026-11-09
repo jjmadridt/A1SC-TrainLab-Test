@@ -9,13 +9,24 @@ const str=v=>v==null?'':String(v);
 const safeDate=v=>{const d=new Date(v);return Number.isFinite(d.getTime())?d:null;};
 const dateOf=(v,fallback)=>safeDate(v)||safeDate(fallback);
 const formatDuration=seconds=>{const n=Number(seconds);if(!Number.isFinite(n)||n<0)return '';const m=Math.floor(n/60),s=Math.round(n%60);return m+'m'+(s?' '+s+'s':'');};
+function totalDetail(s,tb){
+ const name=str(s.name),minutes=Number(s.count);
+ if(name==='Stationary bike')return name+' · '+(Number.isFinite(minutes)?formatDuration(minutes*60):'');
+ if(name==='Elliptical warm-up'){
+  const km=Number(s.weight),unit=tb?.distanceUnits?.[name]==='mi'?'mi':'km';
+  const distance=Number.isFinite(km)&&km>0?(unit==='mi'?km/1.609344:km):null;
+  const distanceText=distance===null?'':Number(distance.toFixed(2))+' '+unit;
+  return name+' · '+[Number.isFinite(minutes)?formatDuration(minutes*60):'',distanceText].filter(Boolean).join(' · ');
+ }
+ return name+' · '+str(s.weight)+' lb × '+str(s.count)+' '+str(s.unit);
+}
 function getRecords(){
  const records=[];
  const tb=read(SOURCES.total,{}),logs=array(tb?.logs),done=array(tb?.completed),groups=new Map();
  for(const x of logs){if(!x||typeof x!=='object')continue;const key=str(x.day)+'|'+str(x.session);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x);}
  const completedKeys=new Set();
- for(const c of done){if(!c||typeof c!=='object')continue;const key=str(c.day)+'|'+str(c.session);completedKeys.add(key);const sets=groups.get(key)||[];const d=dateOf(c.finishedAt,sets[sets.length-1]?.timestamp||sets[sets.length-1]?.date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(c.day),'Cuerpo completo — '+str(c.day)),summary:tr('Completed session','Sesión finalizada')+' · '+sets.length+' '+tr('sets','series'),details:sets.map(s=>str(s.name)+' · '+str(s.weight)+' lb × '+str(s.count)+' '+str(s.unit)),note:''});}
- for(const [key,sets] of groups){if(completedKeys.has(key)||!sets.length)continue;const d=dateOf(sets[sets.length-1].timestamp,sets[sets.length-1].date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(sets[0].day),'Cuerpo completo — '+str(sets[0].day)),summary:tr('Logged workout','Entrenamiento registrado')+' · '+sets.length+' '+tr('sets','series'),details:sets.map(s=>str(s.name)+' · '+str(s.weight)+' lb × '+str(s.count)+' '+str(s.unit)),note:''});}
+ for(const c of done){if(!c||typeof c!=='object')continue;const key=str(c.day)+'|'+str(c.session);completedKeys.add(key);const sets=groups.get(key)||[];const d=dateOf(c.finishedAt,sets[sets.length-1]?.timestamp||sets[sets.length-1]?.date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(c.day),'Cuerpo completo — '+str(c.day)),summary:tr('Completed session','Sesión finalizada')+' · '+sets.length+' '+tr('entries','registros'),details:sets.map(s=>totalDetail(s,tb)),note:''});}
+ for(const [key,sets] of groups){if(completedKeys.has(key)||!sets.length)continue;const d=dateOf(sets[sets.length-1].timestamp,sets[sets.length-1].date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(sets[0].day),'Cuerpo completo — '+str(sets[0].day)),summary:tr('Logged workout','Entrenamiento registrado')+' · '+sets.length+' '+tr('entries','registros'),details:sets.map(s=>totalDetail(s,tb)),note:''});}
  for(const r of array(read(SOURCES.cycle,[]))){if(!r||typeof r!=='object')continue;const d=dateOf(r.date);if(!d)continue;records.push({discipline:'cycle',date:d,name:str(r.workoutName||r.workoutId||'Cycle'),summary:[formatDuration(r.actualSeconds??(Number(r.actualMinutes)*60)),r.rpe?'RPE '+r.rpe:'',r.completion==='complete'?tr('Complete','Completo'):r.completion==='partial'?tr('Partial','Parcial'):''].filter(Boolean).join(' · '),details:[r.mode?tr('Mode: ','Modo: ')+str(r.mode):'',r.plannedMinutes!=null?tr('Planned: ','Planeado: ')+str(r.plannedMinutes)+' min':''].filter(Boolean),note:str(r.notes)});}
  for(const r of array(read(SOURCES.run,[]))){if(!r||typeof r!=='object')continue;const d=dateOf(r.timestamp);if(!d)continue;const fields=r.data&&typeof r.data==='object'?Object.entries(r.data).filter(([,v])=>v!==''&&v!=null).map(([k,v])=>k+': '+str(v)):[];records.push({discipline:'run',date:d,name:str(r.exercise||'Run'),summary:[formatDuration(r.durationSeconds),r.distance?str(r.distance)+' '+str(r.unit):'',str(r.pace)].filter(Boolean).join(' · '),details:fields,note:''});}
  for(const r of array(read(SOURCES.swim,[]))){if(!r||typeof r!=='object')continue;const d=dateOf(r.savedAt,r.startedAt);if(!d)continue;const ws=array(r.workoutDetails),fallback=array(r.workouts);const spanish=document.getElementById('language-toggle')?.value==='es';const names=ws.length?ws.map(w=>str(spanish?w.es||w.en:w.en||w.es||w.id)):fallback.map(w=>str(w.en||w.name||w.id||''));records.push({discipline:'swim',date:d,name:names.filter(Boolean).join(' + ')||tr('Swim session','Sesión de natación'),summary:[r.environment==='pool'?tr('Pool','Alberca'):r.environment==='open'?tr('Open Water','Aguas abiertas'):str(r.environment),r.distance!=null?str(r.distance)+' '+str(r.unit):'',formatDuration(r.durationSeconds)].filter(Boolean).join(' · '),details:[...ws.map(w=>str(w.category)).filter(Boolean),r.completedSets!=null?tr('Completed sets: ','Series completadas: ')+str(r.completedSets):''],note:str(r.notes)});}
