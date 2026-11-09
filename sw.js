@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.32-totalbody-compact-layout';
+const CACHE = 'trainlab-v2.33-elliptical-activity';
 
 const ASSETS = [
   './',
