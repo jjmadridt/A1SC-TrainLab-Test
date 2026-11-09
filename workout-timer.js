@@ -142,7 +142,7 @@ function values(){const mode=el('mode').value,duration=Number(el('duration').val
 function reset(){stop();el('finish-summary').style.display='none';let v;try{v=values();el('validation').style.display='none';el('validation').textContent=''}catch(e){el('validation').textContent=timerTranslateText(e.message);el('validation').style.display='block';el('phase').textContent=timerTranslateText('Adjust timer settings');el('start').disabled=true;return false}state.mode=v.mode;state.elapsed=0;state.phase=0;state.segments=[];if(v.mode==='interval')for(let i=0;i<v.cycles;i++){state.segments.push({name:`Peak ${i+1}/${v.cycles}`,seconds:v.peak});if(i<v.cycles-1)state.segments.push({name:'Recovery',seconds:v.recovery})}state.remaining=v.mode==='stopwatch'?0:v.mode==='interval'?state.segments[0].seconds:v.duration;el('phase').textContent=timerTranslateText(v.mode==='interval'?state.segments[0].name:'Ready');el('clock').textContent=clock(state.remaining);return true}
 function finish(completed=true){
  stop();if(completed)chime();el('phase').textContent=timerTranslateText(completed?'Complete':'Stopped early');
- if(state.origin==='bike'&&state.elapsed>0){el('finish-duration').textContent=(timerLanguage()==='es'?'Tiempo registrado: ':'Recorded time: ')+clock(state.elapsed);el('finish-summary').style.display='block';}
+ if((state.origin==='bike'||String(state.origin||'').startsWith('run-'))&&state.elapsed>0){el('finish-duration').textContent=(timerLanguage()==='es'?'Tiempo registrado: ':'Recorded time: ')+clock(state.elapsed);el('finish-summary').style.display='block';}
  if(state.origin==='plank'&&state.index!==null){
   overlay.classList.remove('visible');
   try{
@@ -187,12 +187,12 @@ function open(mode,index){
 }
 function config(){el('config').style.display=el('mode').value==='countdown'?'block':'none';el('interval-config').style.display=el('mode').value==='interval'?'block':'none'}
 timerApplyLanguage();el('finish-return').onclick=()=>{
- if(state.origin!=='bike'||!(state.elapsed>0))return;
+ if(!(state.origin==='bike'||String(state.origin||'').startsWith('run-'))||!(state.elapsed>0))return;
  const seconds=state.elapsed;
  overlay.classList.remove('visible');
- document.dispatchEvent(new CustomEvent('trainlab:timer-finished',{detail:{origin:'bike',elapsedSeconds:seconds,completed:el('phase').textContent===timerTranslateText('Complete')}}));
- const bike=document.querySelector('[data-open-timer="bike"]');
- if(bike)bike.scrollIntoView({block:'center',behavior:'instant'});
+ document.dispatchEvent(new CustomEvent('trainlab:timer-finished',{detail:{origin:state.origin,elapsedSeconds:seconds,completed:el('phase').textContent===timerTranslateText('Complete')}}));
+ const target=document.querySelector(`[data-open-timer="${state.origin}"]`);
+ if(target)target.scrollIntoView({block:'center',behavior:'instant'});
 };launch.onclick=()=>open('manual',null);document.addEventListener('click',e=>{const btn=e.target.closest('[data-open-timer]');if(btn)open(btn.dataset.openTimer,Number(btn.dataset.exerciseIndex))});el('close').onclick=()=>{stop();overlay.classList.remove('visible')};el('mode').onchange=()=>{config();reset()};['duration','cycles','peak','recovery'].forEach(id=>el(id).onchange=reset);el('reset').onclick=reset;el('stop').onclick=()=>{
  if(!state.running&&el('start').disabled)return;
  if(state.running)tick();

@@ -36,14 +36,28 @@
   function controls(n){
     const type=kind(n),v=settings[n]||{};
     const field=(id,title,value,min='0',step='1')=>`<label>${title}<input data-run-field="${id}" type="number" min="${min}" step="${step}" value="${esc(v[id]??value)}"></label>`;
+    const splitTime=(key,total,majorLabel,minorLabel,majorSize=60)=>{const seconds=Math.max(0,Math.round(Number(v[key]??total)||0));return `<div class="run-time-pair" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>${majorLabel}<input data-run-time-key="${key}" data-run-time-part="major" type="number" min="0" step="1" value="${Math.floor(seconds/majorSize)}"></label><label>${minorLabel}<input data-run-time-key="${key}" data-run-time-part="minor" type="number" min="0" max="${majorSize-1}" step="1" value="${seconds%majorSize}"></label></div>`};
+    const runTime=()=>{const minutes=Math.max(0,Math.round(Number(v.minutes??30)||0));return `<div class="run-time-pair" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>${t('Hours','Horas')}<input data-run-time-key="minutes" data-run-time-part="major" type="number" min="0" step="1" value="${Math.floor(minutes/60)}"></label><label>${t('Minutes','Minutos')}<input data-run-time-key="minutes" data-run-time-part="minor" type="number" min="0" max="59" step="1" value="${minutes%60}"></label></div>`};
     const timer=(mode)=>`<button type="button" class="run-save" data-open-timer="${mode}" data-exercise-index="0">⏱ ${t('Open Smart Timer','Abrir temporizador')}</button>`;
     let fields='';
-    if(type==='run')fields=field('minutes',t('Duration (minutes)','Duración (minutos)'),30)+field('distance',t('Distance','Distancia'),'','0','any')+`<label>${t('Unit','Unidad')}<select data-run-field="unit"><option value="km" ${v.unit==='mi'?'':'selected'}>km</option><option value="mi" ${v.unit==='mi'?'selected':''}>mi</option></select></label>`+(n==='Treadmill Run'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
-    if(type==='interval')fields=field('cycles',t('Cycles','Ciclos'),5,'1')+field('peak',t('Peak (seconds)','Pico (segundos)'),60,'1')+field('recovery',t('Recovery (seconds)','Recuperación (segundos)'),120,'1')+(n==='Treadmill Intervals'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
-    if(type==='drill')fields=field('sets',t('Sets','Series'),2,'1')+field('seconds',t('Duration per set (seconds)','Duración por serie (segundos)'),30,'1');
+    if(type==='run')fields=runTime()+field('distance',t('Distance','Distancia'),'','0','any')+`<label>${t('Unit','Unidad')}<select data-run-field="unit"><option value="km" ${v.unit==='mi'?'':'selected'}>km</option><option value="mi" ${v.unit==='mi'?'selected':''}>mi</option></select></label>`+(n==='Treadmill Run'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
+    if(type==='interval')fields=field('cycles',t('Cycles','Ciclos'),5,'1')+splitTime('peak',60,t('Peak minutes','Minutos de pico'),t('Peak seconds','Segundos de pico'))+splitTime('recovery',120,t('Recovery minutes','Minutos de recuperación'),t('Recovery seconds','Segundos de recuperación'))+(n==='Treadmill Intervals'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
+    if(type==='drill')fields=field('sets',t('Sets','Series'),2,'1')+splitTime('seconds',30,t('Minutes per set','Minutos por serie'),t('Seconds per set','Segundos por serie'));
+    const splitKeys=type==='run'?['minutes']:type==='interval'?['peak','recovery']:type==='drill'?['seconds']:[];fields+=splitKeys.map(key=>`<input type="hidden" data-run-field="${key}" value="${esc(v[key]??(key==='minutes'?30:key==='recovery'?120:key==='peak'?60:30))}">`).join('');
     if(type==='strength')fields=field('sets',t('Sets','Series'),3,'1')+field('reps',t('Repetitions','Repeticiones'),10,'1')+(n==='Step-Ups'||n==='Calf Raises'?field('weight',t('Optional weight (kg)','Peso opcional (kg)'),'','0','any'):'');
     return `<div class="run-controls" data-run-controls="${esc(n)}"><div class="run-log-fields">${fields}</div>${type==='interval'?timer('run-interval'):type==='run'||type==='drill'?timer('run-countdown'):''}<button type="button" class="run-save" data-run-log="${esc(n)}">${t('Log Activity','Registrar actividad')}</button><p class="muted" style="font-size:12px">${t('Settings save automatically. Timer completion does not log an activity.','Los ajustes se guardan automáticamente. El temporizador no registra la actividad por sí solo.')}</p></div>`;
   }
+  let pendingRunTimer=null;
+  document.addEventListener('trainlab:timer-finished',e=>{
+    const detail=e.detail||{};if(!String(detail.origin||'').startsWith('run-')||!(detail.elapsedSeconds>0)||!pendingRunTimer)return;
+    const n=pendingRunTimer;pendingRunTimer=null;
+    const seconds=Math.round(detail.elapsedSeconds),v=settings[n]||{};
+    if(kind(n)==='run')v.minutes=String(Math.round(seconds/60*100)/100);
+    else if(kind(n)==='drill')v.seconds=String(seconds);
+    else v.completedSeconds=String(seconds);
+    settings[n]=v;try{localStorage.setItem(CONTROL_KEY,JSON.stringify(settings))}catch(e){}
+    expanded=n;view='workout';render();
+  });
   const LOG_KEY = 'a1sc-run-activities-v1';
   let activities=[];
   try { const saved=JSON.parse(localStorage.getItem(LOG_KEY)); if(Array.isArray(saved))activities=saved; } catch(e) {}
@@ -91,8 +105,16 @@
         settings[n]={...(settings[n]||{}),[input.dataset.runField]:input.value};
         try{localStorage.setItem(CONTROL_KEY,JSON.stringify(settings))}catch(e){alert(t('Could not save settings.','No se pudieron guardar los ajustes.'))}
       });
+      panel.querySelectorAll('[data-run-time-part]').forEach(input=>input.addEventListener('change',()=>{
+        const key=input.dataset.runTimeKey,parts=[...panel.querySelectorAll(`[data-run-time-key="${key}"]`)];
+        const major=Number(parts.find(x=>x.dataset.runTimePart==='major')?.value),minor=Number(parts.find(x=>x.dataset.runTimePart==='minor')?.value);
+        const radix=key==='minutes'?60:60;
+        if(!Number.isInteger(major)||major<0||!Number.isInteger(minor)||minor<0||minor>=radix){input.setCustomValidity(t('Enter valid time values.','Ingresa valores de tiempo válidos.'));input.reportValidity();return;}
+        input.setCustomValidity('');const hidden=panel.querySelector(`[data-run-field="${key}"]`);if(hidden){hidden.value=String(major*radix+minor);hidden.dispatchEvent(new Event('change',{bubbles:true}));}
+      }));
       const timer=panel.querySelector('[data-open-timer]');
       if(timer)timer.addEventListener('click',(event)=>{
+        pendingRunTimer=n;
         const get=id=>Number(panel.querySelector(`[data-run-field="${id}"]`)?.value);
         if(kind(n)==='interval'){
           const values={cycles:get('cycles'),peak:get('peak'),recovery:get('recovery')};
@@ -112,8 +134,8 @@
         if(nums.some(([k,v])=>v!==''&&(!Number.isFinite(Number(v))||Number(v)<0))){alert(t('Check the entered values.','Revisa los valores.'));return;}
         if(kind(n)==='run'&&!(Number(data.minutes)>0)||kind(n)==='interval'&&!(Number(data.cycles)>0&&Number(data.peak)>0&&Number(data.recovery)>0)||kind(n)==='strength'&&!(Number(data.sets)>0&&Number(data.reps)>0)||kind(n)==='drill'&&!(Number(data.sets)>0&&Number(data.seconds)>0)){alert(t('Complete the required workout values.','Completa los valores del entrenamiento.'));return;}
         const seconds=Number(data.minutes)*60,km=Number(data.distance)*(data.unit==='mi'?1.609344:1);
-        const entry={timestamp:new Date().toISOString(),exercise:n,kind:kind(n),data,durationSeconds:kind(n)==='run'?seconds:0,distance:Number(data.distance)||0,unit:data.unit||'',effort:'',pace:seconds>0&&km>0?pace(seconds,km):''};
-        try{const updated=[entry,...activities];localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render();alert(t('Activity saved.','Actividad guardada.'))}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'))}
+        const entry={timestamp:new Date().toISOString(),exercise:n,kind:kind(n),data,durationSeconds:kind(n)==='run'?seconds:(Number(data.completedSeconds)||0),distance:Number(data.distance)||0,unit:data.unit||'',effort:'',pace:seconds>0&&km>0?pace(seconds,km):''};
+        try{const updated=[entry,...activities];localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render()}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'))}
       };
     });
     el.querySelectorAll('[data-run-day]').forEach(b=>b.onclick=()=>{day=b.dataset.runDay;render()});
