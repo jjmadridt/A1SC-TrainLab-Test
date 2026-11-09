@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.29-wakelock-diagnostic';
+const CACHE = 'trainlab-v2.30-totalbody-workout-first';
 
 const ASSETS = [
   './',
