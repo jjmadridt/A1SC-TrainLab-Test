@@ -195,6 +195,22 @@ if(db.totalBodyCleanStartVersion!==1){
  save();
 }
 restoreWeeklyProgram();
+// Per-weekday day types are separate from exercise selections and workout records.
+// Switching to Rest or Active Recovery never deletes the saved exercise plan.
+const DAY_TYPES=['training','recovery','rest'];
+function dayType(d){
+ const stored=db.dayTypes?.[d];
+ if(DAY_TYPES.includes(stored))return stored;
+ // Existing populated days remain training days; empty original recovery days default to rest.
+ return (!db.weeklyProgram[d]?.length&&(d==='Friday'||d==='Sunday'))?'rest':'training';
+}
+function dayTypeLabel(type){
+ return ({training:tr('Training Day','Día de entrenamiento'),recovery:tr('Active Recovery','Recuperación activa'),rest:tr('Rest Day','Día de descanso')})[type];
+}
+function dayTypePicker(){
+ const type=dayType(day);
+ return `<div class="card"><label for="tb-day-type">${tr('Day type','Tipo de día')}</label><select id="tb-day-type">${DAY_TYPES.map(t=>`<option value="${t}" ${type===t?'selected':''}>${dayTypeLabel(t)}</option>`).join('')}</select><p class="muted">${tr('Changing the day type never deletes your saved exercises. Training and Active Recovery can use the existing plan; Rest Day pauses it.','Cambiar el tipo de día nunca elimina los ejercicios guardados. Entrenamiento y Recuperación activa pueden usar el plan; Día de descanso lo pausa.')}</p></div>`;
+}
 const exerciseCatalog=()=>BASE_EXERCISES;
 function toggleWeeklyExercise(name){
  if(!BASE_BY_NAME.has(name))return;
@@ -221,18 +237,20 @@ function bodyAreaPicker(){
 }
 
 function workout(){
- let p=PROGRAM[day],n=session(day),locked=completed(day,n);
- if(!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
+ let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
+ if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
  const dt=new Date(getStart(day,n));const start=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
  <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div><span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span></div>
  <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
- ${totalBodyPlanMode?bodyAreaPicker():''}
+ ${totalBodyPlanMode?dayTypePicker()+bodyAreaPicker():''}
  ${!totalBodyPlanMode?`
- <div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
+ ${type!=='training'?`<div class="card"><h3>${dayTypeLabel(type)}</h3><p class="muted">${type==='rest'?tr('No structured workout scheduled. Your saved exercises remain available when you switch back to Training Day.','No hay entrenamiento programado. Tus ejercicios guardados estarán disponibles al volver a Día de entrenamiento.'):tr('Keep movement gentle and optional. You can use your saved exercises below or edit the plan.','Mantén el movimiento suave y opcional. Puedes usar los ejercicios guardados abajo o editar el plan.')}</p></div>`:''}
+ ${type==='rest'?'':`<div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
  ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Use Edit plan to add exercises.','No hay ejercicios seleccionados para este día. Usa Editar plan para agregarlos.')}</div>`}
- ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`:''}`;
+ ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
  document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();const root=document.getElementById('fitclimb');if(root)root.scrollIntoView({block:'start',behavior:'instant'});});
+ if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
  document.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const area=b.dataset.area;selectedBodyAreas=selectedBodyAreas.includes(area)?selectedBodyAreas.filter(x=>x!==area):[...selectedBodyAreas,area];render()});
  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=b.dataset.day;render()});
  document.querySelectorAll('[data-weekly-exercise]').forEach(el=>el.onchange=()=>toggleWeeklyExercise(el.dataset.weeklyExercise));

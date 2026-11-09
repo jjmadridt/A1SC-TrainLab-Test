@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.30-totalbody-workout-first';
+const CACHE = 'trainlab-v2.31-totalbody-day-types';
 
 const ASSETS = [
   './',
