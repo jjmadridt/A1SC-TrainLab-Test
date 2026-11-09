@@ -289,7 +289,6 @@ function workout(){
  document.querySelectorAll('[data-target]').forEach(b=>b.onchange=()=>{db.setTargets[day+'|'+PROGRAM[day].ex[Number(b.dataset.target)][0]]=Number(b.value);save();render()});
  if($('start-time'))$('start-time').onchange=e=>{if(e.target.value){db.started[startKey(day,n)]=new Date(e.target.value).toISOString();save()}};
  if($('finish'))$('finish').onclick=()=>{
- if(!confirm(tr('Finish and lock this session, then move to the next day?','¿Finalizar y bloquear esta sesión y pasar al siguiente día?')))return;
  db.completed.push({day,session:n,finishedAt:new Date().toISOString(),startedAt:getStart(day,n)});
  db.session[day]=n+1;
  day=EN[(EN.indexOf(day)+1)%7];
