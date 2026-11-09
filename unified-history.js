@@ -17,8 +17,9 @@ function totalDetail(s,tb){
   const km=Number(s.weight),distance=Number.isFinite(km)?Number((unit==='mi'?km/1.609344:km).toFixed(2)):null;
   const duration=Number.isFinite(minutes)?Math.floor(minutes/60)+'h '+Math.round(minutes%60)+'m':'';
   const extras=[];
-  if(s.elevationGainM!=null)extras.push('↑'+s.elevationGainM+' m');
-  if(s.averageSpeedKmh!=null)extras.push(Number((unit==='mi'?s.averageSpeedKmh/1.609344:s.averageSpeedKmh).toFixed(1))+' '+(unit==='mi'?'mph':'km/h'));
+  if(s.elevationGainM!=null)extras.push('↑'+Number((unit==='mi'?s.elevationGainM/0.3048:s.elevationGainM).toFixed(unit==='mi'?0:1))+' '+(unit==='mi'?'ft':'m'));
+  const avg=Number.isFinite(km)&&km>=0&&Number.isFinite(minutes)&&minutes>0?km/(minutes/60):(s.averageSpeedKmh!=null?Number(s.averageSpeedKmh):null);
+  if(avg!=null&&Number.isFinite(avg))extras.push(Number((unit==='mi'?avg/1.609344:avg).toFixed(1))+' '+(unit==='mi'?'mph':'km/h'));
   return name+' · '+[duration,distance!==null?distance+' '+unit:'',...extras].filter(Boolean).join(' · ');
  }
  if(name==='Elliptical warm-up'){

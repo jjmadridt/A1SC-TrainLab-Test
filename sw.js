@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.37-outdoor-ride-spacing';
+const CACHE = 'trainlab-v2.38-outdoor-ride-units';
 
 const ASSETS = [
   './',
