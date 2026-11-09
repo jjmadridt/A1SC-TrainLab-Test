@@ -152,7 +152,7 @@ function render(){
  document.documentElement.lang=db.settings.lang;
  document.getElementById('language-toggle').value=db.settings.lang;
  document.getElementById('language-toggle').onchange=e=>{db.settings.lang=e.target.value;save();render();if(window.trainlabTranslate)window.trainlabTranslate()};
- document.getElementById('tabs').innerHTML=['Workout'].map(t=>`<button class="${t===tab?'active':''}" data-tab="${t}">${({Workout:tr('Workout','Rutina'),Progress:tr('Progress','Progreso'),Body:tr('Body','Cuerpo'),Backup:tr('Backup','Respaldo')})[t]}</button>`).join('');
+ document.getElementById('tabs').innerHTML='';
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();window.scrollTo({top:0,behavior:'instant'})});
  if(tab==='Workout')workout();if(tab==='Progress')progress();if(tab==='Body')body();if(tab==='Backup')backup();
 }
@@ -209,7 +209,7 @@ function dayTypeLabel(type){
 }
 function dayTypePicker(){
  const type=dayType(day);
- return `<div class="card"><label for="tb-day-type">${tr('Day type','Tipo de día')}</label><select id="tb-day-type">${DAY_TYPES.map(t=>`<option value="${t}" ${type===t?'selected':''}>${dayTypeLabel(t)}</option>`).join('')}</select><p class="muted">${tr('Changing the day type never deletes your saved exercises. Training and Active Recovery can use the existing plan; Rest Day pauses it.','Cambiar el tipo de día nunca elimina los ejercicios guardados. Entrenamiento y Recuperación activa pueden usar el plan; Día de descanso lo pausa.')}</p></div>`;
+ return `<div class="card"><label for="tb-day-type">${tr('Day type','Tipo de día')}</label><select id="tb-day-type">${DAY_TYPES.map(t=>`<option value="${t}" ${type===t?'selected':''}>${dayTypeLabel(t)}</option>`).join('')}</select></div>`;
 }
 const exerciseCatalog=()=>BASE_EXERCISES;
 function toggleWeeklyExercise(name){
@@ -228,8 +228,7 @@ function bodyAreaPicker(){
  const available=exerciseCatalog().filter(e=>!chosen.has(e[0])&&selectedBodyAreas.some(area=>TOTAL_BODY_AREAS[area].includes(e[0])));
  const item=e=>`<label class="area-exercise-item"><span class="area-exercise-thumbnail">${anatomyImage(e[0],db.settings.bodyIllustration)}</span><span class="area-exercise-name">${esc(exerciseName(e[0]))}</span><input type="checkbox" data-weekly-exercise="${esc(e[0])}" ${chosen.has(e[0])?'checked':''} aria-label="${esc(exerciseName(e[0]))}"></label>`;
  return `<div class="card body-area-picker"><h3>${tr('Build your weekly workout','Crea tu rutina semanal')}</h3>
- <p class="muted">${tr('Choose a weekday below, select body areas, then tap exercises to add or remove them. Changes save automatically and repeat every week on that day.','Elige un día de la semana abajo, selecciona áreas del cuerpo y toca ejercicios para agregarlos o quitarlos. Los cambios se guardan automáticamente y se repiten cada semana ese día.')}</p>
- <div class="area-exercise-list"><strong>${tr('Selected for','Seleccionados para')} ${db.settings.lang==='es'?ES[EN.indexOf(day)]:day} (${chosen.size})</strong>${selected.length?selected.map(item).join(''):`<p class="muted">${tr('No exercises selected yet. Choose a body area below.','Aún no hay ejercicios seleccionados. Elige un área abajo.')}</p>`}</div>
+ <div class="area-exercise-list"><strong>${tr('Selected for','Seleccionados para')} ${db.settings.lang==='es'?ES[EN.indexOf(day)]:day} (${chosen.size})</strong>${selected.length?selected.map(item).join(''):`<p class="muted">${tr('Choose from the areas below.','Elige de las áreas abajo.')}</p>`}</div>
  <div class="area-options">${areas.map(a=>`<button type="button" class="${selectedBodyAreas.includes(a)?'active':''}" data-area="${a}" aria-pressed="${selectedBodyAreas.includes(a)}">${labels[a]}</button>`).join('')}</div>
  ${selectedBodyAreas.length?`<div class="area-exercise-list"><strong>${tr('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(item).join(''):`<p class="muted">${tr('All exercises in these categories are already selected.','Todos los ejercicios de estas categorías ya están seleccionados.')}</p>`}</div>`:''}
  <p class="muted" style="font-size:12px">${tr('Saved automatically','Guardado automático')}</p>
@@ -241,7 +240,7 @@ function workout(){
  if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
  const dt=new Date(getStart(day,n));const start=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
- <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div><span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span></div>
+ <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>${totalBodyPlanMode?'':`<span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span>`}</div>
  <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
  ${totalBodyPlanMode?dayTypePicker()+bodyAreaPicker():''}
  ${!totalBodyPlanMode?`
