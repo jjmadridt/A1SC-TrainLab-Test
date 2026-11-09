@@ -12,6 +12,15 @@ const formatDuration=seconds=>{const n=Number(seconds);if(!Number.isFinite(n)||n
 function totalDetail(s,tb){
  const name=str(s.name),minutes=Number(s.count);
  if(name==='Stationary bike')return name+' · '+(Number.isFinite(minutes)?formatDuration(minutes*60):'');
+ if(name==='Outdoor ride'){
+  const unit=tb?.distanceUnits?.[name]==='mi'?'mi':'km';
+  const km=Number(s.weight),distance=Number.isFinite(km)?Number((unit==='mi'?km/1.609344:km).toFixed(2)):null;
+  const duration=Number.isFinite(minutes)?Math.floor(minutes/60)+'h '+Math.round(minutes%60)+'m':'';
+  const extras=[];
+  if(s.elevationGainM!=null)extras.push('↑'+s.elevationGainM+' m');
+  if(s.averageSpeedKmh!=null)extras.push(Number((unit==='mi'?s.averageSpeedKmh/1.609344:s.averageSpeedKmh).toFixed(1))+' '+(unit==='mi'?'mph':'km/h'));
+  return name+' · '+[duration,distance!==null?distance+' '+unit:'',...extras].filter(Boolean).join(' · ');
+ }
  if(name==='Elliptical warm-up'){
   const km=Number(s.weight),unit=tb?.distanceUnits?.[name]==='mi'?'mi':'km';
   const distance=Number.isFinite(km)&&km>0?(unit==='mi'?km/1.609344:km):null;
