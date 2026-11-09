@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.33-elliptical-activity';
+const CACHE = 'trainlab-v2.34-bike-timer-log';
 
 const ASSETS = [
   './',

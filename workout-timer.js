@@ -142,6 +142,7 @@ function values(){const mode=el('mode').value,duration=Number(el('duration').val
 function reset(){stop();let v;try{v=values();el('validation').style.display='none';el('validation').textContent=''}catch(e){el('validation').textContent=timerTranslateText(e.message);el('validation').style.display='block';el('phase').textContent=timerTranslateText('Adjust timer settings');el('start').disabled=true;return false}state.mode=v.mode;state.elapsed=0;state.phase=0;state.segments=[];if(v.mode==='interval')for(let i=0;i<v.cycles;i++){state.segments.push({name:`Peak ${i+1}/${v.cycles}`,seconds:v.peak});if(i<v.cycles-1)state.segments.push({name:'Recovery',seconds:v.recovery})}state.remaining=v.mode==='stopwatch'?0:v.mode==='interval'?state.segments[0].seconds:v.duration;el('phase').textContent=timerTranslateText(v.mode==='interval'?state.segments[0].name:'Ready');el('clock').textContent=clock(state.remaining);return true}
 function finish(completed=true){
  stop();if(completed)chime();el('phase').textContent=timerTranslateText(completed?'Complete':'Stopped early');
+ if(state.origin==='bike'&&state.elapsed>0)document.dispatchEvent(new CustomEvent('trainlab:timer-finished',{detail:{origin:'bike',elapsedSeconds:state.elapsed,completed}}));
  if(state.origin==='plank'&&state.index!==null){
   overlay.classList.remove('visible');
   try{
@@ -177,12 +178,9 @@ function open(mode,index){
   el('duration').value=Number.isFinite(entered)&&entered>0?Math.round(entered):(exercise?Number(exercise[4])||60:60);
  }
  if(mode==='bike'){
-  const cfg=typeof db!=='undefined'&&db.bikeIntervals||{};
-  // Read visible exercise inputs at launch, even when a number field has not blurred yet.
-  const read=(key,fallback)=>{const input=document.querySelector(`[data-bike-config="${key}"]`);const value=Number(input?input.value:cfg[key]);return Number.isFinite(value)?value:fallback};
-  const cycles=read('cycles',0),peak=read('peak',60),recovery=read('recovery',120);
-  el('cycles').value=Math.max(1,cycles);el('peak').value=peak;el('recovery').value=recovery;
-  if(!cycles){el('mode').value='countdown';const minutes=document.getElementById('count-'+index);el('duration').value=Math.max(1,Math.round(Number(minutes?.value||60)*60));}
+  // Timer settings are managed inside this dialog; no duplicate card configuration.
+  const minutes=document.getElementById('count-'+index);
+  if(minutes&&Number(minutes.value)>0)el('duration').value=Math.round(Number(minutes.value)*60);
  }
  if(mode==='manual'){const field=document.querySelector('[data-reps]:focus');if(field&&Number(field.value)>0)el('duration').value=Math.round(Number(field.value));}
  Object.keys(limits).forEach(syncEditor);config();overlay.classList.add('visible');reset();timerApplyLanguage();
