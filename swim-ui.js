@@ -28,7 +28,7 @@ const nav=el('div','sw-buttons');
 nav.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'));
 nav.append(button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(nav);
 // Edit Plan keeps its planning panel; Today's Workout uses a compact day selector.
-const week=view==='edit'?panel(t('Weekly plan','Plan semanal')):el('div','sw-workout-day-selector');
+const week=view==='edit'?panel(t('Choose weekday','Elegir día')):el('div','sw-workout-day-selector');
 if(view==='workout'){week.style.cssText='margin:10px 0 8px';host.append(week);}
 const wd=el('div','sw-days');days[lang()].forEach((d,i)=>wd.append(button(d,()=>{day=i;render();},day===i)));week.append(wd);
 if(view==='edit'){
@@ -53,8 +53,11 @@ if(view==='edit'){
  const envSummary=el('div','sw-note',settingsForDay.environment==='pool'?t('Pool','Alberca')+' · '+settingsForDay.pool+' '+settingsForDay.unit:t('Open water','Aguas abiertas'));
 envSummary.style.cssText='margin:6px 0 10px;color:#b5c7d7;font-size:14px';week.append(envSummary);
 }
-if(view==='edit'){const cats=el('div','sw-buttons');data.categories.forEach(c=>cats.append(button(c[lang()],()=>{category=c.id;render();},category===c.id)));week.append(cats);
-const list=el('div');data.workouts.filter(w=>w.category===category).forEach(w=>{
+if(view==='edit'){
+ const focus=panel(t('Training focus','Enfoque de entrenamiento'));
+ const cats=el('div','sw-buttons');data.categories.forEach(c=>cats.append(button(c[lang()],()=>{category=c.id;render();},category===c.id)));focus.append(cats);
+ const exercises=panel(t('Select exercises','Seleccionar ejercicios'));
+ const list=el('div');data.workouts.filter(w=>w.category===category).forEach(w=>{
  const row=el('label','sw-workout');const check=el('input');check.type='checkbox';check.checked=selected().some(x=>x.id===w.id);check.addEventListener('change',()=>{const existing=selected().filter(x=>x.id!==w.id);if(check.checked)existing.push({id:w.id,perSet:w.perSet,sets:w.sets,rest:w.rest});plan[day]=existing;persist();render()});row.append(check);
  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',w.sets+' × '+w.perSet+' '+settingsForDay.unit+(w.rest?' · '+w.rest+'s '+t('rest','descanso'):'')));row.append(info);list.append(row);
@@ -69,7 +72,7 @@ const list=el('div');data.workouts.filter(w=>w.category===category).forEach(w=>{
     });list.append(fields);
    }
   }
-});week.append(list);}
+});exercises.append(list);}
 if(view==='edit')return;
 // Per-exercise logging: timers only prepare a draft; Log Activity commits it.
 const activityPanel=panel(t('Activity recording','Registro de actividad'));
