@@ -7,7 +7,7 @@
  const DAY_TYPE_KEY='a1sc-cycle-day-types-v01';
  let dayTypes={};
  try{const stored=JSON.parse(localStorage.getItem(DAY_TYPE_KEY)||'{}');if(stored&&typeof stored==='object'&&!Array.isArray(stored))dayTypes=stored;}catch(e){}
- function dayType(){return dayTypes[selectedDay]==='rest'?'rest':'training';}
+ function dayType(){const value=dayTypes[selectedDay];return value==='rest'||value==='recovery'?value:'training';}
  function saveDayTypes(){try{localStorage.setItem(DAY_TYPE_KEY,JSON.stringify(dayTypes));return true;}catch(e){return false;}}
  let history=[];
  try {const stored=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(Array.isArray(stored))history=stored;}catch(e){}
@@ -180,7 +180,7 @@
   });mount.appendChild(nav);
   if(view==='workout') {
   const summary=make('div','cy-panel');summary.appendChild(make('h3','',t('Selected workouts','Entrenamientos seleccionados')+' — '+(lang()==='es'?DAYS_ES:DAYS)[selectedDay]));
-  const current=dayType()==='rest'?[]:selected();if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
+  const current=dayType()==='rest'?[]:selected();if(dayType()==='recovery')summary.appendChild(make('p','cy-note',t('Active Recovery — choose an easy cycling session.','Recuperación activa — elige una sesión de ciclismo suave.')));if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
    const item=make('div','cy-plan-item');const heading=make('div','cy-plan-heading');heading.appendChild(workoutIcon(w));heading.appendChild(make('strong','',w.name));item.appendChild(heading);
    const config=make('div','cy-config');config.appendChild(make('span','cy-note',t('Suggested: ','Sugerido: ')+w.defaultDurationMinutes+' min'));
@@ -196,7 +196,7 @@
   const typePanel=make('div','cy-panel cy-day-type');
   const typeLabel=make('label','cy-type-label',t('Day type','Tipo de día'));
   const typeSelect=make('select','cy-type-select');
-  [['training',t('Training Day','Día de entrenamiento')],['rest',t('Rest Day','Día de descanso')]].forEach(([value,label])=>{const opt=make('option','',label);opt.value=value;typeSelect.appendChild(opt);});
+  [['training',t('Training Day','Día de entrenamiento')],['recovery',t('Active Recovery','Recuperación activa')],['rest',t('Rest Day','Día de descanso')]].forEach(([value,label])=>{const opt=make('option','',label);opt.value=value;typeSelect.appendChild(opt);});
   typeSelect.value=dayType();typeSelect.setAttribute('aria-label',t('Day type','Tipo de día'));
   typeSelect.addEventListener('change',()=>{const previous=dayTypes[selectedDay];dayTypes[selectedDay]=typeSelect.value;if(!saveDayTypes()){if(previous===undefined)delete dayTypes[selectedDay];else dayTypes[selectedDay]=previous;root.alert(t('Could not save day type.','No se pudo guardar el tipo de día.'));}render();});
   typeLabel.appendChild(typeSelect);typePanel.appendChild(typeLabel);mount.appendChild(typePanel);

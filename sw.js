@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.57-cycle-edit-layout';
+const CACHE = 'trainlab-v2.58-cycle-active-recovery';
 
 const ASSETS = [
   './',
