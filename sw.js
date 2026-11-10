@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.51-swim-edit-order';
+const CACHE = 'trainlab-v2.53-swim-ui-consistency';
 
 const ASSETS = [
   './',

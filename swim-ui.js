@@ -24,16 +24,16 @@ function selected(){return Array.isArray(plan[day])?plan[day]:[];}
 function render(){const host=document.getElementById('swim-builder'),data=root.TrainLabSwim;if(!host||!data)return;host.replaceChildren();
 const settingsForDay=daySettings();
 const panel=(title)=>{const p=el('section','sw-panel');p.append(el('h2','',title));host.append(p);return p;};
-const nav=el('div','sw-buttons');
-nav.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'));
-nav.append(button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(nav);
-// Edit Plan keeps its planning panel; Today's Workout uses a compact day selector.
-const week=view==='edit'?panel(t('Choose weekday','Elegir día')):el('div','sw-workout-day-selector');
-if(view==='workout'){week.style.cssText='margin:10px 0 8px';host.append(week);}
+// Shared RUN/Total Body hierarchy: weekday strip, then the two view tabs.
+const week=el('div','sw-workout-day-selector');week.style.cssText='margin:12px 0 10px';host.append(week);
 const wd=el('div','sw-days');days[lang()].forEach((d,i)=>wd.append(button(d,()=>{day=i;render();},day===i)));week.append(wd);
+const nav=el('div','sw-buttons sw-view-tabs');nav.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 16px';
+const todayTab=button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout');
+const editTab=button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit');
+[todayTab,editTab].forEach(b=>{b.style.cssText='width:100%;min-height:58px;font-weight:700;font-size:16px;border-radius:12px';nav.append(b);});host.append(nav);
 if(view==='edit'){
  const typePanel=panel(t('Day type','Tipo de día'));
- const typeLabel=el('label','',t('Day type','Tipo de día'));
+ const typeLabel=el('label');
  const typeSelect=el('select');
  [['training',t('Training Day','Día de entrenamiento')],['recovery',t('Active Recovery','Recuperación activa')],['rest',t('Rest Day','Día de descanso')]].forEach(([value,label])=>{const option=el('option','',label);option.value=value;typeSelect.append(option);});
  typeSelect.value=currentDayType();typeSelect.addEventListener('change',()=>{dayTypes[day]=typeSelect.value;try{localStorage.setItem(DAY_TYPES,JSON.stringify(dayTypes));}catch(e){}render();});
@@ -75,7 +75,7 @@ if(view==='edit'){
 });exercises.append(list);}
 if(view==='edit')return;
 // Per-exercise logging: timers only prepare a draft; Log Activity commits it.
-const activityPanel=panel(t('Activity recording','Registro de actividad'));
+const activityPanel=el('section','sw-activity-list');host.append(activityPanel);
 const historyRead=()=>{const v=load(HISTORY,[]);return Array.isArray(v)?v:[];};
 const clockText=(n)=>{n=Math.max(0,Math.floor(Number(n)||0));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(x=>String(x).padStart(2,'0')).join(':');};
 const active=load(ACTIVE,null);
@@ -86,21 +86,25 @@ const actions=(parent)=>{const row=el('div','sw-buttons');parent.append(row);ret
 const drafts={};
 selected().forEach((entry)=>{
  const def=data.workouts.find(w=>w.id===entry.id);if(!def)return;
- const card=el('div','sw-plan');activityPanel.append(card);
- card.append(el('strong','',def[lang()]));
- card.append(el('small','',t('Planned: ','Planeado: ')+distance(entry)+' '+settingsForDay.unit));
+ const card=el('div','sw-plan sw-exercise-card');card.style.cssText='border:0;border-bottom:1px solid #29465e;padding:14px 0';activityPanel.append(card);
+ const header=el('div');header.style.cssText='display:flex;align-items:center;gap:14px;cursor:pointer';
+ const img=el('img','sw-icon');img.src='swim-icons/'+def.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';img.style.cssText='width:82px;height:82px;object-fit:cover;border-radius:10px';header.append(img);
+ const description=el('div');description.style.flex='1';description.append(el('strong','',def[lang()]+' ▸'));description.append(el('small','',t('Planned: ','Planeado: ')+distance(entry)+' '+settingsForDay.unit));header.append(description);card.append(header);
+ const details=el('div');details.style.cssText='display:none;padding:10px 0 0';card.append(details);
+ header.addEventListener('click',()=>{details.style.display=details.style.display==='none'?'block':'none';});
+ if(active&&active.workoutId===entry.id)details.style.display='block';
  const existingTimer=active&&active.workoutId===entry.id?active:null;
- if(active&&!active.workoutId){card.append(el('small','',t('An older unfinished session is stored; finish it before starting a new timer.','Hay una sesión anterior sin terminar; termínala antes de iniciar otro cronómetro.')));}
- const grid=el('div','sw-fields');grid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';card.append(grid);
+ if(active&&!active.workoutId){details.append(el('small','',t('An older unfinished session is stored; finish it before starting a new timer.','Hay una sesión anterior sin terminar; termínala antes de iniciar otro cronómetro.')));}
+ const grid=el('div','sw-fields');grid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';details.append(grid);
  const dist=field(grid,t('Actual distance ('+settingsForDay.unit+')','Distancia real ('+settingsForDay.unit+')'),distance(entry));
  const sets=field(grid,t('Completed sets','Series completadas'),entry.sets,0);
  const hrs=field(grid,t('Hours','Horas'),existingTimer?.status==='review'?Math.floor(elapsed(existingTimer)/3600):0);
  const mins=field(grid,t('Minutes','Minutos'),existingTimer?.status==='review'?Math.floor(elapsed(existingTimer)%3600/60):0);
  const secs=field(grid,t('Seconds','Segundos'),existingTimer?.status==='review'?elapsed(existingTimer)%60:0);
- const note=el('label','',t('Notes (optional)','Notas (opcional)'));const noteInput=el('textarea');noteInput.rows=2;noteInput.maxLength=1000;noteInput.placeholder=t('Session notes','Notas de la sesión');noteInput.style.cssText='width:100%;box-sizing:border-box;padding:9px;background:#091d2e;color:white;border:1px solid #42607a;border-radius:8px';note.append(noteInput);card.append(note);
- const timerLine=el('div','sw-note',existingTimer?clockText(elapsed(existingTimer)):clockText(0));card.append(timerLine);
+ const note=el('label','',t('Notes (optional)','Notas (opcional)'));const noteInput=el('textarea');noteInput.rows=2;noteInput.maxLength=1000;noteInput.placeholder=t('Session notes','Notas de la sesión');noteInput.style.cssText='width:100%;box-sizing:border-box;padding:9px;background:#091d2e;color:white;border:1px solid #42607a;border-radius:8px';note.append(noteInput);details.append(note);
+ const timerLine=el('div','sw-note',existingTimer?clockText(elapsed(existingTimer)):clockText(0));details.append(timerLine);
  if(existingTimer?.status==='running'){const interval=setInterval(()=>{if(!timerLine.isConnected){clearInterval(interval);return;}timerLine.textContent=clockText(elapsed(existingTimer));},1000);}
- const row=actions(card);
+ const row=actions(details);
  if(!existingTimer){
   row.append(button(t('Start timer','Iniciar cronómetro'),()=>{if(active){alert(t('Finish the existing timer first.','Finaliza el cronómetro activo primero.'));return;}setActive({workoutId:entry.id,status:'running',startedAt:Date.now(),accumulatedMs:0});render();}));
  }else if(existingTimer.status==='running'){
