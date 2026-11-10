@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.58-cycle-finish-review';
+const CACHE = 'trainlab-v2.59-cycle-interval-bells';
 
 const ASSETS = [
   './',
