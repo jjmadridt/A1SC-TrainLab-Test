@@ -23,6 +23,15 @@ const panel=(title)=>{const p=el('section','sw-panel');p.append(el('h2','',title
 const nav=el('div','sw-buttons');
 nav.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'));
 nav.append(button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(nav);
+if(view==='edit'){
+ const typePanel=panel(t('Day type','Tipo de día'));
+ const typeLabel=el('label','',t('Day type','Tipo de día'));
+ const typeSelect=el('select');
+ [['training',t('Training Day','Día de entrenamiento')],['recovery',t('Active Recovery','Recuperación activa')],['rest',t('Rest Day','Día de descanso')]].forEach(([value,label])=>{const option=el('option','',label);option.value=value;typeSelect.append(option);});
+ typeSelect.value=currentDayType();typeSelect.addEventListener('change',()=>{dayTypes[day]=typeSelect.value;try{localStorage.setItem(DAY_TYPES,JSON.stringify(dayTypes));}catch(e){}render();});
+ typeLabel.append(typeSelect);typePanel.append(typeLabel);
+}
+
 const setup=panel(t('Swimming environment','Entorno de natación'));const env=el('div','sw-buttons');['pool','open'].forEach(v=>env.append(button(v==='pool'?t('Pool','Alberca'):t('Open water','Aguas abiertas'),()=>{settings.environment=v;persist();render();},settings.environment===v)));setup.append(env);
 if(settings.environment==='pool'){
  const opts=el('div','sw-settings');const unit=el('label','',t('Units','Unidades'));const select=el('select');[['m',t('Meters','Metros')],['yd',t('Yards','Yardas')]].forEach(([v,name])=>{const o=el('option','',name);o.value=v;select.append(o)});select.value=settings.unit;select.addEventListener('change',()=>{settings.unit=select.value;persist();render()});unit.append(select);opts.append(unit);
@@ -30,29 +39,23 @@ if(settings.environment==='pool'){
  const presets=el('div','sw-buttons');[25,50].forEach(n=>presets.append(button(n+' '+settings.unit,()=>{settings.pool=n;persist();render();},settings.pool===n)));setup.append(presets);
 }
 const week=panel(t('Weekly plan','Plan semanal'));const wd=el('div','sw-days');days[lang()].forEach((d,i)=>wd.append(button(d,()=>{day=i;render();},day===i)));week.append(wd);
-if(view==='edit'){
- const typeLabel=el('label','',t('Day type','Tipo de día'));
- const typeSelect=el('select');
- [['training',t('Training Day','Día de entrenamiento')],['recovery',t('Active Recovery','Recuperación activa')],['rest',t('Rest Day','Día de descanso')]].forEach(([value,label])=>{const option=el('option','',label);option.value=value;typeSelect.append(option);});
- typeSelect.value=currentDayType();typeSelect.addEventListener('change',()=>{dayTypes[day]=typeSelect.value;try{localStorage.setItem(DAY_TYPES,JSON.stringify(dayTypes));}catch(e){}render();});
- typeLabel.append(typeSelect);week.append(typeLabel);
-}
 if(view==='edit'){const cats=el('div','sw-buttons');data.categories.forEach(c=>cats.append(button(c[lang()],()=>{category=c.id;render();},category===c.id)));week.append(cats);
 const list=el('div');data.workouts.filter(w=>w.category===category).forEach(w=>{
  const row=el('label','sw-workout');const check=el('input');check.type='checkbox';check.checked=selected().some(x=>x.id===w.id);check.addEventListener('change',()=>{const existing=selected().filter(x=>x.id!==w.id);if(check.checked)existing.push({id:w.id,perSet:w.perSet,sets:w.sets,rest:w.rest});plan[day]=existing;persist();render()});row.append(check);
  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',w.sets+' × '+w.perSet+' '+settings.unit+(w.rest?' · '+w.rest+'s '+t('rest','descanso'):'')));row.append(info);list.append(row);
+  // Configure a selected workout in its selection row; no duplicate planned-session list.
+  if(check.checked){
+   const entry=selected().find(x=>x.id===w.id);
+   if(entry){const fields=el('div','sw-fields');fields.style.cssText='margin:4px 0 12px 32px;grid-template-columns:repeat(3,minmax(0,1fr))';
+    [['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{
+     const wrapper=el('label','',label),input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];
+     input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});
+     wrapper.append(input);fields.append(wrapper);
+    });list.append(fields);
+   }
+  }
 });week.append(list);}
-if(view==='edit'){
-const summary=panel(t('Planned session — '+days.en[day],'Sesión planeada — '+days.es[day]));
-if(view==='workout'&&currentDayType()!=='training'){summary.append(el('p','sw-note',currentDayType()==='rest'?t('Rest Day. Your saved workouts are preserved.','Día de descanso. Tus entrenamientos guardados se conservan.'):t('Active Recovery. Keep movement gentle and optional.','Recuperación activa. Mantén el movimiento suave y opcional.')));}
-if(!selected().length)summary.append(el('p','sw-note',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
-selected().forEach((entry)=>{const w=data.workouts.find(x=>x.id===entry.id);if(!w)return;const line=el('div','sw-plan');line.append(el('strong','',w[lang()]));const fields=el('div','sw-fields');
-[['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{const wrapper=el('label','',label);const input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});wrapper.append(input);fields.append(wrapper);});if(view==='edit')line.append(fields);line.append(el('small','',t('Planned distance: ','Distancia planeada: ')+distance(entry)+' '+settings.unit));summary.append(line);});
-const total=selected().reduce((sum,x)=>sum+distance(x),0);summary.append(el('p','sw-total',t('Total planned: ','Total planeado: ')+total+' '+settings.unit));
-if(settings.environment==='pool'){const lengths=total/settings.pool;summary.append(el('p','sw-note',t('Equivalent pool lengths: ','Largos equivalentes: ')+(Number.isInteger(lengths)?lengths:lengths.toFixed(2))));}
-
-}
 if(view==='edit')return;
 // Per-exercise logging: timers only prepare a draft; Log Activity commits it.
 const activityPanel=panel(t('Activity recording','Registro de actividad'));
