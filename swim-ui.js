@@ -43,11 +43,15 @@ if(view==='edit'){
 // Select the weekday before configuring its day type and swimming environment.
 if(view==='edit'){
  const setup=panel(t('Swimming environment','Entorno de natación'));
- const env=el('div','sw-buttons');['pool','open'].forEach(v=>env.append(button(v==='pool'?t('Pool','Alberca'):t('Open water','Aguas abiertas'),()=>{saveDaySettings({environment:v});render();},settingsForDay.environment===v)));setup.append(env);
+ const env=el('div','sw-buttons');env.style.cssText='display:flex;flex-wrap:wrap;align-items:center;gap:8px';
+ ['pool','open'].forEach(v=>env.append(button(v==='pool'?t('Pool','Alberca'):t('Open water','Aguas abiertas'),()=>{saveDaySettings({environment:v});render();},settingsForDay.environment===v)));
+ if(settingsForDay.environment==='pool'){
+  [25,50].forEach(n=>env.append(button(n+' '+settingsForDay.unit,()=>{saveDaySettings({pool:n});render();},settingsForDay.pool===n)));
+ }
+ setup.append(env);
  if(settingsForDay.environment==='pool'){
   const opts=el('div','sw-settings');const unit=el('label','',t('Units','Unidades'));const select=el('select');[['m',t('Meters','Metros')],['yd',t('Yards','Yardas')]].forEach(([v,name])=>{const o=el('option','',name);o.value=v;select.append(o)});select.value=settingsForDay.unit;select.addEventListener('change',()=>{saveDaySettings({unit:select.value});render()});unit.append(select);opts.append(unit);
   const size=el('label','',t('Pool length','Longitud de alberca'));const field=el('input');field.type='number';field.min='1';field.step='0.01';field.value=settingsForDay.pool;field.addEventListener('change',()=>{const n=Number(field.value);if(Number.isFinite(n)&&n>0&&n<=1000){saveDaySettings({pool:n});render();}else field.value=settingsForDay.pool;});size.append(field);opts.append(size);setup.append(opts);
-  const presets=el('div','sw-buttons');[25,50].forEach(n=>presets.append(button(n+' '+settingsForDay.unit,()=>{saveDaySettings({pool:n});render();},settingsForDay.pool===n)));setup.append(presets);
  }
 }else{
  const envSummary=el('div','sw-note',settingsForDay.environment==='pool'?t('Pool','Alberca')+' · '+settingsForDay.pool+' '+settingsForDay.unit:t('Open water','Aguas abiertas'));

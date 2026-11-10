@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.54-swim-poolside-review';
+const CACHE = 'trainlab-v2.55-swim-compact-environment';
 
 const ASSETS = [
   './',
