@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.60-cycle-bells-default-on';
+const CACHE = 'trainlab-v2.59-cycle-bells-always-on';
 
 const ASSETS = [
   './',
