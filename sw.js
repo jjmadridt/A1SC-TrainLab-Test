@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.64-triathlon-clean-icons';
+const CACHE = 'trainlab-v2.65-triathlon-strength-category';
 
 const ASSETS = [
   './',
