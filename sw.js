@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.62-triathlon-syntax-fix';
+const CACHE = 'trainlab-v2.63-triathlon-icons';
 
 const ASSETS = [
   './',
@@ -12,6 +12,9 @@ const ASSETS = [
   './home-images/run.webp',
   './home-images/swim.webp',
   './home-images/triathlon.webp',
+  './triathlon-icons/swim.webp',
+  './triathlon-icons/bike.webp',
+  './triathlon-icons/run.webp',
 
   // Precache all Total Body anatomy illustrations for offline use.
   './anatomy/elliptical-warm-up-male.png',
