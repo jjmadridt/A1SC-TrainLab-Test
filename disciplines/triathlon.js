@@ -1,6 +1,14 @@
 /* A1SC TrainLab — Triathlon Step 17C: independent weekly Edit Plan. */
 (function(root){'use strict';
  const KEY='a1sc-triathlon-weekly-plan-v01';
+ const LOG_KEY='a1sc-triathlon-activity-log-v01';
+ let session=null;
+ let tick=null;
+ function elapsed(){return session?session.elapsed+(session.startedAt?Math.max(0,Date.now()-session.startedAt):0):0;}
+ function clock(ms){let n=Math.floor(ms/1000);return String(Math.floor(n/3600)).padStart(2,'0')+':'+String(Math.floor(n%3600/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
+ function stopTick(){if(tick){clearInterval(tick);tick=null;}}
+ function startTick(){stopTick();tick=setInterval(()=>{const n=document.getElementById('tri-clock');if(n)n.textContent=clock(elapsed());},500);}
+
  const DAYS={en:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],es:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']};
  const CATALOG={
   Swim:[['Continuous Swim','Nado continuo','swim-icons/endurance-male.webp'],['Technique Drills','Ejercicios de técnica','swim-icons/technique-male.webp'],['Interval Sets','Series de intervalos','swim-icons/intervals-male.webp'],['Threshold Swim','Nado a umbral','swim-icons/endurance-male.webp'],['Open Water Sighting','Orientación en aguas abiertas','swim-icons/technique-male.webp']],
@@ -20,8 +28,8 @@
  function imageFor(item){let path=item[2];let gender='male';try{const p=JSON.parse(localStorage.getItem('a1sc-profile-v1')||'{}');if(p.gender==='female')gender='female';}catch(e){}return path.replace('-male.', '-'+gender+'.');}
  function itemRow(item,checked,onClick){const row=el('div','tri-item');const img=el('img');img.src=imageFor(item);img.alt='';img.loading='lazy';img.onerror=()=>{img.onerror=null;img.src='home-images/triathlon.webp';};row.append(img);const name=el('div','tri-item-name',lang()==='es'?item[1]:item[0]);row.append(name);if(checked)row.append(el('span','tri-check','✓'));if(onClick){row.tabIndex=0;row.setAttribute('role','button');row.addEventListener('click',onClick);row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onClick();}});}return row;}
  function find(id){for(const [cat,items] of Object.entries(CATALOG)){const item=items.find(x=>x[0]===id);if(item)return {cat,item};}return null;}
- function render(){const host=document.getElementById('tri-builder');if(!host)return;host.replaceChildren();
- const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}`;host.append(css);
+ function render(){stopTick();const host=document.getElementById('tri-builder');if(!host)return;host.replaceChildren();
+ const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}#tri-builder .tri-session{border:1px solid #355875;border-radius:12px;padding:14px;margin:12px 0;background:#10283d}#tri-builder .tri-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#tri-builder .tri-controls button{padding:11px 15px;border:1px solid #4a85aa;border-radius:9px;background:#176b9f;color:white;font-weight:700}#tri-builder .tri-controls button:disabled{opacity:.45}#tri-builder .tri-clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#tri-builder .tri-session input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #41617b;border-radius:8px;background:#081b2d;color:white;font:inherit}`;host.append(css);
  const days=el('div','tri-days');DAYS[lang()].forEach((d,i)=>days.append(button(d,()=>{day=i;render();},day===i)));host.append(days);
  const tabs=el('div','tri-tabs');tabs.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'),button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(tabs);
  const r=record();if(view==='edit'){
@@ -33,10 +41,42 @@
   host.append(el('h3','',t('Exercise Categories','Categorías de ejercicios')));const cats=el('div','tri-cats');Object.keys(CATALOG).forEach(cat=>{const b=button('',()=>{category=cat;render();},category===cat);const img=el('img','tri-category-icon');img.src=({Swim:'swim-icons/endurance-male.webp',Bike:'cycle-icons/spin-male.webp',Run:'anatomy/run/easy-run-male.png',Strength:'anatomy/goblet-squat-male.png'})[cat];img.alt=lang()==='es'?CATEGORY_ES[cat]:cat;b.append(img);b.append(el('span','',lang()==='es'?CATEGORY_ES[cat]:cat));b.setAttribute('aria-label',lang()==='es'?CATEGORY_ES[cat]:cat);cats.append(b);});host.append(cats);
   host.append(el('h3','',lang()==='es'?CATEGORY_ES[category]:category));CATALOG[category].forEach(item=>{const checked=(r.items||[]).includes(item[0]);host.append(itemRow(item,checked,()=>{const items=checked?r.items.filter(x=>x!==item[0]):[...(r.items||[]),item[0]];save({...r,items});}));});
  }else{
-  host.append(el('h3','',t('Today\'s Triathlon Plan','Plan de triatlón de hoy')));
-  if(r.type==='rest')host.append(el('p','tri-muted',t('Rest Day','Día de descanso')));
-  else if(!r.items?.length)host.append(el('p','tri-muted',t('No workouts selected. Open Edit Plan to choose Swim, Bike and Run exercises.','No hay ejercicios seleccionados. Abre Editar plan para elegir natación, ciclismo y carrera.')));
-  else{if(r.type==='recovery')host.append(el('p','tri-muted',t('Active Recovery','Recuperación activa')));r.items.forEach(id=>{const match=find(id);if(match){host.append(el('h3','',lang()==='es'?CATEGORY_ES[match.cat]:match.cat));host.append(itemRow(match.item,true,null));}});host.append(el('p','tri-muted',t('Workout recording will be added in the next step.','El registro de entrenamientos se agregará en el siguiente paso.')));}
+  host.append(el('h3','',t("Today's Triathlon Plan",'Plan de triatlón de hoy')));
+  if(r.type==='rest'){host.append(el('p','tri-muted',t('Rest Day','Día de descanso')));}
+  else if(!r.items?.length){host.append(el('p','tri-muted',t('No workouts selected. Open Edit Plan to choose exercises.','No hay ejercicios seleccionados. Abre Editar plan para elegir ejercicios.')));}
+  else{
+   if(r.type==='recovery')host.append(el('p','tri-muted',t('Active Recovery','Recuperación activa')));
+   r.items.forEach(id=>{const match=find(id);if(!match)return;
+    const wrap=el('div','tri-session');wrap.append(itemRow(match.item,false,null));
+    if(session&&session.id===id){
+     const timer=el('div','tri-clock',clock(elapsed()));timer.id='tri-clock';wrap.append(timer);
+     if(session.phase==='review'){
+      wrap.append(el('p','tri-muted',t('Review before saving.','Revisa antes de guardar.')));
+      const notes=el('input');notes.placeholder=t('Optional notes / distance / sets','Notas / distancia / series (opcional)');notes.value=session.notes||'';notes.addEventListener('input',()=>{session.notes=notes.value;});wrap.append(notes);
+      const actions=el('div','tri-controls');
+      actions.append(button(t('Save Activity','Guardar actividad'),()=>{
+       const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise:id,discipline:match.cat,elapsedMs:session.elapsed,notes:session.notes||'',completedAt:new Date().toISOString()};
+       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));session=null;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
+      }));
+      actions.append(button(t('Discard','Descartar'),()=>{session=null;render();}));wrap.append(actions);
+     }else{
+      const actions=el('div','tri-controls');
+      if(session.startedAt)actions.append(button(t('Pause','Pausar'),()=>{session.elapsed=elapsed();session.startedAt=null;render();}));
+      else actions.append(button(t('Resume','Continuar'),()=>{session.startedAt=Date.now();render();}));
+      actions.append(button(t('Finish & Review','Terminar y revisar'),()=>{session.elapsed=elapsed();session.startedAt=null;session.phase='review';render();}));
+      wrap.append(actions);if(session.startedAt)startTick();
+     }
+    }else{
+     const actions=el('div','tri-controls');const b=button(t('Start Workout','Iniciar entrenamiento'),()=>{session={id,elapsed:0,startedAt:Date.now(),phase:'active',notes:''};render();});b.disabled=!!session;actions.append(b);wrap.append(actions);
+    }
+    host.append(wrap);
+   });
+   const history=el('h3','',t('Recent Triathlon Activities','Actividades recientes de triatlón'));host.append(history);
+   let entries=[];try{entries=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(entries))entries=[];}catch(e){}
+   if(!entries.length)host.append(el('p','tri-muted',t('No activities recorded yet.','Aún no hay actividades registradas.')));
+   entries.slice(-5).reverse().forEach(entry=>{const p=el('p','tri-muted');const d=new Date(entry.completedAt);p.textContent=(find(entry.exercise)?.item?.[lang()==='es'?1:0]||entry.exercise)+' · '+clock(entry.elapsedMs)+' · '+(isNaN(d.getTime())?'':d.toLocaleDateString());host.append(p);});
+  }
+
  }
  }
  root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render};
