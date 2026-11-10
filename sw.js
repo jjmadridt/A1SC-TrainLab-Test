@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.66-triathlon-today-workout';
+const CACHE = 'trainlab-v2.67-triathlon-strength-sets';
 
 const ASSETS = [
   './',
