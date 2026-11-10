@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.57-cycle-day-type-15b';
+const CACHE = 'trainlab-v2.57-cycle-edit-layout';
 
 const ASSETS = [
   './',
