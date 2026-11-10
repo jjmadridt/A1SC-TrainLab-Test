@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.43-run-timer-ux';
+const CACHE = 'trainlab-v2.44-run-record-edit-delete';
 
 const ASSETS = [
   './',

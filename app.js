@@ -375,9 +375,26 @@ function editSet(code){
  lastSetAction={type:'edit',record:before,index:x._index,day,session:session(day),name:x.name};
  save();render();
 }
-function deleteSet(code){
+// Shared, bilingual destructive-action confirmation; no generic browser OK button.
+window.TrainLabConfirmDelete=function(message){
+ return new Promise(resolve=>{
+  const overlay=document.createElement('div');overlay.setAttribute('role','presentation');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const dialog=document.createElement('div');dialog.setAttribute('role','alertdialog');dialog.setAttribute('aria-modal','true');
+  dialog.style.cssText='width:min(100%,400px);padding:22px;background:#102234;color:#fff;border:1px solid #49647c;border-radius:14px';
+  const msg=document.createElement('p');msg.textContent=message;dialog.append(msg);
+  const actions=document.createElement('div');actions.style.cssText='display:flex;justify-content:flex-end;gap:12px;margin-top:18px';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent=tr('Cancel','Cancelar');
+  const del=document.createElement('button');del.type='button';del.textContent=tr('Delete','Eliminar');del.style.cssText='background:#a52d35;color:white';
+  actions.append(cancel,del);dialog.append(actions);overlay.append(dialog);document.body.append(overlay);
+  const finish=value=>{document.removeEventListener('keydown',key);overlay.remove();resolve(value)};
+  const key=e=>{if(e.key==='Escape')finish(false)};document.addEventListener('keydown',key);
+  cancel.onclick=()=>finish(false);del.onclick=()=>finish(true);overlay.onclick=e=>{if(e.target===overlay)finish(false)};cancel.focus();
+ });
+};
+async function deleteSet(code){
  const x=setRef(code);if(!x)return;
- if(!confirm(tr('Delete this recorded set?','¿Eliminar esta serie registrada?')))return;
+ if(!await window.TrainLabConfirmDelete(tr('Delete this recorded set? This action cannot be undone.','¿Eliminar esta serie registrada? Esta acción no se puede deshacer.')))return;
  const before={...db.logs[x._index]};
  db.logs.splice(x._index,1);
  lastSetAction={type:'delete',record:before,index:x._index,day,session:session(day),name:x.name};
