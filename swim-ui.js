@@ -52,66 +52,87 @@ const total=selected().reduce((sum,x)=>sum+distance(x),0);summary.append(el('p',
 if(settings.environment==='pool'){const lengths=total/settings.pool;summary.append(el('p','sw-note',t('Equivalent pool lengths: ','Largos equivalentes: ')+(Number.isInteger(lengths)?lengths:lengths.toFixed(2))));}
 
 if(view==='edit')return;
-// Activity recorder: separate storage; does not modify weekly plans or Total Body logs.
+// Per-exercise logging: timers only prepare a draft; Log Activity commits it.
 const activityPanel=panel(t('Activity recording','Registro de actividad'));
-const style=(node)=>{node.style.cssText='width:100%;margin:6px 0;padding:11px;border:1px solid #42607a;border-radius:9px;background:#091d2e;color:#fff';return node;};
+const historyRead=()=>{const v=load(HISTORY,[]);return Array.isArray(v)?v:[];};
+const clockText=(n)=>{n=Math.max(0,Math.floor(Number(n)||0));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(x=>String(x).padStart(2,'0')).join(':');};
 const active=load(ACTIVE,null);
-const now=Date.now();
-const elapsed=(a,at)=>Math.max(0,Math.floor(((a.accumulatedMs||0)+(a.status==='running'?Math.max(0,at-a.startedAt):0))/1000));
-const time=(sec)=>{const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');};
-const saveActive=(a)=>{try{if(a)localStorage.setItem(ACTIVE,JSON.stringify(a));else localStorage.removeItem(ACTIVE);}catch(e){alert(t('Device storage unavailable. Do not close the app.','Almacenamiento no disponible. No cierres la aplicación.'));}};
-const recorderButton=(text,action)=>{const b=button(text,action);b.style.margin='4px 6px 4px 0';activityPanel.append(b);return b;};
-const clock=el('div','',time(active?elapsed(active,now):0));clock.style.cssText='font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center;margin:12px 0';activityPanel.append(clock);
-if(active?.status==='running'){const tick=()=>{if(clock.isConnected)clock.textContent=time(elapsed(active,Date.now()));else clearInterval(timer);};const timer=setInterval(tick,1000);}
-if(!active){
- activityPanel.append(el('p','sw-note',t('Start a timed session or enter a completed workout manually.','Inicia una sesión cronometrada o registra un entrenamiento manualmente.')));
- recorderButton(t('START','INICIAR'),()=>{if(!selected().length){alert(t('Select at least one workout for this day first.','Selecciona al menos un entrenamiento para este día.'));return;}
- const snapshot=selected().map(x=>({...x}));saveActive({status:'running',startedAt:Date.now(),accumulatedMs:0,day,environment:settings.environment,unit:settings.unit,pool:settings.pool,workouts:snapshot,createdAt:new Date().toISOString()});render();});
- recorderButton(t('MANUAL ENTRY','REGISTRO MANUAL'),()=>{saveActive({status:'review',startedAt:0,accumulatedMs:0,day,environment:settings.environment,unit:settings.unit,pool:settings.pool,workouts:selected().map(x=>({...x})),createdAt:new Date().toISOString(),manual:true});render();});
-}else if(active.status==='running'){
- activityPanel.append(el('p','sw-note',t('Timer running. You can lock your phone and return later.','Cronómetro activo. Puedes bloquear el teléfono y regresar después.')));
- recorderButton(t('PAUSE','PAUSAR'),()=>{active.accumulatedMs+=Date.now()-active.startedAt;active.status='paused';active.startedAt=0;saveActive(active);render();});
- recorderButton(t('FINISH','FINALIZAR'),()=>{if(!confirm(t('Finish this swimming session?','¿Finalizar esta sesión de natación?')))return;active.accumulatedMs+=Date.now()-active.startedAt;active.status='review';active.startedAt=0;saveActive(active);render();});
-}else if(active.status==='paused'){
- activityPanel.append(el('p','sw-note',t('Session paused.','Sesión en pausa.')));
- recorderButton(t('RESUME','REANUDAR'),()=>{active.startedAt=Date.now();active.status='running';saveActive(active);render();});
- recorderButton(t('FINISH','FINALIZAR'),()=>{if(!confirm(t('Finish this swimming session?','¿Finalizar esta sesión de natación?')))return;active.status='review';saveActive(active);render();});
-}else if(active.status==='review'){
- activityPanel.append(el('p','sw-note',t('Review actual results before saving.','Revisa los resultados reales antes de guardar.')));
- const field=(label,value,min,step)=>{const wrap=el('label','',label);wrap.style.cssText='display:block;margin:9px 0';const input=style(el('input'));input.type='number';input.min=String(min);input.step=String(step);input.value=String(value);wrap.append(input);activityPanel.append(wrap);return input;};
- const planned=active.workouts.reduce((n,w)=>n+distance(w),0);
- const dist=field(t('Actual distance ('+active.unit+')','Distancia real ('+active.unit+')'),planned,0,1);
- const sets=field(t('Completed sets','Series completadas'),active.workouts.reduce((n,w)=>n+(Number(w.sets)||0),0),0,1);
- const duration=field(t('Elapsed time (minutes)','Tiempo transcurrido (minutos)'),Math.round(elapsed(active,now)/60*100)/100,0,0.01);
- const notesWrap=el('label','',t('Personal notes (optional)','Notas personales (opcional)'));notesWrap.style.cssText='display:block;margin:9px 0';const notes=style(el('textarea'));notes.rows=3;notes.maxLength=1000;notes.placeholder=t('How did the workout feel?','¿Cómo te sentiste durante el entrenamiento?');notes.value=active.notes||'';notes.addEventListener('input',()=>{active.notes=notes.value;saveActive(active);});notesWrap.append(notes);activityPanel.append(notesWrap);
- activityPanel.append(el('p','sw-note',t('Pool/open-water mode and pool length are saved with the record.','Se guardan el tipo de natación y la longitud de alberca.')));
- recorderButton(t('SAVE ACTIVITY','GUARDAR ACTIVIDAD'),()=>{const d=Number(dist.value),s=Number(sets.value),mins=Number(duration.value);if(![d,s,mins].every(Number.isFinite)||d<0||s<0||!Number.isInteger(s)||mins<0){alert(t('Enter valid results.','Ingresa resultados válidos.'));return;}
- const history=load(HISTORY,[]);if(!Array.isArray(history)){alert(t('Activity history cannot be read.','No se puede leer el historial.'));return;}
- const workoutDetails=active.workouts.map(w=>{const definition=data.workouts.find(x=>x.id===w.id);return {id:w.id,category:definition?.category||'',en:definition?.en||w.id,es:definition?.es||definition?.en||w.id};});
- const record={id:'swim-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),savedAt:new Date().toISOString(),startedAt:active.createdAt,day:active.day,environment:active.environment,unit:active.unit,pool:active.environment==='pool'?active.pool:null,workouts:active.workouts,workoutDetails,notes:notes.value.trim(),distance:d,completedSets:s,durationSeconds:Math.round(mins*60),manual:!!active.manual};
- try{localStorage.setItem(HISTORY,JSON.stringify([...history,record]));localStorage.removeItem(ACTIVE);render();alert(t('SWIM activity saved on this device.','Actividad de natación guardada en este dispositivo.'));}catch(e){alert(t('Save failed. Your session has not been cleared.','No se pudo guardar. Tu sesión sigue disponible.'));}
- });
- recorderButton(t('BACK TO PAUSED','VOLVER A PAUSA'),()=>{if(active.manual){if(confirm(t('Discard manual entry?','¿Descartar registro manual?'))){saveActive(null);render();}}else{active.status='paused';saveActive(active);render();}});
-}
-const records=load(HISTORY,[]);
-if(Array.isArray(records)&&records.length){
- const h=el('div','sw-plan');h.append(el('strong','',t('Recent SWIM activities','Actividades recientes de natación')));
- records.slice(-5).reverse().forEach(r=>{
-  const item=el('div','sw-plan');
-  // Older records do not have workoutDetails. Resolve their saved workout IDs using the catalog.
-  const details=Array.isArray(r.workoutDetails)&&r.workoutDetails.length?r.workoutDetails:(Array.isArray(r.workouts)?r.workouts.map(w=>{const def=data.workouts.find(x=>x.id===w.id);return {id:w.id,category:def?.category||'',en:def?.en||w.id,es:def?.es||def?.en||w.id};}):[]);
-  const names=details.map(w=>w[lang()]||w.en||w.id).filter(Boolean);
-  item.append(el('strong','',names.length?names.join(' · '):t('SWIM activity','Actividad de natación')));
-  const categories=[...new Set(details.map(w=>data.categories.find(c=>c.id===w.category)?.[lang()]||w.category).filter(Boolean))];
-  const mode=r.environment==='open'?t('Open water','Aguas abiertas'):t('Pool','Alberca');
-  item.append(el('small','',categories.concat(mode).join(' · ')));
+const elapsed=(a)=>Math.max(0,Math.floor(((a.accumulatedMs||0)+(a.status==='running'?Math.max(0,Date.now()-a.startedAt):0))/1000));
+const setActive=(a)=>{try{if(a)localStorage.setItem(ACTIVE,JSON.stringify(a));else localStorage.removeItem(ACTIVE);}catch(e){alert(t('Storage unavailable.','Almacenamiento no disponible.'));}};
+const field=(parent,label,value,min=0)=>{const l=el('label','',label),i=el('input');i.type='number';i.min=String(min);i.step='1';i.value=String(value);l.append(i);parent.append(l);return i;};
+const actions=(parent)=>{const row=el('div','sw-buttons');parent.append(row);return row;};
+const drafts={};
+selected().forEach((entry)=>{
+ const def=data.workouts.find(w=>w.id===entry.id);if(!def)return;
+ const card=el('div','sw-plan');activityPanel.append(card);
+ card.append(el('strong','',def[lang()]));
+ card.append(el('small','',t('Planned: ','Planeado: ')+distance(entry)+' '+settings.unit));
+ const existingTimer=active&&active.workoutId===entry.id?active:null;
+ if(active&&!active.workoutId){card.append(el('small','',t('An older unfinished session is stored; finish it before starting a new timer.','Hay una sesión anterior sin terminar; termínala antes de iniciar otro cronómetro.')));}
+ const grid=el('div','sw-fields');grid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';card.append(grid);
+ const dist=field(grid,t('Actual distance ('+settings.unit+')','Distancia real ('+settings.unit+')'),distance(entry));
+ const sets=field(grid,t('Completed sets','Series completadas'),entry.sets,0);
+ const hrs=field(grid,t('Hours','Horas'),existingTimer?.status==='review'?Math.floor(elapsed(existingTimer)/3600):0);
+ const mins=field(grid,t('Minutes','Minutos'),existingTimer?.status==='review'?Math.floor(elapsed(existingTimer)%3600/60):0);
+ const secs=field(grid,t('Seconds','Segundos'),existingTimer?.status==='review'?elapsed(existingTimer)%60:0);
+ const note=el('label','',t('Notes (optional)','Notas (opcional)'));const noteInput=el('textarea');noteInput.rows=2;noteInput.maxLength=1000;noteInput.placeholder=t('Session notes','Notas de la sesión');noteInput.style.cssText='width:100%;box-sizing:border-box;padding:9px;background:#091d2e;color:white;border:1px solid #42607a;border-radius:8px';note.append(noteInput);card.append(note);
+ const timerLine=el('div','sw-note',existingTimer?clockText(elapsed(existingTimer)):clockText(0));card.append(timerLine);
+ if(existingTimer?.status==='running'){const interval=setInterval(()=>{if(!timerLine.isConnected){clearInterval(interval);return;}timerLine.textContent=clockText(elapsed(existingTimer));},1000);}
+ const row=actions(card);
+ if(!existingTimer){
+  row.append(button(t('Start timer','Iniciar cronómetro'),()=>{if(active){alert(t('Finish the existing timer first.','Finaliza el cronómetro activo primero.'));return;}setActive({workoutId:entry.id,status:'running',startedAt:Date.now(),accumulatedMs:0});render();}));
+ }else if(existingTimer.status==='running'){
+  row.append(button(t('Pause','Pausar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='paused';setActive(existingTimer);render();}));
+  row.append(button(t('Finish & Return','Finalizar y regresar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='review';setActive(existingTimer);render();}));
+ }else if(existingTimer.status==='paused'){
+  row.append(button(t('Resume','Reanudar'),()=>{existingTimer.startedAt=Date.now();existingTimer.status='running';setActive(existingTimer);render();}));
+  row.append(button(t('Finish & Return','Finalizar y regresar'),()=>{existingTimer.status='review';setActive(existingTimer);render();}));
+ }else{
+  row.append(button(t('Clear timer','Borrar cronómetro'),()=>{setActive(null);render();}));
+ }
+ row.append(button(t('Log Activity','Registrar actividad'),()=>{
+  const d=Number(dist.value),n=Number(sets.value),h=Number(hrs.value),m=Number(mins.value),sec=Number(secs.value);
+  if(![d,n,h,m,sec].every(Number.isFinite)||d<0||!Number.isInteger(d)||!Number.isInteger(n)||n<0||![h,m,sec].every(Number.isInteger)||h<0||m<0||m>59||sec<0||sec>59){alert(t('Enter valid activity details.','Ingresa datos válidos.'));return;}
+  const rec={id:'swim-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),savedAt:new Date().toISOString(),day,environment:settings.environment,unit:settings.unit,pool:settings.environment==='pool'?settings.pool:null,workouts:[{...entry}],workoutDetails:[{id:def.id,category:def.category,en:def.en,es:def.es}],distance:d,completedSets:n,durationSeconds:h*3600+m*60+sec,notes:noteInput.value.trim(),manual:!existingTimer};
+  try{localStorage.setItem(HISTORY,JSON.stringify([...historyRead(),rec]));if(existingTimer)setActive(null);render();}catch(e){alert(t('Save failed; try again.','No se pudo guardar; inténtalo de nuevo.'));}
+ }));
+});
+if(!selected().length)activityPanel.append(el('p','sw-note',t('Add exercises in Edit Plan first.','Agrega ejercicios en Editar plan.')));
+const records=historyRead();
+if(records.length){
+ const list=el('div','sw-plan');list.append(el('strong','',t('Logged activities','Actividades registradas')));activityPanel.append(list);
+ records.slice().reverse().forEach(r=>{
+  const item=el('div','sw-plan');list.append(item);
+  const details=Array.isArray(r.workoutDetails)&&r.workoutDetails.length?r.workoutDetails:(Array.isArray(r.workouts)?r.workouts.map(w=>{const d=data.workouts.find(x=>x.id===w.id);return {id:w.id,en:d?.en||w.id,es:d?.es||d?.en||w.id};}):[]);
+  item.append(el('strong','',details.map(d=>d[lang()]||d.en||d.id).join(' · ')||t('SWIM activity','Actividad de natación')));
   const date=new Date(r.savedAt);const dateText=Number.isNaN(date.getTime())?'':date.toLocaleDateString(lang()==='es'?'es-MX':'en-US');
-  item.append(el('p','sw-note',dateText+' · '+r.distance+' '+r.unit+' · '+time(r.durationSeconds||0)+' · '+(r.completedSets??0)+' '+t('sets','series')));
-  if(typeof r.notes==='string'&&r.notes.trim())item.append(el('p','sw-note',t('Note: ','Nota: ')+r.notes));
-  h.append(item);
- });activityPanel.append(h);
+  item.append(el('small','',dateText+' · '+r.distance+' '+(r.unit||'m')+' · '+clockText(r.durationSeconds)+' · '+(r.completedSets||0)+' '+t('sets','series')));
+  if(r.notes)item.append(el('small','',r.notes));
+  const row=actions(item);
+  row.append(button(t('Edit','Editar'),()=>{
+   if(item.querySelector('.sw-fields'))return;
+   const grid=el('div','sw-fields');grid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';item.append(grid);
+   const d=field(grid,t('Distance','Distancia'),r.distance),n=field(grid,t('Sets','Series'),r.completedSets);
+   const h=field(grid,t('Hours','Horas'),Math.floor((r.durationSeconds||0)/3600)),m=field(grid,t('Minutes','Minutos'),Math.floor((r.durationSeconds||0)%3600/60)),sec=field(grid,t('Seconds','Segundos'),(r.durationSeconds||0)%60);
+   const editActions=actions(item);
+   editActions.append(button(t('Save changes','Guardar cambios'),()=>{
+    const vals=[d,n,h,m,sec].map(x=>Number(x.value));if(!vals.every(Number.isInteger)||vals.some(x=>x<0)||vals[3]>59||vals[4]>59){alert(t('Enter valid results.','Ingresa resultados válidos.'));return;}
+    const updated=historyRead().map(x=>x.id===r.id?{...x,distance:vals[0],completedSets:vals[1],durationSeconds:vals[2]*3600+vals[3]*60+vals[4]}:x);
+    try{localStorage.setItem(HISTORY,JSON.stringify(updated));render();}catch(e){alert(t('Save failed.','No se pudo guardar.'));}
+   }));
+   editActions.append(button(t('Cancel','Cancelar'),render));
+  }));
+  row.append(button(t('Delete','Eliminar'),()=>{
+   const backdrop=el('div');backdrop.style.cssText='position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+   const dialog=el('div','sw-panel');dialog.style.cssText='max-width:350px;width:100%;background:#10273d;padding:20px;border:1px solid #42607a;border-radius:14px;color:#fff';
+   dialog.append(el('strong','',t('Delete this activity? This cannot be undone.','¿Eliminar esta actividad? Esta acción no se puede deshacer.')));
+   const buttons=actions(dialog);
+   buttons.append(button(t('Cancel','Cancelar'),()=>backdrop.remove()));
+   buttons.append(button(t('Delete','Eliminar'),()=>{try{localStorage.setItem(HISTORY,JSON.stringify(historyRead().filter(x=>x.id!==r.id)));backdrop.remove();render();}catch(e){alert(t('Delete failed.','No se pudo eliminar.'));}}));
+   backdrop.append(dialog);document.body.append(backdrop);
+  }));
+ });
 }
-
 }
 root.TrainLabSwimUI={render};
 })(window);
