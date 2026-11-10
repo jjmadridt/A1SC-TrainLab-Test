@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.63-triathlon-icons';
+const CACHE = 'trainlab-v2.64-triathlon-icon-alignment';
 
 const ASSETS = [
   './',
