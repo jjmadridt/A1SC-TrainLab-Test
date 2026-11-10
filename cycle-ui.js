@@ -123,12 +123,19 @@
   persistSession();requestWake();stopTick();ticker=setInterval(tick,250);render();
  }
  if(session?.running){requestWake();ticker=setInterval(tick,250);}
+ function finishAndReview(){
+  if(!session||session.finished)return;
+  syncSession();
+  if(session.running){session.activeMs=activeMs();session.activeSince=null;}
+  session.running=false;session.finished=true;session.remaining=0;
+  stopTick();releaseWake();persistSession();render();
+ }
  function sessionView(mount){
   if(!session)return;
   const panel=make('section','cy-panel cy-session');const w=session.workout;
   const sessionHeading=make('div','cy-plan-heading');sessionHeading.appendChild(workoutIcon(w));sessionHeading.appendChild(make('h2','',w.name));panel.appendChild(sessionHeading);
   panel.appendChild(make('p','cy-note',session.mode==='guided'?t('Guided mode · segments advance automatically.','Modo guiado · los segmentos avanzan automáticamente.'):t('Manual mode · use Next to advance.','Modo manual · usa Siguiente para avanzar.')));
-  if(session.finished){panel.appendChild(make('h3','',t('Session finished','Sesión finalizada')));}
+  if(session.finished){panel.appendChild(make('h3','',t('Session finished — review before saving','Sesión finalizada — revisa antes de guardar')));}
   else {
    const st=session.steps[session.index];panel.appendChild(make('h3','',st.name+' ('+(session.index+1)+'/'+session.steps.length+')'));
    panel.appendChild(make('div','cy-clock',clock(timeLeft()))).id='cy-countdown';
@@ -137,9 +144,11 @@
    function btn(label,fn){const b=make('button','',label);b.type='button';b.addEventListener('click',fn);actions.appendChild(b);}
    btn(session.running?t('Pause','Pausar'):t('Start / Resume','Iniciar / Continuar'),()=>{if(session.running)pause();else resume();});
    btn(t('Next segment','Siguiente segmento'),next);
+   btn(t('Finish & Review','Finalizar y revisar'),finishAndReview);
    panel.appendChild(actions);
    panel.appendChild(make('p','cy-note',t('Your session is saved on this device. The clock continues when you switch screens. Screen Awake is requested when supported.','La sesión se guarda en este dispositivo. El tiempo continúa al cambiar de pantalla. Se solicita mantener la pantalla activa cuando sea compatible.')));
   }
+  if(session.finished){
   const logging=make('div','cy-logging');
   logging.appendChild(make('h3','',t('Log activity','Registrar actividad')));
   const actualLabel=make('label','',t('Actual duration (mm:ss) — automatically measured; editable','Duración real (mm:ss) — automática; editable'));
@@ -159,7 +168,8 @@
   });logging.appendChild(saveBtn);
   logging.appendChild(make('p','cy-note',t('Saving stores this activity only on this device.','El registro se guarda únicamente en este dispositivo.')));
   panel.appendChild(logging);
-  const end=make('button','cy-end',t('Close session','Cerrar sesión'));end.type='button';end.addEventListener('click',()=>{stopTick();releaseWake();session=null;persistSession();render();});panel.appendChild(end);
+  }
+  const end=make('button','cy-end',t('Close session','Cerrar sesión'));end.type='button';end.addEventListener('click',()=>{if(!root.confirm(t('Discard this session without saving an activity?','¿Descartar esta sesión sin guardar la actividad?')))return;stopTick();releaseWake();session=null;persistSession();render();});panel.appendChild(end);
   mount.appendChild(panel);
  }
  function render(){
