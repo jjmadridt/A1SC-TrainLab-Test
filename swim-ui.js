@@ -95,33 +95,45 @@ selected().forEach((entry)=>{
  if(active&&active.workoutId===entry.id)details.style.display='block';
  const existingTimer=active&&active.workoutId===entry.id?active:null;
  if(active&&!active.workoutId){details.append(el('small','',t('An older unfinished session is stored; finish it before starting a new timer.','Hay una sesión anterior sin terminar; termínala antes de iniciar otro cronómetro.')));}
- const grid=el('div','sw-fields');grid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';details.append(grid);
+ const reviewing=existingTimer?.status==='review';
+ const timing=existingTimer&&(existingTimer.status==='running'||existingTimer.status==='paused');
+ if(reviewing){const heading=el('strong','',t('Review completed swim — correct your results, then log','Revisa el nado — corrige los resultados y registra'));details.append(heading);}
+ const review=el('div','sw-review-fields');review.style.display=timing?'none':'block';details.append(review);
+ const grid=el('div','sw-fields');grid.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';review.append(grid);
  const dist=field(grid,t('Actual distance ('+settingsForDay.unit+')','Distancia real ('+settingsForDay.unit+')'),distance(entry));
  const sets=field(grid,t('Completed sets','Series completadas'),entry.sets,0);
  const hrs=field(grid,t('Hours','Horas'),existingTimer?.status==='review'?Math.floor(elapsed(existingTimer)/3600):0);
  const mins=field(grid,t('Minutes','Minutos'),existingTimer?.status==='review'?Math.floor(elapsed(existingTimer)%3600/60):0);
  const secs=field(grid,t('Seconds','Segundos'),existingTimer?.status==='review'?elapsed(existingTimer)%60:0);
- const note=el('label','',t('Notes (optional)','Notas (opcional)'));const noteInput=el('textarea');noteInput.rows=2;noteInput.maxLength=1000;noteInput.placeholder=t('Session notes','Notas de la sesión');noteInput.style.cssText='width:100%;box-sizing:border-box;padding:9px;background:#091d2e;color:white;border:1px solid #42607a;border-radius:8px';note.append(noteInput);details.append(note);
- const timerLine=el('div','sw-note',existingTimer?clockText(elapsed(existingTimer)):clockText(0));details.append(timerLine);
+ const note=el('label','',t('Notes (optional)','Notas (opcional)'));const noteInput=el('textarea');noteInput.rows=2;noteInput.maxLength=1000;noteInput.placeholder=t('Session notes','Notas de la sesión');noteInput.style.cssText='width:100%;box-sizing:border-box;padding:9px;background:#091d2e;color:white;border:1px solid #42607a;border-radius:8px';note.append(noteInput);review.append(note);
+ const timerLine=el('div','sw-note',existingTimer?clockText(elapsed(existingTimer)):clockText(0));
+ timerLine.style.cssText='text-align:center;font-size:clamp(32px,9vw,56px);font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums;padding:14px 0';
+ if(!reviewing)details.insertBefore(timerLine,review);else review.prepend(timerLine);
  if(existingTimer?.status==='running'){const interval=setInterval(()=>{if(!timerLine.isConnected){clearInterval(interval);return;}timerLine.textContent=clockText(elapsed(existingTimer));},1000);}
- const row=actions(details);
+ const row=actions(details);row.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px';
  if(!existingTimer){
   row.append(button(t('Start timer','Iniciar cronómetro'),()=>{if(active){alert(t('Finish the existing timer first.','Finaliza el cronómetro activo primero.'));return;}setActive({workoutId:entry.id,status:'running',startedAt:Date.now(),accumulatedMs:0});render();}));
  }else if(existingTimer.status==='running'){
   row.append(button(t('Pause','Pausar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='paused';setActive(existingTimer);render();}));
-  row.append(button(t('Finish & Return','Finalizar y regresar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='review';setActive(existingTimer);render();}));
+  row.append(button(t('Finish & Review','Finalizar y revisar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='review';setActive(existingTimer);render();}));
  }else if(existingTimer.status==='paused'){
   row.append(button(t('Resume','Reanudar'),()=>{existingTimer.startedAt=Date.now();existingTimer.status='running';setActive(existingTimer);render();}));
-  row.append(button(t('Finish & Return','Finalizar y regresar'),()=>{existingTimer.status='review';setActive(existingTimer);render();}));
+  row.append(button(t('Finish & Review','Finalizar y revisar'),()=>{existingTimer.status='review';setActive(existingTimer);render();}));
  }else{
   row.append(button(t('Clear timer','Borrar cronómetro'),()=>{setActive(null);render();}));
  }
- row.append(button(t('Log Activity','Registrar actividad'),()=>{
+ if(!timing){
+ const logButton=button(t('Log Activity','Registrar actividad'),()=>{
+
   const d=Number(dist.value),n=Number(sets.value),h=Number(hrs.value),m=Number(mins.value),sec=Number(secs.value);
   if(![d,n,h,m,sec].every(Number.isFinite)||d<0||!Number.isInteger(d)||!Number.isInteger(n)||n<0||![h,m,sec].every(Number.isInteger)||h<0||m<0||m>59||sec<0||sec>59){alert(t('Enter valid activity details.','Ingresa datos válidos.'));return;}
   const rec={id:'swim-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),savedAt:new Date().toISOString(),day,environment:settingsForDay.environment,unit:settingsForDay.unit,pool:settingsForDay.environment==='pool'?settingsForDay.pool:null,workouts:[{...entry}],workoutDetails:[{id:def.id,category:def.category,en:def.en,es:def.es}],distance:d,completedSets:n,durationSeconds:h*3600+m*60+sec,notes:noteInput.value.trim(),manual:!existingTimer};
   try{localStorage.setItem(HISTORY,JSON.stringify([...historyRead(),rec]));if(existingTimer)setActive(null);render();}catch(e){alert(t('Save failed; try again.','No se pudo guardar; inténtalo de nuevo.'));}
- }));
+ });
+ logButton.style.cssText='grid-column:1/-1;min-height:58px;font-size:17px;font-weight:700';
+ row.append(logButton);
+ }
+ Array.from(row.children).forEach(b=>{b.style.minHeight='62px';b.style.fontSize='17px';b.style.fontWeight='700';});
 });
 if(!selected().length)activityPanel.append(el('p','sw-note',t('Add exercises in Edit Plan first.','Agrega ejercicios en Editar plan.')));
 const records=historyRead();
