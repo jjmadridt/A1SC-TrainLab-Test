@@ -154,7 +154,9 @@
   panel.appendChild(make('p','cy-note',session.mode==='guided'?t('Guided mode · segments advance automatically.','Modo guiado · los segmentos avanzan automáticamente.'):t('Manual mode · use Next to advance.','Modo manual · usa Siguiente para avanzar.')));
   if(!session.finished){
    const audioRow=make('div','cy-audio-row');
-   const mute=make('button','cy-audio-toggle',cycleMuted?t('🔇 Bells muted','🔇 Campanas silenciadas'):t('🔔 Bells on','🔔 Campanas activadas'));
+   const mute=make('button','cy-audio-toggle',cycleMuted?t('🔇 Unmute','🔇 Activar sonido'):t('🔔 Mute','🔔 Silenciar'));
+   mute.title=cycleMuted?t('Enable interval bells','Activar campanas de intervalos'):t('Mute interval bells','Silenciar campanas de intervalos');
+   mute.style.cssText='font-size:13px;padding:6px 10px;min-height:34px;opacity:.8';
    mute.type='button';mute.setAttribute('aria-pressed',String(cycleMuted));
    mute.addEventListener('click',()=>{cycleMuted=!cycleMuted;if(cycleMuted){cycleBell.pause();cycleBell.currentTime=0;}else unlockBell();render();});
    audioRow.appendChild(mute);panel.appendChild(audioRow);
