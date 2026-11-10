@@ -27,7 +27,10 @@ const panel=(title)=>{const p=el('section','sw-panel');p.append(el('h2','',title
 const nav=el('div','sw-buttons');
 nav.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'));
 nav.append(button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(nav);
-const week=panel(t('Weekly plan','Plan semanal'));const wd=el('div','sw-days');days[lang()].forEach((d,i)=>wd.append(button(d,()=>{day=i;render();},day===i)));week.append(wd);
+// Edit Plan keeps its planning panel; Today's Workout uses a compact day selector.
+const week=view==='edit'?panel(t('Weekly plan','Plan semanal')):el('div','sw-workout-day-selector');
+if(view==='workout'){week.style.cssText='margin:10px 0 8px';host.append(week);}
+const wd=el('div','sw-days');days[lang()].forEach((d,i)=>wd.append(button(d,()=>{day=i;render();},day===i)));week.append(wd);
 if(view==='edit'){
  const typePanel=panel(t('Day type','Tipo de día'));
  const typeLabel=el('label','',t('Day type','Tipo de día'));
@@ -47,7 +50,8 @@ if(view==='edit'){
   const presets=el('div','sw-buttons');[25,50].forEach(n=>presets.append(button(n+' '+settingsForDay.unit,()=>{saveDaySettings({pool:n});render();},settingsForDay.pool===n)));setup.append(presets);
  }
 }else{
- week.append(el('small','',settingsForDay.environment==='pool'?t('Pool','Alberca')+' · '+settingsForDay.pool+' '+settingsForDay.unit:t('Open water','Aguas abiertas')));
+ const envSummary=el('div','sw-note',settingsForDay.environment==='pool'?t('Pool','Alberca')+' · '+settingsForDay.pool+' '+settingsForDay.unit:t('Open water','Aguas abiertas'));
+envSummary.style.cssText='margin:6px 0 10px;color:#b5c7d7;font-size:14px';week.append(envSummary);
 }
 if(view==='edit'){const cats=el('div','sw-buttons');data.categories.forEach(c=>cats.append(button(c[lang()],()=>{category=c.id;render();},category===c.id)));week.append(cats);
 const list=el('div');data.workouts.filter(w=>w.category===category).forEach(w=>{
