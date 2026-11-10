@@ -264,9 +264,23 @@
   history.forEach(r=>{const item=make('div','cy-log-item');const date=new Date(r.date);item.appendChild(make('strong','',r.workoutName+' · '+(Number.isNaN(date.getTime())?'':date.toLocaleDateString())));item.appendChild(make('small','',t('Planned ','Planeado ')+r.plannedMinutes+' min · '+t('Actual ','Real ')+(Number.isFinite(r.actualSeconds)?String(Math.floor(r.actualSeconds/60))+'m '+String(r.actualSeconds%60).padStart(2,'0')+'s':r.actualMinutes+' min')+' · RPE '+r.rpe+' · '+(r.completion==='complete'?t('Complete','Completo'):t('Partial','Parcial'))));if(r.notes)item.appendChild(make('small','',r.notes));
    const del=make('button','cy-delete',t('Delete activity','Eliminar actividad'));del.type='button';
    del.addEventListener('click',()=>{
-    if(!root.confirm(t('Delete this Cycle activity permanently?','¿Eliminar permanentemente esta actividad de ciclismo?')))return;
-    const updated=history.filter(x=>x!==r);
-    try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));history=updated;render();}catch(e){root.alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
+    // Match SWIM's in-app confirmation rather than the browser-native popup.
+    const backdrop=make('div','cy-confirm-backdrop');
+    backdrop.style.cssText='position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+    const dialog=make('div','cy-confirm-dialog');
+    dialog.style.cssText='max-width:350px;width:100%;background:#10273d;padding:20px;border:1px solid #42607a;border-radius:14px;color:#fff';
+    dialog.appendChild(make('strong','',t('Delete this Cycling activity? This cannot be undone.','¿Eliminar esta actividad de ciclismo? Esta acción no se puede deshacer.')));
+    const controls=make('div','cy-confirm-actions');
+    controls.style.cssText='display:flex;gap:10px;justify-content:flex-end;margin-top:18px';
+    const cancel=make('button','',t('Cancel','Cancelar'));
+    cancel.type='button';cancel.addEventListener('click',()=>backdrop.remove());
+    const confirmDelete=make('button','cy-delete',t('Delete','Eliminar'));
+    confirmDelete.type='button';confirmDelete.addEventListener('click',()=>{
+     const updated=history.filter(x=>x!==r);
+     try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));history=updated;backdrop.remove();render();}
+     catch(e){root.alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
+    });
+    controls.append(cancel,confirmDelete);dialog.appendChild(controls);backdrop.appendChild(dialog);document.body.appendChild(backdrop);
    });item.appendChild(del);logPanel.appendChild(item);});mount.appendChild(logPanel);
   }
  }
