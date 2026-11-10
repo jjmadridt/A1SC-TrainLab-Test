@@ -226,13 +226,6 @@
   if(view==='workout') {
   const logPanel=make('div','cy-panel');logPanel.appendChild(make('h2','',t('Recent Cycle activities','Actividades recientes de ciclismo')));
   if(!history.length)logPanel.appendChild(make('p','cy-note',t('No activities logged yet.','Todavía no hay actividades registradas.')));
-  if(history.length){
-   const clear=make('button','cy-delete-all',t('Clear all Cycle activities','Borrar todas las actividades de ciclismo'));
-   clear.type='button';clear.addEventListener('click',()=>{
-    if(!root.confirm(t('Permanently delete ALL saved Cycle activities? Your weekly plan will stay unchanged.','¿Eliminar permanentemente TODAS las actividades de ciclismo? Tu plan semanal no cambiará.')))return;
-    try{localStorage.setItem(LOG_KEY,'[]');history=[];render();}catch(e){root.alert(t('Could not delete activities.','No se pudieron borrar las actividades.'));}
-   });logPanel.appendChild(clear);
-  }
   history.forEach(r=>{const item=make('div','cy-log-item');const date=new Date(r.date);item.appendChild(make('strong','',r.workoutName+' · '+(Number.isNaN(date.getTime())?'':date.toLocaleDateString())));item.appendChild(make('small','',t('Planned ','Planeado ')+r.plannedMinutes+' min · '+t('Actual ','Real ')+(Number.isFinite(r.actualSeconds)?String(Math.floor(r.actualSeconds/60))+'m '+String(r.actualSeconds%60).padStart(2,'0')+'s':r.actualMinutes+' min')+' · RPE '+r.rpe+' · '+(r.completion==='complete'?t('Complete','Completo'):t('Partial','Parcial'))));if(r.notes)item.appendChild(make('small','',r.notes));
    const del=make('button','cy-delete',t('Delete activity','Eliminar actividad'));del.type='button';
    del.addEventListener('click',()=>{
