@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.60-cycle-delete-dialog';
+const CACHE = 'trainlab-v2.62-triathlon-syntax-fix';
 
 const ASSETS = [
   './',
@@ -71,6 +71,29 @@ const ASSETS = [
   './workout-timer.js',
   './boxing-bell-double-ding.wav',
   './disciplines/run.js',
+  './disciplines/triathlon.js',
+  './anatomy/run/easy-run-female.png',
+  './anatomy/run/easy-run-male.png',
+  './anatomy/run/long-run-female.png',
+  './anatomy/run/long-run-male.png',
+  './anatomy/run/short-intervals-female.png',
+  './anatomy/run/short-intervals-male.png',
+  './anatomy/run/strides-female.png',
+  './anatomy/run/strides-male.png',
+  './anatomy/run/tempo-run-female.png',
+  './anatomy/run/tempo-run-male.png',
+  './cycle-icons/climb-female.webp',
+  './cycle-icons/climb-male.webp',
+  './cycle-icons/speed-female.webp',
+  './cycle-icons/speed-male.webp',
+  './cycle-icons/spin-female.webp',
+  './cycle-icons/spin-male.webp',
+  './swim-icons/endurance-female.webp',
+  './swim-icons/endurance-male.webp',
+  './swim-icons/intervals-female.webp',
+  './swim-icons/intervals-male.webp',
+  './swim-icons/technique-female.webp',
+  './swim-icons/technique-male.webp',
   './anatomy/run/a-skips-female.png',
   './anatomy/run/a-skips-male.png',
   './anatomy/run/butt-kicks-female.png',

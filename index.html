@@ -166,18 +166,18 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
  <button class="module" data-module="cycle"><img src="home-images/cycle.webp" alt=""><div class="module-content"><strong>CYCLE</strong><span><i class="dot"></i><span data-i18n="cycleReady">Training workouts · Ready to use</span></span></div></button>
  <button class="module " data-module="run"><img src="home-images/run.webp" alt=""><div class="module-content"><strong>RUN</strong><span><i class="dot"></i><span data-i18n="runReady">Weekly program · Ready to use</span></span></div></button>
  <button class="module" data-module="swim"><img src="home-images/swim.webp" alt=""><div class="module-content"><strong>SWIM</strong><span><i class="dot"></i><span data-i18n="swimPreview">Training workouts · Ready to use</span></span></div></button>
- <button class="module pending" data-module="tri"><img src="home-images/triathlon.webp" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span data-i18n="soon">Coming soon</span></span></div></button>
+ <button class="module" data-module="tri"><img src="home-images/triathlon.webp" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><i class="dot"></i><span>Weekly plan · Development</span></span></div></button>
  </div>
  <div class="status"><b data-i18n="vision">Built for a growing team</b><p data-i18n="visionText">Total Body is active today. Each additional discipline will be developed with its own volunteer team.</p></div>
 </section>
-<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div id="cycle-builder" style="display:none"></div><div id="swim-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
+<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div id="cycle-builder" style="display:none"></div><div id="swim-builder" style="display:none"></div><div id="tri-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
 <section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
 <div class="footer"><b>A1SC TRAINLAB</b> · <span data-i18n="platformFooter">A platform for every discipline</span></div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
 <script src="disciplines/run.js?v=20261029gender1"></script>
 <script src="disciplines/swim.js"></script>
-<script src="disciplines/triathlon.js"></script>
+<script src="disciplines/triathlon.js?v=20261110tri17c"></script>
 <script src="swim-ui.js?v=20261105swim1"></script>
 <script src="app.js?v=20261029profilebackup1"></script>
 <script src="cycle-ui.js?v=20261104v03"></script>
@@ -235,13 +235,16 @@ function show(name){
  const isRun=name==='run';
   const isCycle=name==='cycle';
   const isSwim=name==='swim';
+  const isTri=name==='tri';
   document.getElementById('cycle-builder').style.display=isCycle?'block':'none';
  document.getElementById('run-builder').style.display=isRun?'block':'none';
  document.getElementById('swim-builder').style.display=isSwim?'block':'none';
- document.getElementById('module-coming').style.display=(isRun||isCycle||isSwim)?'none':'block';
+ document.getElementById('tri-builder').style.display=isTri?'block':'none';
+ document.getElementById('module-coming').style.display=(isRun||isCycle||isSwim||isTri)?'none':'block';
   if(isCycle && window.TrainLabCycleUI)window.TrainLabCycleUI.render();
  if(isRun && window.TrainLabRun)window.TrainLabRun.render();
  if(isSwim && window.TrainLabSwimUI)window.TrainLabSwimUI.render();
+ if(isTri && window.TrainLabTriathlon)window.TrainLabTriathlon.render();
  }
  try{localStorage.setItem('trainlab-last-discipline',name)}catch(e){}
  window.scrollTo(0,0);
@@ -250,7 +253,7 @@ document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('clic
 document.getElementById('home-button').addEventListener('click',()=>show('home'));
 document.getElementById('back-button').addEventListener('click',()=>show('home'));
 lang.value=db.settings.lang==='es'?'es':'en';
-lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(document.getElementById('athlete-profile').classList.contains('visible'))window.renderAthleteProfile();if(window.TrainLabRun)window.TrainLabRun.render();if(window.TrainLabCycleUI)window.TrainLabCycleUI.render();if(window.TrainLabSwimUI)window.TrainLabSwimUI.render()});
+lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(document.getElementById('athlete-profile').classList.contains('visible'))window.renderAthleteProfile();if(window.TrainLabRun)window.TrainLabRun.render();if(window.TrainLabCycleUI)window.TrainLabCycleUI.render();if(window.TrainLabSwimUI)window.TrainLabSwimUI.render();if(window.TrainLabTriathlon)window.TrainLabTriathlon.render();});
 window.trainlabTranslate=translate;
 translate();
 if(document.getElementById('run-builder').style.display==='block' && window.TrainLabRun)window.TrainLabRun.render();
