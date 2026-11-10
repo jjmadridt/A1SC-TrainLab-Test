@@ -8,7 +8,7 @@ const KEY='fitclimb-v1';let db;try{db=JSON.parse(localStorage.getItem(KEY))}catc
 function render(){document.getElementById('tabs').innerHTML=['Workout'].map(t=>`<button class="${t===tab?'active':''}" data-tab="${t}">${t}</button>`).join('');document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render()});if(tab==='Workout')workout();if(tab==='Progress')progress();if(tab==='Body')body();if(tab==='Backup')backup()}
 function workout(){let p=PROGRAM[day];app.innerHTML=`${bodyAreaPicker()}<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${d.slice(0,3)}</button>`).join('')}</div><div class="row"><div><h2>${p.title}</h2><small>${day} • Session ${session(day)}</small></div><span class="pill">${p.ex.length} exercises</span></div>${p.ex.length?p.ex.map((e,i)=>exercise(e,i)).join(''):'<div class="card">Recovery day. Walking or mobility is optional.</div>'}${p.ex.length?'<button class="full" id="finish">Finish session / start next</button>':''}`;document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=b.dataset.day;selectedBodyAreas=[];render()});
  document.querySelectorAll('[data-weekly-exercise]').forEach(el=>el.onchange=()=>toggleWeeklyExercise(el.dataset.weeklyExercise));document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>logExercise(Number(b.dataset.log)));if($('finish'))$('finish').onclick=()=>{if(confirm('Start a new session for '+day+'?')){db.session[day]=session(day)+1;save();render()}}}
-function exercise(e,i){let [name,equipment,unit,sets,min,max]=e;let past=relevant(day,name),today=current(day,name),last=past.length?past[past.length-1]:null;let advice=!last?'Establish a comfortable baseline with controlled form.':last.rir>=2&&last.count>=max?'At the top of the rep range: if all sets were controlled, consider 2–5% more load next session.':last.count<min?'Below target: maintain or reduce resistance and prioritize form.':'Keep the same load and work toward the top of the range.';let cardio=unit==='minutes';return `<section class="card exercise"><div class="row"><div><h3>${i+1}. ${esc(name)}</h3><small>${esc(equipment)}</small><div><span class="pill">${sets} × ${min}${max!==min?'–'+max:''} ${unit}</span></div></div><span class="pill">${today.length}/${sets} logged</span></div><div class="grid" style="margin-top:12px"><div><label>${cardio?'Distance (km, optional)':'Weight (lb; 0 for bodyweight)'}</label><input id="weight-${i}" type="number" step="0.5" min="0" placeholder="0" value="${last?last.weight:''}"></div><div><label>${cardio?'Minutes':unit}</label><input id="count-${i}" data-reps="${i}" type="number" min="1" value="${db.repDefaults[name]??(last?last.count:min)}"></div></div>${!cardio?`<label style="margin-top:9px">Reps left in reserve (RIR)</label><select id="rir-${i}"><option value="3">3+ reps</option><option value="2" selected>2 reps</option><option value="1">1 rep</option><option value="0">0 reps</option></select>`:''}<button class="primary full log-activity" data-log="${i}">+ Log ${cardio?'activity':'set'}</button>${today.length?`<div class="history success">${today.map(x=>`✓ ${x.weight} ${cardio?'km':'lb'} × ${x.count} ${unit}`).join('<br>')}</div>`:''}<div class="notice"><small>Progression coach</small><div>${advice}</div></div></section>`}
+function exercise(e,i){let [name,equipment,unit,sets,min,max]=e;let past=relevant(day,name),today=current(day,name),last=past.length?past[past.length-1]:null;let advice=!last?'Establish a comfortable baseline with controlled form.':last.rir>=2&&last.count>=max?'At the top of the rep range: if all sets were controlled, consider 2–5% more load next session.':last.count<min?'Below target: maintain or reduce resistance and prioritize form.':'Keep the same load and work toward the top of the range.';let cardio=unit==='minutes';return `<section class="card exercise"><div class="row"><div><h3>${i+1}. ${esc(name)}</h3><small>${esc(equipment)}</small><div><span class="pill">${sets} × ${min}${max!==min?'–'+max:''} ${unit}</span></div></div><span class="pill">${today.length}/${sets} logged</span></div><div class="grid" style="margin-top:12px"><div><label>${cardio?'Distance (km, optional)':'Weight (lb; 0 for bodyweight)'}</label><input id="weight-${i}" ${ride?`data-ride-input="${i}"`:``} type="number" step="0.5" min="0" placeholder="0" value="${last?last.weight:''}"></div><div><label>${cardio?'Minutes':unit}</label><input id="count-${i}" data-reps="${i}" type="number" min="0.01" step="0.01" value="${bike?(pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===session(day)?(pendingBikeTimer.seconds/60).toFixed(2):''):(db.repDefaults[name]??(last?last.count:min))}"></div></div>${!cardio?`<label style="margin-top:9px">Reps left in reserve (RIR)</label><select id="rir-${i}"><option value="3">3+ reps</option><option value="2" selected>2 reps</option><option value="1">1 rep</option><option value="0">0 reps</option></select>`:''}<button class="primary full log-activity" data-log="${i}">+ Log ${cardio?'activity':'set'}</button>${today.length?`<div class="history success">${today.map(x=>`✓ ${x.weight} ${cardio?'km':'lb'} × ${x.count} ${unit}`).join('<br>')}</div>`:''}<div class="notice"><small>Progression coach</small><div>${advice}</div></div></section>`}
 function logExercise(i){let e=PROGRAM[day].ex[i],weight=Number($('weight-'+i).value||0),count=Number($('count-'+i).value),rir=$('rir-'+i)?Number($('rir-'+i).value):null;if(!Number.isFinite(weight)||weight<0||!Number.isFinite(count)||count<=0){alert('Enter valid values.');return}db.logs.push({date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:session(day),name:e[0],equipment:e[1],unit:e[2],weight,count,rir});save();render()}
 function progress(){let exercises=[...new Set(db.logs.map(x=>x.name))];app.innerHTML=`<h2>Progress</h2><div class="grid"><div class="card"><small>Logged sets</small><div class="stat">${db.logs.length}</div></div><div class="card"><small>Sessions</small><div class="stat">${new Set(db.logs.map(x=>x.day+'-'+x.session)).size}</div></div></div>${exercises.length?`<label>Exercise history</label><select id="history-select">${exercises.map(x=>`<option>${esc(x)}</option>`).join('')}</select><div class="card" id="history"></div>`:'<div class="card">Log your first workout to see progression.</div>'}`;if($('history-select')){$('history-select').onchange=renderHistory;renderHistory()}}
 function setRef(code){
@@ -152,7 +152,7 @@ function render(){
  document.documentElement.lang=db.settings.lang;
  document.getElementById('language-toggle').value=db.settings.lang;
  document.getElementById('language-toggle').onchange=e=>{db.settings.lang=e.target.value;save();render();if(window.trainlabTranslate)window.trainlabTranslate()};
- document.getElementById('tabs').innerHTML=['Workout'].map(t=>`<button class="${t===tab?'active':''}" data-tab="${t}">${({Workout:tr('Workout','Rutina'),Progress:tr('Progress','Progreso'),Body:tr('Body','Cuerpo'),Backup:tr('Backup','Respaldo')})[t]}</button>`).join('');
+ document.getElementById('tabs').innerHTML='';
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();window.scrollTo({top:0,behavior:'instant'})});
  if(tab==='Workout')workout();if(tab==='Progress')progress();if(tab==='Body')body();if(tab==='Backup')backup();
 }
@@ -170,6 +170,8 @@ const TOTAL_BODY_AREAS={
  'Upper Body':['Chest press','Seated cable row','Lat pulldown','Dumbbell shoulder press','Farmer carry']
 };
 let selectedBodyAreas=[];
+// Navigation state is UI-only; weekly plans and activity records remain unchanged.
+let totalBodyPlanMode=false;
 // Weekly routine templates are independent of completed workout logs.
 // Keep the original exercise definitions as the canonical catalog.
 const BASE_EXERCISES=[...new Map(Object.values(PROGRAM).flatMap(p=>p.ex).map(e=>[e[0],e])).values()];
@@ -193,6 +195,22 @@ if(db.totalBodyCleanStartVersion!==1){
  save();
 }
 restoreWeeklyProgram();
+// Per-weekday day types are separate from exercise selections and workout records.
+// Switching to Rest or Active Recovery never deletes the saved exercise plan.
+const DAY_TYPES=['training','recovery','rest'];
+function dayType(d){
+ const stored=db.dayTypes?.[d];
+ if(DAY_TYPES.includes(stored))return stored;
+ // Existing populated days remain training days; empty original recovery days default to rest.
+ return (!db.weeklyProgram[d]?.length&&(d==='Friday'||d==='Sunday'))?'rest':'training';
+}
+function dayTypeLabel(type){
+ return ({training:tr('Training Day','Día de entrenamiento'),recovery:tr('Active Recovery','Recuperación activa'),rest:tr('Rest Day','Día de descanso')})[type];
+}
+function dayTypePicker(){
+ const type=dayType(day);
+ return `<div class="card"><label for="tb-day-type">${tr('Day type','Tipo de día')}</label><select id="tb-day-type">${DAY_TYPES.map(t=>`<option value="${t}" ${type===t?'selected':''}>${dayTypeLabel(t)}</option>`).join('')}</select></div>`;
+}
 const exerciseCatalog=()=>BASE_EXERCISES;
 function toggleWeeklyExercise(name){
  if(!BASE_BY_NAME.has(name))return;
@@ -210,8 +228,7 @@ function bodyAreaPicker(){
  const available=exerciseCatalog().filter(e=>!chosen.has(e[0])&&selectedBodyAreas.some(area=>TOTAL_BODY_AREAS[area].includes(e[0])));
  const item=e=>`<label class="area-exercise-item"><span class="area-exercise-thumbnail">${anatomyImage(e[0],db.settings.bodyIllustration)}</span><span class="area-exercise-name">${esc(exerciseName(e[0]))}</span><input type="checkbox" data-weekly-exercise="${esc(e[0])}" ${chosen.has(e[0])?'checked':''} aria-label="${esc(exerciseName(e[0]))}"></label>`;
  return `<div class="card body-area-picker"><h3>${tr('Build your weekly workout','Crea tu rutina semanal')}</h3>
- <p class="muted">${tr('Choose a weekday below, select body areas, then tap exercises to add or remove them. Changes save automatically and repeat every week on that day.','Elige un día de la semana abajo, selecciona áreas del cuerpo y toca ejercicios para agregarlos o quitarlos. Los cambios se guardan automáticamente y se repiten cada semana ese día.')}</p>
- <div class="area-exercise-list"><strong>${tr('Selected for','Seleccionados para')} ${db.settings.lang==='es'?ES[EN.indexOf(day)]:day} (${chosen.size})</strong>${selected.length?selected.map(item).join(''):`<p class="muted">${tr('No exercises selected yet. Choose a body area below.','Aún no hay ejercicios seleccionados. Elige un área abajo.')}</p>`}</div>
+ <div class="area-exercise-list"><strong>${tr('Selected for','Seleccionados para')} ${db.settings.lang==='es'?ES[EN.indexOf(day)]:day} (${chosen.size})</strong>${selected.length?selected.map(item).join(''):`<p class="muted">${tr('Choose from the areas below.','Elige de las áreas abajo.')}</p>`}</div>
  <div class="area-options">${areas.map(a=>`<button type="button" class="${selectedBodyAreas.includes(a)?'active':''}" data-area="${a}" aria-pressed="${selectedBodyAreas.includes(a)}">${labels[a]}</button>`).join('')}</div>
  ${selectedBodyAreas.length?`<div class="area-exercise-list"><strong>${tr('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(item).join(''):`<p class="muted">${tr('All exercises in these categories are already selected.','Todos los ejercicios de estas categorías ya están seleccionados.')}</p>`}</div>`:''}
  <p class="muted" style="font-size:12px">${tr('Saved automatically','Guardado automático')}</p>
@@ -219,25 +236,42 @@ function bodyAreaPicker(){
 }
 
 function workout(){
- let p=PROGRAM[day],n=session(day),locked=completed(day,n);
- if(!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
+ let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
+ if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
  const dt=new Date(getStart(day,n));const start=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
- app.innerHTML=`${bodyAreaPicker()}<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
- <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div><span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span></div>
- <div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
- ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Choose a body area above to build your workout.','No hay ejercicios seleccionados para este día. Elige un área del cuerpo arriba para crear tu rutina.')}</div>`}
- ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`;
+ app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
+ <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>${totalBodyPlanMode?'':`<span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span>`}</div>
+ <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
+ ${totalBodyPlanMode?dayTypePicker()+bodyAreaPicker():''}
+ ${!totalBodyPlanMode?`
+ ${type!=='training'?`<div class="card"><h3>${dayTypeLabel(type)}</h3><p class="muted">${type==='rest'?tr('No structured workout scheduled. Your saved exercises remain available when you switch back to Training Day.','No hay entrenamiento programado. Tus ejercicios guardados estarán disponibles al volver a Día de entrenamiento.'):tr('Keep movement gentle and optional. You can use your saved exercises below or edit the plan.','Mantén el movimiento suave y opcional. Puedes usar los ejercicios guardados abajo o editar el plan.')}</p></div>`:''}
+ ${type==='rest'?'':`<div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
+ ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Use Edit plan to add exercises.','No hay ejercicios seleccionados para este día. Usa Editar plan para agregarlos.')}</div>`}
+ ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
+ document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();const root=document.getElementById('fitclimb');if(root)root.scrollIntoView({block:'start',behavior:'instant'});});
+ if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
  document.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const area=b.dataset.area;selectedBodyAreas=selectedBodyAreas.includes(area)?selectedBodyAreas.filter(x=>x!==area):[...selectedBodyAreas,area];render()});
  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=b.dataset.day;render()});
  document.querySelectorAll('[data-weekly-exercise]').forEach(el=>el.onchange=()=>toggleWeeklyExercise(el.dataset.weeklyExercise));
  document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>logExercise(Number(b.dataset.log)));
- document.querySelectorAll('[data-bike-config]').forEach(el=>el.oninput=()=>{const v=Number(el.value),key=el.dataset.bikeConfig;if(!Number.isFinite(v))return;db.bikeIntervals=db.bikeIntervals||{cycles:0,peak:60,recovery:120};db.bikeIntervals[key]=v;save();if(key==='cycles')render();});
  document.querySelectorAll('[data-distanceunit]').forEach(b=>b.onchange=()=>{
    const i=Number(b.dataset.distanceunit),name=PROGRAM[day].ex[i][0],prev=distanceUnit(name),next=b.value;
    const field=$('weight-'+i),v=field?field.value:'';
+   const ride=name==='Outdoor ride';
+   const hours=ride?$('ride-hours-'+i)?.value:null,minutes=ride?$('ride-minutes-'+i)?.value:null;
+   const elev=ride?$('ride-elevation-'+i)?.value:null;
+   const detailsOpen=ride?$('ride-elevation-'+i)?.closest('details')?.open:false;
    db.distanceUnits[name]=next;save();render();
    if(v!==''&&$('weight-'+i))$('weight-'+i).value=String(distanceShown(distanceKm(Number(v),prev),next));
+   if(ride){
+     if(hours!=null)$('ride-hours-'+i).value=hours;
+     if(minutes!=null)$('ride-minutes-'+i).value=minutes;
+     if(elev!=='')$('ride-elevation-'+i).value=String(Number((Number(elev)*(prev==='mi'?0.3048:1)/(next==='mi'?0.3048:1)).toFixed(2)));
+     $('ride-elevation-'+i).closest('details').open=!!detailsOpen;
+     updateRideSpeed(i);
+   }
  });
+ document.querySelectorAll('[data-ride-input]').forEach(el=>el.addEventListener('input',()=>updateRideSpeed(Number(el.dataset.rideInput))));
  document.querySelectorAll('[data-reps]').forEach(el=>el.onchange=()=>{
    const i=Number(el.dataset.reps),name=PROGRAM[day].ex[i][0],v=Number(el.value);
    if(Number.isFinite(v)&&v>0){db.repDefaults[name]=v;save();}
@@ -255,43 +289,64 @@ function workout(){
  document.querySelectorAll('[data-target]').forEach(b=>b.onchange=()=>{db.setTargets[day+'|'+PROGRAM[day].ex[Number(b.dataset.target)][0]]=Number(b.value);save();render()});
  if($('start-time'))$('start-time').onchange=e=>{if(e.target.value){db.started[startKey(day,n)]=new Date(e.target.value).toISOString();save()}};
  if($('finish'))$('finish').onclick=()=>{
- if(!confirm(tr('Finish and lock this session, then move to the next day?','¿Finalizar y bloquear esta sesión y pasar al siguiente día?')))return;
  db.completed.push({day,session:n,finishedAt:new Date().toISOString(),startedAt:getStart(day,n)});
  db.session[day]=n+1;
  day=EN[(EN.indexOf(day)+1)%7];
  save();render();window.scrollTo({top:0,behavior:'instant'});
  };
 }
+// Timer results remain pending until the athlete explicitly logs the activity.
+let pendingBikeTimer=null;
+document.addEventListener('trainlab:timer-finished',event=>{
+ const detail=event.detail||{};
+ if(detail.origin!=='bike'||!Number.isFinite(detail.elapsedSeconds)||detail.elapsedSeconds<=0)return;
+ pendingBikeTimer={seconds:detail.elapsedSeconds,day,session:session(day)};
+ if(typeof render==='function')render();
+});
+function updateRideSpeed(i){
+ const distance=Number($('weight-'+i)?.value||0),hours=Number($('ride-hours-'+i)?.value||0),minutes=Number($('ride-minutes-'+i)?.value||0);
+ const field=$('ride-speed-'+i);if(!field)return;
+ const duration=hours+minutes/60;
+ field.value=duration>0&&distance>=0?String(Number((distance/duration).toFixed(2))):'';
+}
 function exercise(e,i,locked){
  const [name,equipment,unit,sets,min,max]=e;
  const count=target(day,name),past=relevant(day,name),today=current(day,name),last=past.length?past[past.length-1]:null;
- const bike=name==='Stationary bike',cardio=unit==='minutes',exUnit=exerciseUnit(name),distUnit=distanceUnit(name),weight=last?toDisplay(last.weight,exUnit):'';
+ const bike=name==='Stationary bike',elliptical=name==='Elliptical warm-up',ride=name==='Outdoor ride',cardio=unit==='minutes',exUnit=exerciseUnit(name),distUnit=distanceUnit(name),weight=last?toDisplay(last.weight,exUnit):'';
  const completedSets=today.length;
- return `<section class="card exercise"><div class="row"><div><h3>${i+1}. ${esc(exerciseName(name))}</h3><small>${esc(equipment)}</small><div><span class="pill">${min}${max!==min?'–'+max:''} ${esc(unit)}</span></div></div>${muscleArt(name)}</div>
+ return `<section class="card exercise"><div class="row"><div><h3>${i+1}. ${esc(exerciseName(name))}</h3><small>${esc(equipment)}</small>${ride?'':`<div><span class="pill">${min}${max!==min?'–'+max:''} ${esc(unit)}</span></div>`}</div>${muscleArt(name)}</div>
  ${cardio&&!bike?`<div class="row" style="margin-top:8px"><label>${tr('Distance unit','Unidad de distancia')}</label><select data-distanceunit="${i}" style="width:100px" ${locked?'disabled':''}><option value="km" ${distUnit==='km'?'selected':''}>km</option><option value="mi" ${distUnit==='mi'?'selected':''}>mi</option></select></div>`:''}
  ${!cardio&&name!=='Side plank'?`<div class="row" style="margin-top:8px"><label>${tr('Exercise weight unit','Unidad de peso del ejercicio')}</label><select data-exunit="${i}" style="width:100px" ${locked?'disabled':''}><option value="lb" ${exUnit==='lb'?'selected':''}>lb</option><option value="kg" ${exUnit==='kg'?'selected':''}>kg</option></select></div>`:''}
- ${bike?'':`<div class="row" style="margin-top:8px"><label>${tr('Planned sets (1–15)','Series planeadas (1–15)')}</label><select data-target="${i}" style="width:90px" ${locked?'disabled':''}>${Array.from({length:15},(_,j)=>`<option value="${j+1}" ${count===j+1?'selected':''}>${j+1}</option>`).join('')}</select></div>`}
+ ${bike||elliptical||ride?'':`<div class="row" style="margin-top:8px"><label>${tr('Planned sets (1–15)','Series planeadas (1–15)')}</label><select data-target="${i}" style="width:90px" ${locked?'disabled':''}>${Array.from({length:15},(_,j)=>`<option value="${j+1}" ${count===j+1?'selected':''}>${j+1}</option>`).join('')}</select></div>`}
  ${name==='Side plank'?`<button type="button" class="primary full" data-open-timer="plank" data-exercise-index="${i}">⏱ ${tr('Start plank timer','Iniciar temporizador de plancha')}</button>`:''}
- ${bike?`<button type="button" class="primary full" data-open-timer="bike" data-exercise-index="${i}">⏱ ${tr('Open interval timer','Abrir temporizador de intervalos')}</button><div class="card" style="margin-top:10px"><label>${tr('Interval peaks (0–10)','Picos de intervalo (0–10)')}</label><select data-bike-config="cycles" ${locked?'disabled':''}>${Array.from({length:11},(_,j)=>`<option value="${j}" ${(db.bikeIntervals?.cycles||0)===j?'selected':''}>${j}</option>`).join('')}</select>${(db.bikeIntervals?.cycles||0)>0?`<div class="grid"><div><label>${tr('Peak seconds (1–900)','Segundos de pico (1–900)')}</label><input type="number" data-bike-config="peak" min="1" max="900" step="1" value="${db.bikeIntervals?.peak||60}" ${locked?'disabled':''}></div><div><label>${tr('Recovery seconds (1–1200)','Segundos de recuperación (1–1200)')}</label><input type="number" data-bike-config="recovery" min="1" max="1200" step="1" value="${db.bikeIntervals?.recovery||120}" ${locked?'disabled':''}></div></div>`:''}</div>`:''}
- <div class="pill">${bike?`${completedSets} ${tr('activities logged','actividades registradas')}`:`${completedSets}/${count} ${tr('logged','registradas')}`}</div>
- ${!locked?`<div class="grid" style="margin-top:12px">${name==='Side plank'||bike?'':`<div><label>${cardio?tr('Distance','Distancia')+' ('+distUnit+')':tr('Weight','Peso')+' ('+exUnit+')'}</label><input id="weight-${i}" type="number" step="0.5" min="0" value="${cardio?(last?distanceShown(last.weight,distUnit):''):weight}" placeholder="0"></div>`}<div><label>${cardio?tr('Minutes','Minutos'):esc(unit)}</label><input id="count-${i}" data-reps="${i}" type="number" min="1" value="${db.repDefaults[name]??(last?last.count:min)}"></div></div>
+ ${bike?`<button type="button" class="primary full" data-open-timer="bike" data-exercise-index="${i}">⏱ ${tr('Open interval timer','Abrir temporizador de intervalos')}</button>`:''}
+ <div class="pill">${bike||elliptical||ride?`${completedSets} ${tr('activities logged','actividades registradas')}`:`${completedSets}/${count} ${tr('logged','registradas')}`}</div>
+ ${!locked?`<div class="grid" style="margin-top:12px">${name==='Side plank'||bike?'':`<div><label>${cardio?tr('Distance','Distancia')+' ('+distUnit+')':tr('Weight','Peso')+' ('+exUnit+')'}</label><input id="weight-${i}" ${ride?`data-ride-input="${i}"`:``} type="number" step="0.5" min="0" value="${cardio?(last?distanceShown(last.weight,distUnit):''):weight}" placeholder="0"></div>`}${ride?`<div><label>${tr('Moving time','Tiempo en movimiento')}</label><div class="row"><input id="ride-hours-${i}" data-ride-input="${i}" type="number" min="0" step="1" placeholder="h" aria-label="${tr('Hours','Horas')}" style="width:75px" value=""><input id="ride-minutes-${i}" data-ride-input="${i}" type="number" min="0" max="59" step="1" placeholder="min" aria-label="${tr('Minutes','Minutos')}" style="width:85px" value=""></div></div>`:`<div><label>${bike?tr('Actual time (minutes) — enter manually or use timer','Tiempo real (minutos) — manual o con temporizador'):(cardio?tr('Time (minutes)','Tiempo (minutos)'):esc(unit))}</label><input id="count-${i}" data-reps="${i}" type="number" min="0.01" step="0.01" value="${bike?(pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===session(day)?(pendingBikeTimer.seconds/60).toFixed(2):''):(db.repDefaults[name]??(last?last.count:min))}"></div>`}</div>
 
- <button class="primary full log-activity" data-log="${i}" ${!bike&&completedSets>=count?'disabled':''}>+ ${bike?tr('Log activity','Registrar actividad'):tr('Log set','Registrar serie')}</button>`:''}
- ${today.length?`<div class="set-list" aria-label="${tr('Recorded sets','Series registradas')}">${today.map((x,j)=>`<div class="set-row"><span class="set-text"><b>${tr('Set','Serie')} ${j+1}</b> · ${bike?`${x.count} ${esc(unit)}`:`${cardio?distanceShown(x.weight,distUnit):toDisplay(x.weight,exUnit)} ${cardio?distUnit:exUnit} × ${x.count} ${esc(unit)}`}</span>${!locked?`<button class="set-edit" data-edit="${i}:${j}" aria-label="${tr('Edit set','Editar serie')} ${j+1}">✎</button><button class="set-delete" data-delete="${i}:${j}" aria-label="${tr('Delete set','Eliminar serie')} ${j+1}">✕</button>`:''}</div>`).join('')}</div>`:''}
+ ${ride&&!locked?`<details style="margin-top:12px;margin-bottom:22px;padding:10px 0;border-bottom:1px solid var(--border, #555)"><summary>${tr('Additional ride details (optional)','Detalles adicionales (opcional)')}</summary><div class="grid" style="margin-top:8px"><div><label>${tr('Elevation gain','Desnivel positivo')} (${distUnit==='mi'?'ft':'m'})</label><input id="ride-elevation-${i}" type="number" min="0" step="1" placeholder="0"></div><div><label>${tr('Average speed','Velocidad promedio')} (${distUnit==='mi'?'mph':'km/h'})</label><input id="ride-speed-${i}" type="number" min="0" step="0.01" placeholder="—" readonly aria-readonly="true"></div></div></details>`:''}
+ <button class="primary full log-activity" data-log="${i}" ${!bike&&!elliptical&&!ride&&completedSets>=count?'disabled':''}>+ ${bike||elliptical||ride?tr('Log activity','Registrar actividad'):tr('Log set','Registrar serie')}</button>`:''}
+ ${today.length?`<div class="set-list" aria-label="${tr('Recorded sets','Series registradas')}">${today.map((x,j)=>`<div class="set-row"><span class="set-text"><b>${elliptical||ride?tr('Activity','Actividad'):tr('Set','Serie')} ${j+1}</b> · ${bike?`${x.count} ${esc(unit)}`:ride?`${distanceShown(x.weight,distUnit)} ${distUnit} · ${Math.floor(x.count/60)}h ${Math.round(x.count%60)}m${x.elevationGainM!=null?' · ↑'+Number((distUnit==='mi'?x.elevationGainM/0.3048:x.elevationGainM).toFixed(distUnit==='mi'?0:1))+(distUnit==='mi'?'ft':'m'):''}${x.averageSpeedKmh!=null?' · '+Number((distUnit==='mi'?x.averageSpeedKmh/1.609344:x.averageSpeedKmh).toFixed(1))+' '+(distUnit==='mi'?'mph':'km/h'):''}`:`${cardio?distanceShown(x.weight,distUnit):toDisplay(x.weight,exUnit)} ${cardio?distUnit:exUnit} × ${x.count} ${esc(unit)}`}</span>${!locked?`<button class="set-edit" data-edit="${i}:${j}" aria-label="${tr('Edit set','Editar serie')} ${j+1}">✎</button><button class="set-delete" data-delete="${i}:${j}" aria-label="${tr('Delete set','Eliminar serie')} ${j+1}">✕</button>`:''}</div>`).join('')}</div>`:''}
  ${!locked&&lastSetAction&&lastSetAction.day===day&&lastSetAction.session===session(day)&&lastSetAction.name===name?`<button class="undo-set" data-undo="${i}">${tr('Undo last set change','Deshacer último cambio')}</button>`:''}</section>`;
 }
 function logExercise(i){
  const e=PROGRAM[day].ex[i],n=session(day);
  if(completed(day,n))return alert(tr('Session locked.','Sesión bloqueada.'));
- if(e[0]!=='Stationary bike'&&current(day,e[0]).length>=target(day,e[0]))return alert(tr('Planned sets reached.','Series planeadas completas.'));
- const raw=e[0]==='Side plank'||e[0]==='Stationary bike'?0:Number($('weight-'+i).value||0),count=Number($('count-'+i).value);
+ if(e[0]!=='Stationary bike'&&e[0]!=='Elliptical warm-up'&&e[0]!=='Outdoor ride'&&current(day,e[0]).length>=target(day,e[0]))return alert(tr('Planned sets reached.','Series planeadas completas.'));
+ const ride=e[0]==='Outdoor ride';
+ const raw=e[0]==='Side plank'||e[0]==='Stationary bike'?0:Number($('weight-'+i).value||0);
+ const hours=ride?Number($('ride-hours-'+i).value||0):0,minutes=ride?Number($('ride-minutes-'+i).value||0):0;
+ if(ride&&(!Number.isInteger(hours)||hours<0||!Number.isInteger(minutes)||minutes<0||minutes>59))return alert(tr('Enter valid moving time.','Ingresa un tiempo en movimiento válido.'));
+ const count=ride?hours*60+minutes:Number($('count-'+i).value);
  if(!Number.isFinite(raw)||raw<0||!Number.isFinite(count)||count<=0)return alert(tr('Enter valid values.','Ingresa valores válidos.'));
- const bike=e[0]==='Stationary bike',cfg=db.bikeIntervals||{cycles:0,peak:60,recovery:120};
- if(bike&&(!Number.isInteger(cfg.cycles)||cfg.cycles<0||cfg.cycles>10||(cfg.cycles>0&&(!Number.isFinite(cfg.peak)||cfg.peak<1||cfg.peak>900||!Number.isFinite(cfg.recovery)||cfg.recovery<1||cfg.recovery>1200))))return alert(tr('Invalid interval configuration.','Configuración de intervalos inválida.'));
- if(bike&&cfg.cycles>0&&((cfg.cycles*cfg.peak+(cfg.cycles-1)*cfg.recovery)>count*60))return alert(tr('Intervals exceed total workout time.','Los intervalos exceden el tiempo total.'));
- const record={date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:n,name:e[0],equipment:e[1],unit:e[2],weight:bike?0:e[2]==='minutes'?distanceKm(raw,distanceUnit(e[0])):toLbs(raw,exerciseUnit(e[0])),count,...(bike?{intervals:{cycles:cfg.cycles,peak:cfg.peak,recovery:cfg.recovery}}:{})};
+ const bike=e[0]==='Stationary bike';
+ const optionalNumber=id=>{const el=$(id),v=el?.value?.trim();return v===''||v==null?null:Number(v)};
+ const elev=ride?optionalNumber('ride-elevation-'+i):null;
+ const speed=ride&&count>0?distanceKm(raw,distanceUnit(e[0]))/(count/60):null;
+ if(ride&&((elev!==null&&(!Number.isFinite(elev)||elev<0))))return alert(tr('Enter valid ride details.','Ingresa detalles válidos de la rodada.'));
+ const record={date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:n,name:e[0],equipment:e[1],unit:e[2],weight:bike?0:e[2]==='minutes'?distanceKm(raw,distanceUnit(e[0])):toLbs(raw,exerciseUnit(e[0])),count,...(ride?{...(elev!==null?{elevationGainM:elev*(distanceUnit(e[0])==='mi'?0.3048:1)}:{}),...(speed!==null&&Number.isFinite(speed)?{averageSpeedKmh:speed}:{})}:{}),...(bike&&pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===n&&Math.abs(count-pendingBikeTimer.seconds/60)<0.02?{timerRecordedSeconds:pendingBikeTimer.seconds}:{})};
  db.logs.push(record);
- db.repDefaults[e[0]]=count;
+ if(bike)pendingBikeTimer=null;
+ if(!bike&&!ride)db.repDefaults[e[0]]=count;
  lastSetAction={type:'add',record,day,session:n,name:e[0]};
  save();render();
 }
@@ -320,9 +375,26 @@ function editSet(code){
  lastSetAction={type:'edit',record:before,index:x._index,day,session:session(day),name:x.name};
  save();render();
 }
-function deleteSet(code){
+// Shared, bilingual destructive-action confirmation; no generic browser OK button.
+window.TrainLabConfirmDelete=function(message){
+ return new Promise(resolve=>{
+  const overlay=document.createElement('div');overlay.setAttribute('role','presentation');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  const dialog=document.createElement('div');dialog.setAttribute('role','alertdialog');dialog.setAttribute('aria-modal','true');
+  dialog.style.cssText='width:min(100%,400px);padding:22px;background:#102234;color:#fff;border:1px solid #49647c;border-radius:14px';
+  const msg=document.createElement('p');msg.textContent=message;dialog.append(msg);
+  const actions=document.createElement('div');actions.style.cssText='display:flex;justify-content:flex-end;gap:12px;margin-top:18px';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent=tr('Cancel','Cancelar');
+  const del=document.createElement('button');del.type='button';del.textContent=tr('Delete','Eliminar');del.style.cssText='background:#a52d35;color:white';
+  actions.append(cancel,del);dialog.append(actions);overlay.append(dialog);document.body.append(overlay);
+  const finish=value=>{document.removeEventListener('keydown',key);overlay.remove();resolve(value)};
+  const key=e=>{if(e.key==='Escape')finish(false)};document.addEventListener('keydown',key);
+  cancel.onclick=()=>finish(false);del.onclick=()=>finish(true);overlay.onclick=e=>{if(e.target===overlay)finish(false)};cancel.focus();
+ });
+};
+async function deleteSet(code){
  const x=setRef(code);if(!x)return;
- if(!confirm(tr('Delete this recorded set?','¿Eliminar esta serie registrada?')))return;
+ if(!await window.TrainLabConfirmDelete(tr('Delete this recorded set? This action cannot be undone.','¿Eliminar esta serie registrada? Esta acción no se puede deshacer.')))return;
  const before={...db.logs[x._index]};
  db.logs.splice(x._index,1);
  lastSetAction={type:'delete',record:before,index:x._index,day,session:session(day),name:x.name};

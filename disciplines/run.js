@@ -28,18 +28,38 @@
   const CONTROL_KEY='a1sc-run-controls-v1';
   let settings={};try{settings=JSON.parse(localStorage.getItem(CONTROL_KEY))||{}}catch(e){}
   let expanded=null;
+  let editingRunIndex=null;
+  let pendingRunElapsed={};
+  let view='workout';
+  const DAY_TYPE_KEY='a1sc-run-day-types-v1';
+  let dayTypes={};try{const saved=JSON.parse(localStorage.getItem(DAY_TYPE_KEY));if(saved&&typeof saved==='object'&&!Array.isArray(saved))dayTypes=saved;}catch(e){}
+  const dayType=d=>['training','recovery','rest'].includes(dayTypes[d])?dayTypes[d]:'training';
   const kind=n=>INTERVALS.has(n)?'interval':CONTINUOUS.has(n)?'run':TIMED_DRILLS.has(n)?'drill':'strength';
   function controls(n){
     const type=kind(n),v=settings[n]||{};
     const field=(id,title,value,min='0',step='1')=>`<label>${title}<input data-run-field="${id}" type="number" min="${min}" step="${step}" value="${esc(v[id]??value)}"></label>`;
+    const splitTime=(key,total,majorLabel,minorLabel,majorSize=60)=>{const seconds=Math.max(0,Math.round(Number(v[key]??total)||0));return `<div class="run-time-pair" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>${majorLabel}<input data-run-time-key="${key}" data-run-time-part="major" type="number" min="0" step="1" value="${Math.floor(seconds/majorSize)}"></label><label>${minorLabel}<input data-run-time-key="${key}" data-run-time-part="minor" type="number" min="0" max="${majorSize-1}" step="1" value="${seconds%majorSize}"></label></div>`};
+    const runTime=()=>{const minutes=Math.max(0,Math.round(Number(v.minutes??30)||0));return `<div class="run-time-pair" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>${t('Hours','Horas')}<input data-run-time-key="minutes" data-run-time-part="major" type="number" min="0" step="1" value="${Math.floor(minutes/60)}"></label><label>${t('Minutes','Minutos')}<input data-run-time-key="minutes" data-run-time-part="minor" type="number" min="0" max="59" step="1" value="${minutes%60}"></label></div>`};
     const timer=(mode)=>`<button type="button" class="run-save" data-open-timer="${mode}" data-exercise-index="0">⏱ ${t('Open Smart Timer','Abrir temporizador')}</button>`;
     let fields='';
-    if(type==='run')fields=field('minutes',t('Duration (minutes)','Duración (minutos)'),30)+field('distance',t('Distance','Distancia'),'','0','any')+`<label>${t('Unit','Unidad')}<select data-run-field="unit"><option value="km" ${v.unit==='mi'?'':'selected'}>km</option><option value="mi" ${v.unit==='mi'?'selected':''}>mi</option></select></label>`+(n==='Treadmill Run'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
-    if(type==='interval')fields=field('cycles',t('Cycles','Ciclos'),5,'1')+field('peak',t('Peak (seconds)','Pico (segundos)'),60,'1')+field('recovery',t('Recovery (seconds)','Recuperación (segundos)'),120,'1')+(n==='Treadmill Intervals'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
-    if(type==='drill')fields=field('sets',t('Sets','Series'),2,'1')+field('seconds',t('Duration per set (seconds)','Duración por serie (segundos)'),30,'1');
+    if(type==='run')fields=runTime()+field('distance',t('Distance','Distancia'),'','0','any')+`<label>${t('Unit','Unidad')}<select data-run-field="unit"><option value="km" ${v.unit==='mi'?'':'selected'}>km</option><option value="mi" ${v.unit==='mi'?'selected':''}>mi</option></select></label>`+(n==='Treadmill Run'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
+    if(type==='interval')fields=field('cycles',t('Cycles','Ciclos'),5,'1')+splitTime('peak',60,t('Peak minutes','Minutos de pico'),t('Peak seconds','Segundos de pico'))+splitTime('recovery',120,t('Recovery minutes','Minutos de recuperación'),t('Recovery seconds','Segundos de recuperación'))+(n==='Treadmill Intervals'?field('incline',t('Incline (%)','Inclinación (%)'),0,'0','0.5'):'');
+    if(type==='drill')fields=field('sets',t('Sets','Series'),2,'1')+splitTime('seconds',30,t('Minutes per set','Minutos por serie'),t('Seconds per set','Segundos por serie'));
+    const splitKeys=type==='run'?['minutes']:type==='interval'?['peak','recovery']:type==='drill'?['seconds']:[];fields+=splitKeys.map(key=>`<input type="hidden" data-run-field="${key}" value="${esc(v[key]??(key==='minutes'?30:key==='recovery'?120:key==='peak'?60:30))}">`).join('');
     if(type==='strength')fields=field('sets',t('Sets','Series'),3,'1')+field('reps',t('Repetitions','Repeticiones'),10,'1')+(n==='Step-Ups'||n==='Calf Raises'?field('weight',t('Optional weight (kg)','Peso opcional (kg)'),'','0','any'):'');
-    return `<div class="run-controls" data-run-controls="${esc(n)}"><div class="run-log-fields">${fields}</div>${type==='interval'?timer('run-interval'):type==='run'||type==='drill'?timer('run-countdown'):''}<button type="button" class="run-save" data-run-log="${esc(n)}">${t('Log Activity','Registrar actividad')}</button><p class="muted" style="font-size:12px">${t('Settings save automatically. Timer completion does not log an activity.','Los ajustes se guardan automáticamente. El temporizador no registra la actividad por sí solo.')}</p></div>`;
+    return `<div class="run-controls" data-run-controls="${esc(n)}"><div class="run-log-fields">${fields}</div>${type==='interval'?timer('run-interval'):type==='run'||type==='drill'?timer('run-countdown'):''}${pendingRunElapsed[n]!=null?`<p class="muted">${t('Timer recorded','Tiempo registrado')}: ${Math.floor(pendingRunElapsed[n]/60)}:${String(pendingRunElapsed[n]%60).padStart(2,'0')} — ${t('Press Log Activity to save.','Presiona Registrar actividad para guardar.')}</p>`:''}<button type="button" class="run-save" data-run-log="${esc(n)}">${t('Log Activity','Registrar actividad')}</button><p class="muted" style="font-size:12px">${t('Settings save automatically. Timer completion does not log an activity.','Los ajustes se guardan automáticamente. El temporizador no registra la actividad por sí solo.')}</p></div>`;
   }
+  let pendingRunTimer=null;
+  document.addEventListener('trainlab:timer-finished',e=>{
+    const detail=e.detail||{};if(!String(detail.origin||'').startsWith('run-')||!(detail.elapsedSeconds>0)||!pendingRunTimer)return;
+    const n=pendingRunTimer;pendingRunTimer=null;
+    const seconds=Math.round(detail.elapsedSeconds),v=settings[n]||{};
+    if(kind(n)==='run')v.minutes=String(Math.round(seconds/60*10000)/10000);
+    else if(kind(n)==='drill')v.seconds=String(seconds);
+    else v.completedSeconds=String(seconds);
+    pendingRunElapsed[n]=seconds;settings[n]=v;try{localStorage.setItem(CONTROL_KEY,JSON.stringify(settings))}catch(e){}
+    expanded=n;view='workout';render();
+  });
   const LOG_KEY = 'a1sc-run-activities-v1';
   let activities=[];
   try { const saved=JSON.parse(localStorage.getItem(LOG_KEY)); if(Array.isArray(saved))activities=saved; } catch(e) {}
@@ -51,7 +71,7 @@
   const label=s=>t(s,ES[s]||s);
   const pace=(seconds,km)=>{const total=Math.round(seconds/km);return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')} /km`;};
   const runGender=()=>{try{return JSON.parse(localStorage.getItem('fitclimb-v1'))?.settings?.bodyIllustration==='female'?'female':'male'}catch(e){return 'male'}};
-  const runArt=n=>`<img class="run-anatomy" src="anatomy/run/${n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${runGender()}.png?v=20261029gender1" alt="" loading="lazy" decoding="async">`;
+  const runArt=n=>`<img class="run-anatomy" src="anatomy/run/${n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}-${runGender()}.png?v=20261109runart2" alt="" loading="lazy" decoding="async">`;
   function render() {
     const el=document.getElementById('run-builder');
     if(!el)return;
@@ -59,22 +79,66 @@
     const all=Object.values(CATALOG).flat();
     const available=all.filter(n=>!selected.includes(n)&&categories.some(c=>CATALOG[c].includes(n)));
     const item=(n,checked)=>`<label class="run-exercise"><span class="run-exercise-icon" aria-hidden="true">${runArt(n)}</span><span>${esc(label(n))}</span><input type="checkbox" data-run-exercise="${esc(n)}" ${checked?'checked':''}></label>`;
-    el.innerHTML=`<div class="card"><h3>${t('Build your weekly run program','Crea tu programa semanal de carrera')}</h3><p class="muted">${t('Choose a day and training categories, then select exercises. Your choices repeat each week and save automatically.','Elige un día y categorías de entrenamiento, luego selecciona ejercicios. Tus opciones se repiten cada semana y se guardan automáticamente.')}</p>
-      <div class="run-days">${DAYS.map((d,i)=>`<button type="button" class="${day===d?'active':''}" data-run-day="${d}">${t(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][i])}</button>`).join('')}</div>
-      <div class="run-list"><strong>${t('Selected for','Seleccionados para')} ${esc(day)} (${selected.length})</strong>${selected.length?selected.map(n=>item(n,true)).join(''):`<p class="muted">${t('No exercises selected yet.','Todavía no hay ejercicios seleccionados.')}</p>`}</div>
+    const recordDetail=a=>{const data=a.data||{};const k=a.kind||kind(a.exercise);const parts=[];
+      if(k==='run'){const sec=Number(a.durationSeconds)||Number(data.minutes||0)*60;if(sec>0)parts.push(`${Math.floor(sec/3600)}h ${Math.floor(sec%3600/60)}m ${Math.round(sec%60)}s`);if(data.distance)parts.push(`${data.distance} ${data.unit||'km'}`);if(a.pace)parts.push(a.pace);}
+      else if(k==='interval'){if(data.cycles)parts.push(`${data.cycles} ${t('cycles','ciclos')}`);if(data.peak)parts.push(`${data.peak}s ${t('peak','pico')}`);if(data.recovery)parts.push(`${data.recovery}s ${t('recovery','recuperación')}`);if(a.durationSeconds>0)parts.push(`${a.durationSeconds}s ${t('elapsed','transcurridos')}`);}
+      else if(k==='drill'){parts.push(`${data.sets||0} ${t('sets','series')} × ${data.seconds||0}s`);}
+      else {parts.push(`${data.sets||0} × ${data.reps||0} ${t('reps','repeticiones')}`);if(data.weight)parts.push(`${data.weight} kg`);}
+      return parts.join(' · ');
+    };
+    // Compact, translated inline editing: keep stored field names and values unchanged.
+    const editLabels={
+      minutes:['Duration (minutes)','Duración (minutos)'],
+      distance:['Distance','Distancia'], unit:['Unit','Unidad'],
+      incline:['Incline (%)','Inclinación (%)'],
+      cycles:['Cycles','Ciclos'], peak:['Peak (seconds)','Pico (segundos)'],
+      recovery:['Recovery (seconds)','Recuperación (segundos)'],
+      sets:['Sets','Series'], seconds:['Seconds per set','Segundos por serie'],
+      reps:['Repetitions','Repeticiones'], weight:['Weight (kg)','Peso (kg)'],
+      completedSeconds:['Timer elapsed (seconds)','Tiempo del temporizador (segundos)']
+    };
+    const editField=([k,v])=>{
+      const pair=editLabels[k]||[k,k];
+      const title=t(pair[0],pair[1]);
+      const control=k==='unit'
+        ?`<select data-run-edit-field="unit" style="width:100%;min-height:38px"><option value="km" ${v!=='mi'?'selected':''}>km</option><option value="mi" ${v==='mi'?'selected':''}>mi</option></select>`
+        :`<input data-run-edit-field="${esc(k)}" type="number" min="0" step="${['cycles','sets','reps'].includes(k)?'1':'any'}" value="${esc(v)}" style="width:100%;min-height:38px;box-sizing:border-box">`;
+      return `<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0"><span>${esc(title)}</span>${control}</label>`;
+    };
+    const record=(a,i)=>`<div class="run-record" style="padding:12px;margin:8px 0;border:1px solid #49647c;border-radius:10px"><div><strong>${esc(label(a.exercise))}</strong> · <small>${esc(new Date(a.timestamp).toLocaleString())}</small></div><div style="margin:6px 0">${esc(recordDetail(a))}</div>${editingRunIndex===i?`<div class="run-edit-fields" style="margin-top:10px;padding-top:10px;border-top:1px solid #49647c"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px">${Object.entries(a.data||{}).map(editField).join('')}</div><div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="run-save" data-run-edit-save="${i}">${t('Save Changes','Guardar cambios')}</button><button type="button" data-run-edit-cancel>${t('Cancel','Cancelar')}</button></div></div>`:`<div style="display:flex;gap:8px"><button type="button" data-run-edit="${i}">${t('Edit','Editar')}</button><button type="button" data-run-delete="${i}">${t('Delete','Eliminar')}</button></div>`}</div>`;
+    const navigation=`<div class="run-categories" style="margin-bottom:12px"><button type="button" data-run-view="workout" class="${view==='workout'?'active':''}">${t('Today’s Workout','Entrenamiento de hoy')}</button><button type="button" data-run-view="plan" class="${view==='plan'?'active':''}">${t('Edit Plan','Editar Plan')}</button></div>`;
+    const dayNav=`<div class="run-days">${DAYS.map((d,i)=>`<button type="button" class="${day===d?'active':''}" data-run-day="${d}">${t(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][i])}</button>`).join('')}</div>`;
+    el.innerHTML=dayNav+navigation+(view==='plan'?`<div class="card"><h3>${t('Build your weekly run program','Crea tu programa semanal de carrera')}</h3>
+      <div style="margin:12px 0"><label style="display:block;margin-bottom:8px" for="run-day-type">${t('Day type','Tipo de día')}</label><select id="run-day-type" data-run-day-type style="display:block;width:100%;padding:12px 14px;border-radius:10px;background:#102234;color:inherit;border:1px solid #49647c;font:inherit">${[['training',t('Training Day','Día de entrenamiento')],['recovery',t('Active Recovery','Recuperación activa')],['rest',t('Rest Day','Día de descanso')]].map(([id,name])=>`<option value="${id}" ${dayType(day)===id?'selected':''}>${name}</option>`).join('')}</select></div>
+      <div class="run-list"><strong>${t('Selected for','Seleccionados para')} ${esc(day)}</strong>${selected.length?selected.map(n=>item(n,true)).join(''):`<p class="muted">${t('Choose from the areas below.','Elige de las áreas abajo.')}</p>`}</div>
       <div class="run-categories">${Object.keys(CATALOG).map(c=>`<button type="button" class="${categories.includes(c)?'active':''}" data-run-category="${esc(c)}" aria-pressed="${categories.includes(c)}">${esc(label(c))}</button>`).join('')}</div>
       ${categories.length?`<div class="run-list"><strong>${t('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(n=>item(n,false)).join(''):`<p class="muted">${t('All exercises in these categories are selected.','Ya seleccionaste todos los ejercicios de estas categorías.')}</p>`}</div>`:''}
       <p class="muted" style="font-size:12px">${t('Saved automatically on this device','Guardado automáticamente en este dispositivo')}</p></div>
-      <div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${selected.length?selected.map((n,i)=>`<div class="run-exercise-block"><div class="run-program-row">${runArt(n)}<button type="button" class="run-title-button" data-run-expand="${esc(n)}" aria-expanded="${expanded===n}">${i+1}. ${esc(label(n))} ${expanded===n?'▾':'▸'}</button><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>${expanded===n?controls(n):''}</div>`).join(''):`<p class="muted">${t('Choose exercises above to build this day’s program.','Elige ejercicios arriba para crear el programa de este día.')}</p>`}
+`:`<div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${dayType(day)==='rest'?`<p class="muted">${t('Rest Day — no structured workout.','Día de descanso — sin entrenamiento programado.')}</p>`:dayType(day)==='recovery'?`<p class="muted">${t('Active Recovery — optional light movement. Your training plan is preserved.','Recuperación activa — movimiento ligero opcional. Tu plan se conserva.')}</p>`:selected.length?selected.map((n,i)=>`<div class="run-exercise-block"><div class="run-program-row">${runArt(n)}<button type="button" class="run-title-button" data-run-expand="${esc(n)}" aria-expanded="${expanded===n}">${i+1}. ${esc(label(n))} ${expanded===n?'▾':'▸'}</button><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>${expanded===n?controls(n):''}${activities.map((a,j)=>({a,j})).filter(x=>x.a.exercise===n&&new Date(x.a.timestamp).toDateString()===new Date().toDateString()).slice(0,5).map(x=>record(x.a,x.j)).join('')}</div>`).join(''):`<p class="muted">${t('Use Edit Plan to choose exercises for this day.','Usa Editar Plan para elegir los ejercicios de este día.')}</p>`}
       <div class="run-log"><h3>${t('Recent Run Activities','Actividades recientes de carrera')}</h3>
-      ${activities.length?activities.slice(0,5).map((a,i)=>`<div class="run-program-row"><span>${esc(new Date(a.timestamp).toLocaleDateString())} · ${esc(label(a.exercise))}<br><small>${a.data?esc(Object.entries(a.data).filter(([k,v])=>v!=='').map(([k,v])=>k+': '+v).join(' · ')):(a.durationSeconds>=60?Math.floor(a.durationSeconds/60)+'m ':'')+(a.durationSeconds%60)+'s · '+a.distance+' '+a.unit+' · '+esc(a.effort)}</small></span><small>${esc(a.pace)}</small><button type="button" data-run-delete="${i}" style="padding:7px 9px;color:#ffb5b5">${t('Delete','Eliminar')}</button></div>`).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`;
-    el.querySelectorAll('[data-run-delete]').forEach(button=>button.onclick=()=>{
+      ${activities.length?activities.slice(0,5).map((a,i)=>record(a,i)).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`);
+    el.querySelectorAll('[data-run-view]').forEach(b=>b.onclick=()=>{view=b.dataset.runView;expanded=null;render()});
+    el.querySelectorAll('[data-run-day-type]').forEach(b=>b.onchange=()=>{dayTypes[day]=b.value;try{localStorage.setItem(DAY_TYPE_KEY,JSON.stringify(dayTypes))}catch(e){alert(t('Could not save day type.','No se pudo guardar el tipo de día.'));return;}render()});
+    el.querySelectorAll('[data-run-delete]').forEach(button=>button.onclick=async()=>{
       const index=Number(button.dataset.runDelete);
       if(!Number.isInteger(index)||index<0||index>=activities.length)return;
-      if(!confirm(t('Delete this Run activity? This cannot be undone.','¿Eliminar esta actividad de carrera? No se puede deshacer.')))return;
+      const ok=await window.TrainLabConfirmDelete(t('Delete this activity? This action cannot be undone.','¿Eliminar esta actividad? Esta acción no se puede deshacer.'));
+      if(!ok)return;
       const updated=activities.filter((_,i)=>i!==index);
-      try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render();}
+      try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;editingRunIndex=null;render();}
       catch(e){alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
+    });
+    el.querySelectorAll('[data-run-edit]').forEach(b=>b.onclick=()=>{editingRunIndex=Number(b.dataset.runEdit);render()});
+    el.querySelectorAll('[data-run-edit-cancel]').forEach(b=>b.onclick=()=>{editingRunIndex=null;render()});
+    el.querySelectorAll('[data-run-edit-save]').forEach(b=>b.onclick=()=>{
+      const i=Number(b.dataset.runEditSave),a=activities[i];if(!a)return;
+      const fields=b.closest('.run-record').querySelectorAll('[data-run-edit-field]');const data={...a.data};
+      for(const field of fields){const k=field.dataset.runEditField,v=field.value;if(k!=='unit'&&(v!==''&&(!Number.isFinite(Number(v))||Number(v)<0))){alert(t('Check the entered values.','Revisa los valores.'));return;}data[k]=v;}
+      const k=a.kind||kind(a.exercise);
+      if(k==='run'&&!(Number(data.minutes)>0)||k==='interval'&&!(Number(data.cycles)>0&&Number(data.peak)>0&&Number(data.recovery)>0)||k==='strength'&&!(Number(data.sets)>0&&Number(data.reps)>0)||k==='drill'&&!(Number(data.sets)>0&&Number(data.seconds)>0)){alert(t('Complete the required workout values.','Completa los valores del entrenamiento.'));return;}
+      const seconds=Number(data.minutes||0)*60,km=Number(data.distance||0)*(data.unit==='mi'?1.609344:1);
+      const updated=[...activities];updated[i]={...a,data,durationSeconds:k==='run'?seconds:k==='interval'?Number(data.completedSeconds||a.durationSeconds||0):0,distance:Number(data.distance)||0,unit:data.unit||'',pace:seconds>0&&km>0?pace(seconds,km):''};
+      try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;editingRunIndex=null;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
     });
     el.querySelectorAll('[data-run-expand]').forEach(b=>b.onclick=()=>{expanded=expanded===b.dataset.runExpand?null:b.dataset.runExpand;render()});
     el.querySelectorAll('[data-run-controls]').forEach(panel=>{
@@ -83,8 +147,16 @@
         settings[n]={...(settings[n]||{}),[input.dataset.runField]:input.value};
         try{localStorage.setItem(CONTROL_KEY,JSON.stringify(settings))}catch(e){alert(t('Could not save settings.','No se pudieron guardar los ajustes.'))}
       });
+      panel.querySelectorAll('[data-run-time-part]').forEach(input=>input.addEventListener('change',()=>{
+        const key=input.dataset.runTimeKey,parts=[...panel.querySelectorAll(`[data-run-time-key="${key}"]`)];
+        const major=Number(parts.find(x=>x.dataset.runTimePart==='major')?.value),minor=Number(parts.find(x=>x.dataset.runTimePart==='minor')?.value);
+        const radix=key==='minutes'?60:60;
+        if(!Number.isInteger(major)||major<0||!Number.isInteger(minor)||minor<0||minor>=radix){input.setCustomValidity(t('Enter valid time values.','Ingresa valores de tiempo válidos.'));input.reportValidity();return;}
+        input.setCustomValidity('');const hidden=panel.querySelector(`[data-run-field="${key}"]`);if(hidden){hidden.value=String(major*radix+minor);hidden.dispatchEvent(new Event('change',{bubbles:true}));}
+      }));
       const timer=panel.querySelector('[data-open-timer]');
       if(timer)timer.addEventListener('click',(event)=>{
+        pendingRunTimer=n;
         const get=id=>Number(panel.querySelector(`[data-run-field="${id}"]`)?.value);
         if(kind(n)==='interval'){
           const values={cycles:get('cycles'),peak:get('peak'),recovery:get('recovery')};
@@ -99,13 +171,13 @@
         }
       },true);
       panel.querySelector('[data-run-log]').onclick=()=>{
-        const data={};panel.querySelectorAll('[data-run-field]').forEach(input=>data[input.dataset.runField]=input.value);
+        const data={};panel.querySelectorAll('[data-run-field]').forEach(input=>data[input.dataset.runField]=input.value);if(pendingRunElapsed[n]!=null)data.completedSeconds=String(pendingRunElapsed[n]);
         const nums=Object.entries(data).filter(([k])=>k!=='unit');
         if(nums.some(([k,v])=>v!==''&&(!Number.isFinite(Number(v))||Number(v)<0))){alert(t('Check the entered values.','Revisa los valores.'));return;}
         if(kind(n)==='run'&&!(Number(data.minutes)>0)||kind(n)==='interval'&&!(Number(data.cycles)>0&&Number(data.peak)>0&&Number(data.recovery)>0)||kind(n)==='strength'&&!(Number(data.sets)>0&&Number(data.reps)>0)||kind(n)==='drill'&&!(Number(data.sets)>0&&Number(data.seconds)>0)){alert(t('Complete the required workout values.','Completa los valores del entrenamiento.'));return;}
         const seconds=Number(data.minutes)*60,km=Number(data.distance)*(data.unit==='mi'?1.609344:1);
-        const entry={timestamp:new Date().toISOString(),exercise:n,kind:kind(n),data,durationSeconds:kind(n)==='run'?seconds:0,distance:Number(data.distance)||0,unit:data.unit||'',effort:'',pace:seconds>0&&km>0?pace(seconds,km):''};
-        try{const updated=[entry,...activities];localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;render();alert(t('Activity saved.','Actividad guardada.'))}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'))}
+        const entry={timestamp:new Date().toISOString(),exercise:n,kind:kind(n),data,durationSeconds:kind(n)==='run'?(pendingRunElapsed[n]??seconds):(Number(data.completedSeconds)||0),distance:Number(data.distance)||0,unit:data.unit||'',effort:'',pace:seconds>0&&km>0?pace(seconds,km):''};
+        try{const updated=[entry,...activities];localStorage.setItem(LOG_KEY,JSON.stringify(updated));activities=updated;delete pendingRunElapsed[n];render()}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'))}
       };
     });
     el.querySelectorAll('[data-run-day]').forEach(b=>b.onclick=()=>{day=b.dataset.runDay;render()});
