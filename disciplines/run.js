@@ -86,7 +86,26 @@
       else {parts.push(`${data.sets||0} × ${data.reps||0} ${t('reps','repeticiones')}`);if(data.weight)parts.push(`${data.weight} kg`);}
       return parts.join(' · ');
     };
-    const record=(a,i)=>`<div class="run-record" style="padding:12px;margin:8px 0;border:1px solid #49647c;border-radius:10px"><div><strong>${esc(label(a.exercise))}</strong> · <small>${esc(new Date(a.timestamp).toLocaleString())}</small></div><div style="margin:6px 0">${esc(recordDetail(a))}</div><div style="display:flex;gap:8px"><button type="button" data-run-edit="${i}">${t('Edit','Editar')}</button><button type="button" data-run-delete="${i}">${t('Delete','Eliminar')}</button></div>${editingRunIndex===i?`<div class="run-edit-fields" style="margin-top:10px"><p>${t('Edit recorded values','Editar valores registrados')}</p>${Object.entries(a.data||{}).map(([k,v])=>`<label>${esc(k)}<input data-run-edit-field="${esc(k)}" ${k==='unit'?'type="text"':'type="number" min="0" step="any"'} value="${esc(v)}"></label>`).join('')}<div style="display:flex;gap:8px"><button type="button" data-run-edit-save="${i}">${t('Save Changes','Guardar cambios')}</button><button type="button" data-run-edit-cancel>${t('Cancel','Cancelar')}</button></div></div>`:''}</div>`;
+    // Compact, translated inline editing: keep stored field names and values unchanged.
+    const editLabels={
+      minutes:['Duration (minutes)','Duración (minutos)'],
+      distance:['Distance','Distancia'], unit:['Unit','Unidad'],
+      incline:['Incline (%)','Inclinación (%)'],
+      cycles:['Cycles','Ciclos'], peak:['Peak (seconds)','Pico (segundos)'],
+      recovery:['Recovery (seconds)','Recuperación (segundos)'],
+      sets:['Sets','Series'], seconds:['Seconds per set','Segundos por serie'],
+      reps:['Repetitions','Repeticiones'], weight:['Weight (kg)','Peso (kg)'],
+      completedSeconds:['Timer elapsed (seconds)','Tiempo del temporizador (segundos)']
+    };
+    const editField=([k,v])=>{
+      const pair=editLabels[k]||[k,k];
+      const title=t(pair[0],pair[1]);
+      const control=k==='unit'
+        ?`<select data-run-edit-field="unit" style="width:100%;min-height:38px"><option value="km" ${v!=='mi'?'selected':''}>km</option><option value="mi" ${v==='mi'?'selected':''}>mi</option></select>`
+        :`<input data-run-edit-field="${esc(k)}" type="number" min="0" step="${['cycles','sets','reps'].includes(k)?'1':'any'}" value="${esc(v)}" style="width:100%;min-height:38px;box-sizing:border-box">`;
+      return `<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0"><span>${esc(title)}</span>${control}</label>`;
+    };
+    const record=(a,i)=>`<div class="run-record" style="padding:12px;margin:8px 0;border:1px solid #49647c;border-radius:10px"><div><strong>${esc(label(a.exercise))}</strong> · <small>${esc(new Date(a.timestamp).toLocaleString())}</small></div><div style="margin:6px 0">${esc(recordDetail(a))}</div>${editingRunIndex===i?`<div class="run-edit-fields" style="margin-top:10px;padding-top:10px;border-top:1px solid #49647c"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px">${Object.entries(a.data||{}).map(editField).join('')}</div><div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="run-save" data-run-edit-save="${i}">${t('Save Changes','Guardar cambios')}</button><button type="button" data-run-edit-cancel>${t('Cancel','Cancelar')}</button></div></div>`:`<div style="display:flex;gap:8px"><button type="button" data-run-edit="${i}">${t('Edit','Editar')}</button><button type="button" data-run-delete="${i}">${t('Delete','Eliminar')}</button></div>`}</div>`;
     const navigation=`<div class="run-categories" style="margin-bottom:12px"><button type="button" data-run-view="workout" class="${view==='workout'?'active':''}">${t('Today’s Workout','Entrenamiento de hoy')}</button><button type="button" data-run-view="plan" class="${view==='plan'?'active':''}">${t('Edit Plan','Editar Plan')}</button></div>`;
     const dayNav=`<div class="run-days">${DAYS.map((d,i)=>`<button type="button" class="${day===d?'active':''}" data-run-day="${d}">${t(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][i])}</button>`).join('')}</div>`;
     el.innerHTML=dayNav+navigation+(view==='plan'?`<div class="card"><h3>${t('Build your weekly run program','Crea tu programa semanal de carrera')}</h3>
