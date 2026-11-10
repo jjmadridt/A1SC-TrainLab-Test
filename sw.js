@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.44-run-record-edit-delete';
+const CACHE = 'trainlab-v2.45-swim-workout-plan-dropdown';
 
 const ASSETS = [
   './',
