@@ -93,7 +93,6 @@
    r.items.forEach(id=>{const match=find(id);if(!match)return;
     const wrap=el('div','tri-session');wrap.append(itemRow(match.item,false,null));
     if(session&&session.id===id){
-     const timer=el('div','tri-clock',clock(elapsed()));timer.id='tri-clock';wrap.append(timer);
      if(match.cat==='Strength')strengthPanel(id,wrap);
      if(session.phase==='review'){
       wrap.append(el('p','tri-muted',t('Review before saving.','Revisa antes de guardar.')));
@@ -106,20 +105,18 @@
       actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}session=null;render();}));wrap.append(actions);
      }else{
       const actions=el('div','tri-controls');
-      if(session.startedAt)actions.append(button(t('Pause','Pausar'),()=>{session.elapsed=elapsed();session.startedAt=null;render();}));
-      else actions.append(button(t('Resume','Continuar'),()=>{session.startedAt=Date.now();render();}));
-      actions.append(button(t('Finish & Review','Terminar y revisar'),()=>{session.elapsed=elapsed();session.startedAt=null;session.phase='review';render();}));
-      wrap.append(actions);if(session.startedAt)startTick();
+      actions.append(button(t('Finish & Review','Terminar y revisar'),()=>{session.elapsed=0;session.startedAt=null;session.phase='review';render();}));
+      wrap.append(actions);
      }
     }else{
-     const actions=el('div','tri-controls');const b=button(t('Start Workout','Iniciar entrenamiento'),()=>{session={id,sessionId:Date.now()+'-'+Math.random().toString(36).slice(2),elapsed:0,startedAt:Date.now(),phase:'active',notes:''};render();});b.disabled=!!session;actions.append(b);wrap.append(actions);
+     const actions=el('div','tri-controls');const b=button(t('Start Workout','Iniciar entrenamiento'),()=>{session={id,sessionId:Date.now()+'-'+Math.random().toString(36).slice(2),elapsed:0,startedAt:null,phase:'active',notes:''};render();});b.disabled=!!session;actions.append(b);wrap.append(actions);
     }
     host.append(wrap);
    });
    const history=el('h3','',t('Recent Triathlon Activities','Actividades recientes de triatlón'));host.append(history);
    let entries=[];try{entries=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(entries))entries=[];}catch(e){}
    if(!entries.length)host.append(el('p','tri-muted',t('No activities recorded yet.','Aún no hay actividades registradas.')));
-   entries.slice(-5).reverse().forEach(entry=>{const p=el('p','tri-muted');const d=new Date(entry.completedAt);p.textContent=(find(entry.exercise)?.item?.[lang()==='es'?1:0]||entry.exercise)+' · '+clock(entry.elapsedMs)+' · '+(isNaN(d.getTime())?'':d.toLocaleDateString());host.append(p);});
+   entries.slice(-5).reverse().forEach(entry=>{const p=el('p','tri-muted');const d=new Date(entry.completedAt);p.textContent=(find(entry.exercise)?.item?.[lang()==='es'?1:0]||entry.exercise)+(entry.elapsedMs>0?' · '+clock(entry.elapsedMs):'')+' · '+(isNaN(d.getTime())?'':d.toLocaleDateString());host.append(p);});
   }
 
  }
