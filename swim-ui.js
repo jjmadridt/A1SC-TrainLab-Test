@@ -43,6 +43,7 @@ const list=el('div');data.workouts.filter(w=>w.category===category).forEach(w=>{
  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',w.sets+' × '+w.perSet+' '+settings.unit+(w.rest?' · '+w.rest+'s '+t('rest','descanso'):'')));row.append(info);list.append(row);
 });week.append(list);}
+if(view==='edit'){
 const summary=panel(t('Planned session — '+days.en[day],'Sesión planeada — '+days.es[day]));
 if(view==='workout'&&currentDayType()!=='training'){summary.append(el('p','sw-note',currentDayType()==='rest'?t('Rest Day. Your saved workouts are preserved.','Día de descanso. Tus entrenamientos guardados se conservan.'):t('Active Recovery. Keep movement gentle and optional.','Recuperación activa. Mantén el movimiento suave y opcional.')));}
 if(!selected().length)summary.append(el('p','sw-note',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
@@ -51,6 +52,7 @@ selected().forEach((entry)=>{const w=data.workouts.find(x=>x.id===entry.id);if(!
 const total=selected().reduce((sum,x)=>sum+distance(x),0);summary.append(el('p','sw-total',t('Total planned: ','Total planeado: ')+total+' '+settings.unit));
 if(settings.environment==='pool'){const lengths=total/settings.pool;summary.append(el('p','sw-note',t('Equivalent pool lengths: ','Largos equivalentes: ')+(Number.isInteger(lengths)?lengths:lengths.toFixed(2))));}
 
+}
 if(view==='edit')return;
 // Per-exercise logging: timers only prepare a draft; Log Activity commits it.
 const activityPanel=panel(t('Activity recording','Registro de actividad'));

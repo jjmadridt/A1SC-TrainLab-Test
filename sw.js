@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.46-swim-individual-logging';
+const CACHE = 'trainlab-v2.47-swim-compact-workout';
 
 const ASSETS = [
   './',
