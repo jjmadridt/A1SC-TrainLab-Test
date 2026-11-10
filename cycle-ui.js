@@ -8,7 +8,7 @@
  try {const stored=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(Array.isArray(stored))history=stored;}catch(e){}
  const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
  const DAYS_ES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
- let selectedDay=(new Date().getDay()+6)%7, selectedCategory='endurance';
+ let selectedDay=(new Date().getDay()+6)%7, selectedCategory='endurance', view='workout';
  let plan={};
  let session=null, ticker=null, wakeLock=null;
  async function requestWake(){
@@ -161,9 +161,19 @@
   const mount=document.getElementById('cycle-builder');if(!mount)return;
   mount.replaceChildren();if(session){sessionView(mount);return;}const workouts=getWorkouts();
   if(!workouts.length){mount.appendChild(make('p','cy-empty',t('Cycle workout library unavailable.','La biblioteca de ciclismo no está disponible.')));return;}
-  const intro=make('div','cy-panel');intro.appendChild(make('h2','',t('Weekly Cycle Plan','Plan semanal de ciclismo')));
-  intro.appendChild(make('p','cy-note',t('Choose one or more workouts for each weekday. Your selections repeat every week and are saved on this device.','Selecciona uno o más entrenamientos para cada día. Se repiten semanalmente y se guardan en este dispositivo.')));
-  const days=make('div','cy-days');(lang()==='es'?DAYS_ES:DAYS).forEach((name,i)=>{const b=make('button',i===selectedDay?'cy-active':'',name);b.type='button';b.setAttribute('aria-pressed',String(i===selectedDay));b.addEventListener('click',()=>{selectedDay=i;render();});days.appendChild(b);});intro.appendChild(days);mount.appendChild(intro);
+  // Match RUN and SWIM: weekday strip directly below the discipline banner.
+  const days=make('div','cy-days cy-weekday-strip');
+  (lang()==='es'?DAYS_ES:DAYS).forEach((name,i)=>{
+   const b=make('button',i===selectedDay?'cy-active':'',name);
+   b.type='button';b.setAttribute('aria-pressed',String(i===selectedDay));
+   b.addEventListener('click',()=>{selectedDay=i;render();});days.appendChild(b);
+  });mount.appendChild(days);
+  const nav=make('div','cy-view-tabs');
+  [[ 'workout',t("Today's Workout",'Entrenamiento de hoy') ],[ 'edit',t('Edit Plan','Editar plan') ]].forEach(([id,label])=>{
+   const b=make('button',view===id?'cy-active':'',label);b.type='button';
+   b.setAttribute('aria-pressed',String(view===id));b.addEventListener('click',()=>{view=id;render();});nav.appendChild(b);
+  });mount.appendChild(nav);
+  if(view==='workout') {
   const summary=make('div','cy-panel');summary.appendChild(make('h3','',t('Selected workouts','Entrenamientos seleccionados')+' — '+(lang()==='es'?DAYS_ES:DAYS)[selectedDay]));
   const current=selected();if(!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
@@ -176,9 +186,13 @@
     startSession(w,n,mode.value);
    });config.append(duration,mode,start);item.appendChild(config);summary.appendChild(item);
   }});mount.appendChild(summary);
+  }
+  if(view==='edit') {
   const catalog=make('div','cy-panel');catalog.appendChild(make('h2','',t('Workout library','Biblioteca de entrenamientos')));
   const categories=root.TrainLabCycle.categories||[];const tabs=make('div','cy-cats');categories.forEach(c=>{const b=make('button',c.id===selectedCategory?'cy-active':'',c.name);b.type='button';b.setAttribute('aria-pressed',String(c.id===selectedCategory));b.addEventListener('click',()=>{selectedCategory=c.id;render();});tabs.appendChild(b);});catalog.appendChild(tabs);
   workouts.filter(w=>w.category===selectedCategory).forEach(w=>{const label=make('label','cy-workout');const cb=make('input');cb.type='checkbox';cb.checked=current.includes(w.id);cb.addEventListener('change',()=>{const next=new Set(selected());if(cb.checked)next.add(w.id);else next.delete(w.id);plan[selectedDay]=workouts.filter(x=>next.has(x.id)).map(x=>x.id);if(!save()){root.alert(t('Could not save your plan. Check browser storage settings.','No se pudo guardar el plan. Revisa el almacenamiento del navegador.'));}render();});const desc=make('span');desc.appendChild(make('strong','',w.name));desc.appendChild(make('small','',w.purpose));label.append(workoutIcon(w),desc,cb);catalog.appendChild(label);});mount.appendChild(catalog);
+  }
+  if(view==='workout') {
   const logPanel=make('div','cy-panel');logPanel.appendChild(make('h2','',t('Recent Cycle activities','Actividades recientes de ciclismo')));
   if(!history.length)logPanel.appendChild(make('p','cy-note',t('No activities logged yet.','Todavía no hay actividades registradas.')));
   if(history.length){
@@ -195,7 +209,8 @@
     const updated=history.filter(x=>x!==r);
     try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));history=updated;render();}catch(e){root.alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
    });item.appendChild(del);logPanel.appendChild(item);});mount.appendChild(logPanel);
+  }
  }
- const style=document.createElement('style');style.textContent='\n/* Cycle v0.7 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n#cycle-builder .cy-delete,#cycle-builder .cy-delete-all{width:max-content;max-width:100%;padding:8px 12px;margin-top:6px;border:1px solid #9b6679;border-radius:8px;background:#3d2735;color:#fff;font-size:.9rem}\n\n#cycle-builder .cy-illustration{width:64px;height:64px;object-fit:cover;border-radius:12px;flex:0 0 64px;background:#071c30}\n#cycle-builder .cy-workout span{flex:1;min-width:0}\n#cycle-builder .cy-workout input[type=checkbox]{margin-left:auto}\n#cycle-builder .cy-plan-heading{display:flex;align-items:center;gap:12px;margin-bottom:8px}\n#cycle-builder .cy-plan-heading .cy-illustration{width:58px;height:58px;flex-basis:58px}\n#cycle-builder .cy-plan-heading h2{margin:0}\n';document.head.appendChild(style);
+ const style=document.createElement('style');style.textContent='\n/* Cycle v0.7 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n#cycle-builder .cy-delete,#cycle-builder .cy-delete-all{width:max-content;max-width:100%;padding:8px 12px;margin-top:6px;border:1px solid #9b6679;border-radius:8px;background:#3d2735;color:#fff;font-size:.9rem}\n\n#cycle-builder .cy-illustration{width:64px;height:64px;object-fit:cover;border-radius:12px;flex:0 0 64px;background:#071c30}\n#cycle-builder .cy-workout span{flex:1;min-width:0}\n#cycle-builder .cy-workout input[type=checkbox]{margin-left:auto}\n#cycle-builder .cy-plan-heading{display:flex;align-items:center;gap:12px;margin-bottom:8px}\n#cycle-builder .cy-plan-heading .cy-illustration{width:58px;height:58px;flex-basis:58px}\n#cycle-builder .cy-plan-heading h2{margin:0}\n\n/* Step 15A — layout-only consistency; session engine and storage unchanged */\n#cycle-builder .cy-weekday-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:12px 0 10px;padding:0;background:transparent;border:0}\n#cycle-builder .cy-weekday-strip button{min-width:0;padding:11px 0;font-size:clamp(11px,2.7vw,14px);border-radius:9px}\n#cycle-builder .cy-view-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 16px}\n#cycle-builder .cy-view-tabs button{width:100%;min-width:0;min-height:58px;padding:10px 6px;font-size:16px;font-weight:700;border-radius:12px}\n';document.head.appendChild(style);
  root.TrainLabCycleUI={render};
 })(window);
