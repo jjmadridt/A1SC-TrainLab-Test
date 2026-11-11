@@ -27,6 +27,56 @@
   'Pallof press':{sets:3,reps:10,equipment:'Cable or resistance band • reps per side'},
   'Dead bug':{sets:3,reps:8,equipment:'Exercise mat • reps per side'}
  };
+ const activityUndo={previous:null};
+ function readActivities(){try{const value=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');return Array.isArray(value)?value:[];}catch(e){return [];}}
+ function writeActivities(items){localStorage.setItem(LOG_KEY,JSON.stringify(items));}
+ function activitySummary(entry){
+  const d=entry.details||{};
+  return [d.distance?d.distance+' '+(d.distanceUnit||''):null,d.durationMin?d.durationMin+' '+t('min','min'):null,d.rpe?'RPE '+d.rpe:null].filter(Boolean).join(' · ');
+ }
+ function activityActions(entry,host){
+  if(entry.discipline==='Strength')return;
+  const row=el('div','tri-activity-entry');
+  row.append(el('span','',activitySummary(entry)||t('Activity logged','Actividad registrada')));
+  const buttons=el('div','tri-set-actions');
+  buttons.append(button('✎',()=>{
+   const editor=el('div','tri-strength-fields');
+   const d=entry.details||{};
+   function editField(label,key,values){
+    const wrapper=el('label','',label);let field;
+    if(values){field=el('select','tri-type');values.forEach(([v,l])=>{const option=el('option','',l);option.value=v;field.append(option);});}
+    else{field=el('input');field.type='number';field.min='0';field.step='any';}
+    field.value=d[key]??'';wrapper.append(field);editor.append(wrapper);return field;
+   }
+   const unit=editField(t('Distance unit','Unidad de distancia'),'distanceUnit',entry.discipline==='Swim'?[['m','m'],['yd','yd']]:[['km','km'],['mi','mi']]);
+   const distance=editField(t('Distance','Distancia'),'distance');
+   const duration=editField(t('Duration (minutes)','Duración (minutos)'),'durationMin');
+   const rpe=editField('RPE (1–10)','rpe');
+   const environment=entry.discipline==='Swim'?editField(t('Environment','Entorno'),'environment',[['pool',t('Pool','Alberca')],['open-water',t('Open Water','Aguas abiertas')]]):null;
+   const rideType=entry.discipline==='Bike'?editField(t('Ride type','Tipo de ciclismo'),'rideType',[['indoor',t('Indoor','Interior')],['outdoor',t('Outdoor','Exterior')]]):null;
+   const actions=el('div','tri-set-actions');
+   actions.append(button(t('Save change','Guardar cambio'),()=>{
+    const dist=Number(distance.value||0),mins=Number(duration.value||0),effort=Number(rpe.value||0);
+    if(!Number.isFinite(dist)||!Number.isFinite(mins)||dist<0||mins<0||(!dist&&!mins)||(rpe.value&&(!Number.isFinite(effort)||effort<1||effort>10))){
+     alert(t('Enter a valid distance or duration and RPE between 1 and 10.','Ingresa distancia o duración válida y RPE entre 1 y 10.'));return;
+    }
+    const current=readActivities(),index=current.findIndex(x=>x.id===entry.id);
+    if(index<0){alert(t('Activity no longer exists.','La actividad ya no existe.'));return;}
+    const updated={...current[index],details:{...current[index].details,distance:distance.value,distanceUnit:unit.value,durationMin:duration.value,rpe:rpe.value,environment:environment?.value||'',rideType:rideType?.value||''}};
+    const next=current.slice();next[index]=updated;
+    try{writeActivities(next);activityUndo.previous=current;render();}catch(e){alert(t('Could not save change.','No se pudo guardar el cambio.'));}
+   }));
+   actions.append(button(t('Cancel','Cancelar'),()=>render()));
+   row.after(editor,actions);
+   buttons.querySelectorAll('button').forEach(b=>b.disabled=true);
+  }));
+  buttons.append(button('×',()=>{
+   if(!confirm(t('Delete this activity? This cannot be undone unless you use Undo before leaving this page.','¿Eliminar esta actividad? Puedes deshacerlo antes de salir de esta página.')))return;
+   const current=readActivities();
+   try{writeActivities(current.filter(x=>x.id!==entry.id));activityUndo.previous=current;render();}catch(e){alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
+  }));
+  row.append(buttons);host.append(row);
+ }
  const SET_LOG_KEY='a1sc-triathlon-strength-sets-v01';
  const undoBySession=new Map();
  function readSets(){try{const v=JSON.parse(localStorage.getItem(SET_LOG_KEY)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
@@ -148,7 +198,7 @@
  function canonical(id){return ALIASES[id]||id;}
  function find(id){id=canonical(id);for(const [cat,items] of Object.entries(CATALOG)){const item=items.find(x=>x[0]===id);if(item)return {cat,item};}return null;}
  function render(){stopTick();const host=document.getElementById('tri-builder');if(!host)return;host.replaceChildren();
- const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-select-box{width:22px;height:22px;min-width:22px;accent-color:#ff4a9b;cursor:pointer;margin:0 8px 0 auto}#tri-builder .tri-item:has(.tri-select-box:checked){background:rgba(20,105,158,.08)}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}#tri-builder .tri-session{border:1px solid #355875;border-radius:12px;padding:14px;margin:12px 0;background:#10283d}#tri-builder .tri-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#tri-builder .tri-controls button{padding:11px 15px;border:1px solid #4a85aa;border-radius:9px;background:#176b9f;color:white;font-weight:700}#tri-builder .tri-controls button:disabled{opacity:.45}#tri-builder .tri-clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#tri-builder .tri-strength{margin:12px 0;padding:10px;border-top:1px solid #355875}#tri-builder .tri-strength-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}#tri-builder .tri-strength-fields label{font-size:13px;display:flex;flex-direction:column;gap:5px}#tri-builder .tri-strength-fields select{width:100%;padding:9px}#tri-builder .tri-set-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0}#tri-builder .tri-set-line button{width:auto;padding:5px 10px}#tri-builder .tri-set-actions{display:flex;gap:6px;align-items:center}#tri-builder .tri-undo{width:100%;margin:9px 0;padding:10px;background:#214e61;border:1px solid #41617b;border-radius:9px;color:white;font-weight:600}#tri-builder .tri-strength>button{padding:12px 16px;border-radius:9px;background:#1284a7;color:white;font-weight:700;border:0;width:100%}#tri-builder .tri-strength>button:disabled{opacity:.4}#tri-builder .tri-session input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #41617b;border-radius:8px;background:#081b2d;color:white;font:inherit}`;host.append(css);
+ const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-select-box{width:22px;height:22px;min-width:22px;accent-color:#ff4a9b;cursor:pointer;margin:0 8px 0 auto}#tri-builder .tri-item:has(.tri-select-box:checked){background:rgba(20,105,158,.08)}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}#tri-builder .tri-session{border:1px solid #355875;border-radius:12px;padding:14px;margin:12px 0;background:#10283d}#tri-builder .tri-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#tri-builder .tri-controls button{padding:11px 15px;border:1px solid #4a85aa;border-radius:9px;background:#176b9f;color:white;font-weight:700}#tri-builder .tri-controls button:disabled{opacity:.45}#tri-builder .tri-clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#tri-builder .tri-strength{margin:12px 0;padding:10px;border-top:1px solid #355875}#tri-builder .tri-strength-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}#tri-builder .tri-strength-fields label{font-size:13px;display:flex;flex-direction:column;gap:5px}#tri-builder .tri-strength-fields select{width:100%;padding:9px}#tri-builder .tri-set-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0}#tri-builder .tri-set-line button{width:auto;padding:5px 10px}#tri-builder .tri-set-actions{display:flex;gap:6px;align-items:center}#tri-builder .tri-history-item{border-bottom:1px solid #28445c;padding:10px 0}#tri-builder .tri-activity-entry{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0}#tri-builder .tri-activity-entry button{padding:6px 12px;border-radius:7px;background:#176b9f;color:white;border:1px solid #4a85aa}#tri-builder .tri-history-item .tri-strength-fields{margin:8px 0}#tri-builder .tri-history-item .tri-set-actions button{padding:7px 12px;border-radius:7px;background:#176b9f;color:white;border:1px solid #4a85aa}#tri-builder .tri-undo{width:100%;margin:9px 0;padding:10px;background:#214e61;border:1px solid #41617b;border-radius:9px;color:white;font-weight:600}#tri-builder .tri-strength>button{padding:12px 16px;border-radius:9px;background:#1284a7;color:white;font-weight:700;border:0;width:100%}#tri-builder .tri-strength>button:disabled{opacity:.4}#tri-builder .tri-session input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #41617b;border-radius:8px;background:#081b2d;color:white;font:inherit}`;host.append(css);
  const days=el('div','tri-days');DAYS[lang()].forEach((d,i)=>days.append(button(d,()=>{day=i;session=null;activeId=null;render();},day===i)));host.append(days);
  const tabs=el('div','tri-tabs');tabs.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'),button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(tabs);
  const r=record();if(view==='edit'){
@@ -202,9 +252,21 @@
    });
    if(scrollToActive){scrollToActive=false;const target=Array.from(host.querySelectorAll('[data-tri-exercise]')).find(n=>n.dataset.triExercise===activeId);if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));}
    const history=el('h3','',t('Recent Triathlon Activities','Actividades recientes de triatlón'));host.append(history);
-   let entries=[];try{entries=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(entries))entries=[];}catch(e){}
+   const entries=readActivities();
    if(!entries.length)host.append(el('p','tri-muted',t('No activities recorded yet.','Aún no hay actividades registradas.')));
-   entries.slice(-5).reverse().forEach(entry=>{const p=el('p','tri-muted');const d=new Date(entry.completedAt);p.textContent=(find(entry.exercise)?.item?.[lang()==='es'?1:0]||entry.exercise)+(entry.elapsedMs>0?' · '+clock(entry.elapsedMs):'')+' · '+(isNaN(d.getTime())?'':d.toLocaleDateString());host.append(p);});
+   entries.slice(-8).reverse().forEach(entry=>{
+    const wrap=el('div','tri-history-item');
+    const d=new Date(entry.completedAt);
+    wrap.append(el('div','tri-muted',(find(entry.exercise)?.item?.[lang()==='es'?1:0]||entry.exercise)+(entry.elapsedMs>0?' · '+clock(entry.elapsedMs):'')+' · '+(isNaN(d.getTime())?'':d.toLocaleDateString())));
+    if(entry.discipline!=='Strength')activityActions(entry,wrap);
+    host.append(wrap);
+   });
+   if(activityUndo.previous){
+    const undo=button(t('Undo last activity change','Deshacer último cambio de actividad'),()=>{
+     try{writeActivities(activityUndo.previous);activityUndo.previous=null;render();}catch(e){alert(t('Could not undo change.','No se pudo deshacer el cambio.'));}
+    });
+    undo.className='tri-undo';host.append(undo);
+   }
   }
 
  }
