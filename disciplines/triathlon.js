@@ -3,6 +3,7 @@
  const KEY='a1sc-triathlon-weekly-plan-v01';
  const LOG_KEY='a1sc-triathlon-activity-log-v01';
  let session=null;
+ const sessions=new Map();
  let tick=null;
  function elapsed(){return session?session.elapsed+(session.startedAt?Math.max(0,Date.now()-session.startedAt):0):0;}
  function clock(ms){let n=Math.floor(ms/1000);return String(Math.floor(n/3600)).padStart(2,'0')+':'+String(Math.floor(n%3600/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');}
@@ -29,7 +30,7 @@
  const SET_LOG_KEY='a1sc-triathlon-strength-sets-v01';
  function readSets(){try{const v=JSON.parse(localStorage.getItem(SET_LOG_KEY)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
  function saveSets(v){localStorage.setItem(SET_LOG_KEY,JSON.stringify(v));}
- function strengthPanel(id,host){
+ function strengthPanel(id,host,session){
   id=canonical(id);const cfg=STRENGTH_PRESETS[id];if(!cfg)return;
   const panel=el('div','tri-strength');
   const title=el('div','tri-muted',cfg.equipment);panel.append(title);
@@ -93,36 +94,32 @@
   if(r.type==='rest'){host.append(el('p','tri-muted',t('Rest Day','Día de descanso')));}
   else if(!r.items?.length){host.append(el('p','tri-muted',t('No workouts selected. Open Edit Plan to choose exercises.','No hay ejercicios seleccionados. Abre Editar plan para elegir ejercicios.')));}
   else{
-   if(!session && activeId===null){activeId=r.items.find(id=>find(id)?.cat==='Strength')||r.items[0];}
+   // Every selected exercise has its own ready-to-use session.
    if(r.type==='recovery')host.append(el('p','tri-muted',t('Active Recovery','Recuperación activa')));
    r.items.forEach(id=>{const match=find(id);if(!match)return;
+    const key=day+':'+canonical(id);
+    if(!sessions.has(key))sessions.set(key,newSession(canonical(id)));
+    const session=sessions.get(key);
     const wrap=el('div','tri-session');wrap.dataset.triExercise=id;wrap.append(itemRow(match.item,false,null));
-    if(session&&session.id===canonical(id)){
-     if(match.cat==='Strength')strengthPanel(canonical(id),wrap);
+    if(session.phase!=='saved'){
+     if(match.cat==='Strength')strengthPanel(canonical(id),wrap,session);
      if(session.phase==='review'){
       wrap.append(el('p','tri-muted',t('Review before saving.','Revisa antes de guardar.')));
       const notes=el('input');notes.placeholder=t('Optional notes / distance / sets','Notas / distancia / series (opcional)');notes.value=session.notes||'';notes.addEventListener('input',()=>{session.notes=notes.value;});wrap.append(notes);
       const actions=el('div','tri-controls');
       actions.append(button(t('Save Activity','Guardar actividad'),()=>{
        const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise:id,discipline:match.cat,elapsedMs:session.elapsed,notes:session.notes||'',sets:match.cat==='Strength'?readSets().filter(x=>x.exercise===id&&x.day===day&&x.sessionId===session.sessionId):[],completedAt:new Date().toISOString()};
-       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;session=activeId&&find(activeId)?.cat==='Strength'?newSession(activeId):null;scrollToActive=!!activeId;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
+       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;scrollToActive=!!activeId;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
       }));
-      actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}session=null;activeId=id;render();}));wrap.append(actions);
+      actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}sessions.delete(key);activeId=id;render();}));wrap.append(actions);
      }else{
       const actions=el('div','tri-controls');
       actions.append(button(t('Finish & Review','Terminar y revisar'),()=>{session.elapsed=0;session.startedAt=null;session.phase='review';render();}));
       wrap.append(actions);
      }
     }else{
-     if(match.cat==='Strength'){
-      // Direct-entry strength fields; session is created only when the athlete logs a set.
-      if(!session){session=newSession(canonical(id));strengthPanel(canonical(id),wrap);}
-      else if(session.id!==canonical(id)){
-       const actions=el('div','tri-controls');actions.append(button(t('Open exercise','Abrir ejercicio'),()=>{session=newSession(canonical(id));activeId=id;scrollToActive=true;render();}));wrap.append(actions);
-      }
-     }else{
-      const actions=el('div','tri-controls');actions.append(button(t('Open workout','Abrir entrenamiento'),()=>{activeId=id;session=newSession(id);scrollToActive=true;render();}));wrap.append(actions);
-     }
+     // The saved activity remains in history; selecting the exercise again starts a fresh session.
+     sessions.delete(key);
     }
     host.append(wrap);
    });
