@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.80-global-wake-timer17v';
+const CACHE = 'trainlab-v2.81-ble-hr17w';
 
 const ASSETS = [
   './',
@@ -74,6 +74,7 @@ const ASSETS = [
   './unified-history.js',
   './workout-timer.js',
   './screen-awake.js',
+  './ble-heart-rate.js',
   './boxing-bell-double-ding.wav',
   './disciplines/run.js',
   './disciplines/triathlon.js',
