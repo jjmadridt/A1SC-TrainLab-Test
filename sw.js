@@ -1,9 +1,10 @@
 
-const CACHE = 'trainlab-v2.69-triathlon-strength-direct';
+const CACHE = 'trainlab-v2.70-triathlon-shared-strength';
 
 const ASSETS = [
   './',
   './index.html',
+  './shared/strength-core.js',
   './registration.html',
   './admin.html',
   './home-images/total-body.webp',
