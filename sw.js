@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.68-triathlon-no-auto-timers';
+const CACHE = 'trainlab-v2.69-triathlon-strength-direct';
 
 const ASSETS = [
   './',
