@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.83-ble-hr-journal17y';
+const CACHE = 'trainlab-v2.84-profile-hr17z';
 
 const ASSETS = [
   './',
