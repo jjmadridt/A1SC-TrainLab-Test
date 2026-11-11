@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.78-triathlon-scroll-snap';
+const CACHE = 'trainlab-v2.79-triathlon-scroll-snap-fix';
 
 const ASSETS = [
   './',
