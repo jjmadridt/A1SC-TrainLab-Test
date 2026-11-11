@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.73-triathlon-checkbox-selection';
+const CACHE = 'trainlab-v2.74-triathlon-set-edit-undo';
 
 const ASSETS = [
   './',

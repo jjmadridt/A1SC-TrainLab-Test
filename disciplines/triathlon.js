@@ -28,6 +28,7 @@
   'Dead bug':{sets:3,reps:8,equipment:'Exercise mat • reps per side'}
  };
  const SET_LOG_KEY='a1sc-triathlon-strength-sets-v01';
+ const undoBySession=new Map();
  function readSets(){try{const v=JSON.parse(localStorage.getItem(SET_LOG_KEY)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
  function saveSets(v){localStorage.setItem(SET_LOG_KEY,JSON.stringify(v));}
  function strengthPanel(id,host,session){
@@ -48,14 +49,51 @@
   const repsLabel=el('label','',cfg.timed?t('Seconds per side','Segundos por lado'):t('Reps','Repeticiones'));
   const reps=el('input');reps.type='number';reps.min='1';reps.step='1';reps.value=String(session?.reps||cfg.reps);repsLabel.append(reps);inputs.append(repsLabel);panel.append(inputs);
   const list=el('div','tri-muted');
-  existing.forEach((entry,i)=>{const line=el('div','tri-set-line');line.append(el('span','',t('Set ','Serie ')+(i+1)+' · '+(cfg.timed?entry.reps+' s':(window.TrainLabStrengthCore.toDisplay(entry.weightLb,entry.unit)).toFixed(1)+' '+entry.unit+' × '+entry.reps)));const del=button('✕',()=>{if(!confirm(t('Delete this set?','¿Eliminar esta serie?')))return;saveSets(readSets().filter(x=>x.id!==entry.id));render();});line.append(del);list.append(line);});panel.append(list);
+  existing.forEach((entry,i)=>{
+   const line=el('div','tri-set-line');
+   const summary=el('span','',t('Set ','Serie ')+(i+1)+' · '+(cfg.timed?entry.reps+' s':(window.TrainLabStrengthCore.toDisplay(entry.weightLb,entry.unit)).toFixed(1)+' '+entry.unit+' × '+entry.reps));
+   line.append(summary);
+   const controls=el('div','tri-set-actions');
+   controls.append(button('✎',()=>{
+    const editor=el('div','tri-strength-fields');
+    const weightEdit=el('input');weightEdit.type='number';weightEdit.min='0';weightEdit.step='0.5';weightEdit.value=String(window.TrainLabStrengthCore.toDisplay(entry.weightLb,entry.unit));
+    const repsEdit=el('input');repsEdit.type='number';repsEdit.min='1';repsEdit.step='1';repsEdit.value=String(entry.reps);
+    if(!cfg.timed){const wLabel=el('label','',t('Weight','Peso')+' ('+entry.unit+')');wLabel.append(weightEdit);editor.append(wLabel);}
+    const rLabel=el('label','',cfg.timed?t('Seconds per side','Segundos por lado'):t('Reps','Repeticiones'));rLabel.append(repsEdit);editor.append(rLabel);
+    const actions=el('div','tri-set-actions');
+    actions.append(button(t('Save change','Guardar cambio'),()=>{
+     const w=cfg.timed?0:Number(weightEdit.value),n=Number(repsEdit.value);
+     if(!window.TrainLabStrengthCore.validSet(w,n)){alert(t('Enter valid values.','Ingresa valores válidos.'));return;}
+     const all=readSets();const pos=all.findIndex(x=>x.id===entry.id);if(pos<0)return;
+     undoBySession.set(session.sessionId,all.slice());
+     all[pos]={...all[pos],weightLb:window.TrainLabStrengthCore.toLbs(w,entry.unit),reps:n};
+     try{saveSets(all);render();}catch(e){alert(t('Unable to save change.','No se pudo guardar el cambio.'));}
+    }));
+    actions.append(button(t('Cancel','Cancelar'),()=>render()));
+    line.after(editor,actions);
+    controls.querySelectorAll('button').forEach(b=>b.disabled=true);
+   }));
+   controls.append(button('×',()=>{
+    if(!confirm(t('Delete this set?','¿Eliminar esta serie?')))return;
+    const all=readSets();undoBySession.set(session.sessionId,all.slice());
+    try{saveSets(all.filter(x=>x.id!==entry.id));render();}catch(e){alert(t('Unable to delete set.','No se pudo eliminar la serie.'));}
+   }));
+   line.append(controls);list.append(line);
+  });panel.append(list);
+  if(undoBySession.has(session.sessionId)){
+   const undo=button(t('Undo last set change','Deshacer último cambio de serie'),()=>{
+    const previous=undoBySession.get(session.sessionId);
+    try{saveSets(previous);undoBySession.delete(session.sessionId);render();}catch(e){alert(t('Unable to undo change.','No se pudo deshacer el cambio.'));}
+   });
+   undo.className='tri-undo';panel.append(undo);
+  }
   const log=button(t('+ Log set','+ Registrar serie'),()=>{
    const n=Number(reps.value),w=cfg.timed?0:Number(weight.value||0);
    if(!window.TrainLabStrengthCore.validSet(w,n)){alert(t('Enter valid values.','Ingresa valores válidos.'));return;}
    const count=readSets().filter(x=>x.exercise===id&&x.day===day&&x.sessionId===session.sessionId).length;
    if(count>=Number(planned.value))return;
    session.unit=unit.value;session.planned=Number(planned.value);session.weight=weight.value;session.reps=reps.value;
-   const all=readSets();all.push({id:Date.now()+'-'+Math.random().toString(36).slice(2),exercise:id,day,sessionId:session.sessionId,unit:unit.value,weightLb:window.TrainLabStrengthCore.toLbs(w,unit.value),reps:n,timestamp:Date.now()});
+   const all=readSets();undoBySession.set(session.sessionId,all.slice());all.push({id:Date.now()+'-'+Math.random().toString(36).slice(2),exercise:id,day,sessionId:session.sessionId,unit:unit.value,weightLb:window.TrainLabStrengthCore.toLbs(w,unit.value),reps:n,timestamp:Date.now()});
    try{saveSets(all);render();}catch(e){alert(t('Unable to save set.','No se pudo guardar la serie.'));}
   });
   log.disabled=existing.length>=Number(planned.value);planned.addEventListener('change',()=>{session.planned=Number(planned.value);render();});unit.addEventListener('change',()=>{session.unit=unit.value;session.weight=weight.value;session.reps=reps.value;render();});
@@ -110,7 +148,7 @@
  function canonical(id){return ALIASES[id]||id;}
  function find(id){id=canonical(id);for(const [cat,items] of Object.entries(CATALOG)){const item=items.find(x=>x[0]===id);if(item)return {cat,item};}return null;}
  function render(){stopTick();const host=document.getElementById('tri-builder');if(!host)return;host.replaceChildren();
- const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-select-box{width:22px;height:22px;min-width:22px;accent-color:#ff4a9b;cursor:pointer;margin:0 8px 0 auto}#tri-builder .tri-item:has(.tri-select-box:checked){background:rgba(20,105,158,.08)}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}#tri-builder .tri-session{border:1px solid #355875;border-radius:12px;padding:14px;margin:12px 0;background:#10283d}#tri-builder .tri-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#tri-builder .tri-controls button{padding:11px 15px;border:1px solid #4a85aa;border-radius:9px;background:#176b9f;color:white;font-weight:700}#tri-builder .tri-controls button:disabled{opacity:.45}#tri-builder .tri-clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#tri-builder .tri-strength{margin:12px 0;padding:10px;border-top:1px solid #355875}#tri-builder .tri-strength-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}#tri-builder .tri-strength-fields label{font-size:13px;display:flex;flex-direction:column;gap:5px}#tri-builder .tri-strength-fields select{width:100%;padding:9px}#tri-builder .tri-set-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0}#tri-builder .tri-set-line button{width:auto;padding:4px 10px}#tri-builder .tri-strength>button{padding:12px 16px;border-radius:9px;background:#1284a7;color:white;font-weight:700;border:0;width:100%}#tri-builder .tri-strength>button:disabled{opacity:.4}#tri-builder .tri-session input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #41617b;border-radius:8px;background:#081b2d;color:white;font:inherit}`;host.append(css);
+ const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-select-box{width:22px;height:22px;min-width:22px;accent-color:#ff4a9b;cursor:pointer;margin:0 8px 0 auto}#tri-builder .tri-item:has(.tri-select-box:checked){background:rgba(20,105,158,.08)}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}#tri-builder .tri-session{border:1px solid #355875;border-radius:12px;padding:14px;margin:12px 0;background:#10283d}#tri-builder .tri-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#tri-builder .tri-controls button{padding:11px 15px;border:1px solid #4a85aa;border-radius:9px;background:#176b9f;color:white;font-weight:700}#tri-builder .tri-controls button:disabled{opacity:.45}#tri-builder .tri-clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#tri-builder .tri-strength{margin:12px 0;padding:10px;border-top:1px solid #355875}#tri-builder .tri-strength-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}#tri-builder .tri-strength-fields label{font-size:13px;display:flex;flex-direction:column;gap:5px}#tri-builder .tri-strength-fields select{width:100%;padding:9px}#tri-builder .tri-set-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0}#tri-builder .tri-set-line button{width:auto;padding:5px 10px}#tri-builder .tri-set-actions{display:flex;gap:6px;align-items:center}#tri-builder .tri-undo{width:100%;margin:9px 0;padding:10px;background:#214e61;border:1px solid #41617b;border-radius:9px;color:white;font-weight:600}#tri-builder .tri-strength>button{padding:12px 16px;border-radius:9px;background:#1284a7;color:white;font-weight:700;border:0;width:100%}#tri-builder .tri-strength>button:disabled{opacity:.4}#tri-builder .tri-session input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #41617b;border-radius:8px;background:#081b2d;color:white;font:inherit}`;host.append(css);
  const days=el('div','tri-days');DAYS[lang()].forEach((d,i)=>days.append(button(d,()=>{day=i;session=null;activeId=null;render();},day===i)));host.append(days);
  const tabs=el('div','tri-tabs');tabs.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'),button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(tabs);
  const r=record();if(view==='edit'){
@@ -142,9 +180,9 @@
       const actions=el('div','tri-controls');
       actions.append(button(t('Save Activity','Guardar actividad'),()=>{
        const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise:id,discipline:match.cat,elapsedMs:session.elapsed,notes:session.notes||'',sets:match.cat==='Strength'?readSets().filter(x=>x.exercise===canonical(id)&&x.day===day&&x.sessionId===session.sessionId):[],details:match.cat==='Strength'?null:{distance:session.distance||'',distanceUnit:session.distanceUnit||(match.cat==='Swim'?'m':'km'),durationMin:session.durationMin||'',rpe:session.rpe||'',environment:session.environment||'',rideType:session.rideType||''},completedAt:new Date().toISOString()};
-       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;scrollToActive=!!activeId;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
+       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));undoBySession.delete(session.sessionId);sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;scrollToActive=!!activeId;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
       }));
-      actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}sessions.delete(key);activeId=id;render();}));wrap.append(actions);
+      actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}undoBySession.delete(session.sessionId);sessions.delete(key);activeId=id;render();}));wrap.append(actions);
      }else{
       const actions=el('div','tri-controls');
       actions.append(button(t('Finish & Review','Terminar y revisar'),()=>{
