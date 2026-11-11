@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.79-triathlon-scroll-snap-fix';
+const CACHE = 'trainlab-v2.80-global-wake-timer17v';
 
 const ASSETS = [
   './',
@@ -73,6 +73,7 @@ const ASSETS = [
   './app.js',
   './unified-history.js',
   './workout-timer.js',
+  './screen-awake.js',
   './boxing-bell-double-ding.wav',
   './disciplines/run.js',
   './disciplines/triathlon.js',

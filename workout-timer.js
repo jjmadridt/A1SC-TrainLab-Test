@@ -157,17 +157,26 @@ function finish(completed=true){
 }
 function tick(){
  if(!state.running)return;
- const now=performance.now();
- if(state.mode==='stopwatch'){state.elapsed=Math.max(0,Math.floor((now-state.deadline)/1000));el('clock').textContent=clock(state.elapsed);return}
- const left=Math.max(0,Math.ceil((state.deadline-now)/1000));
- state.remaining=left;el('clock').textContent=clock(left);
- if(left>0)return;
- state.elapsed+=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);
- if(state.mode==='interval'&&state.phase<state.segments.length-1){
-  chime();state.phase++;state.remaining=state.segments[state.phase].seconds;state.deadline=now+state.remaining*1000;
-  el('phase').textContent=timerTranslateText(state.segments[state.phase].name);el('clock').textContent=clock(state.remaining);
- }else finish();
+ const now=Date.now();
+ if(state.mode==='stopwatch'){
+  state.elapsed=Math.max(0,Math.floor((now-state.deadline)/1000));
+  el('clock').textContent=clock(state.elapsed);return;
+ }
+ // Consume every interval phase that expired while the browser was suspended.
+ // Keep deadlines anchored to real time, not the delayed callback time.
+ while(state.running&&now>=state.deadline){
+  state.elapsed+=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);
+  if(state.mode==='interval'&&state.phase<state.segments.length-1){
+   state.phase++;
+   state.remaining=state.segments[state.phase].seconds;
+   state.deadline+=state.remaining*1000;
+   el('phase').textContent=timerTranslateText(state.segments[state.phase].name);
+  }else{finish();return;}
+ }
+ state.remaining=Math.max(0,Math.ceil((state.deadline-now)/1000));
+ el('clock').textContent=clock(state.remaining);
 }
+
 function open(mode,index){
  state.origin=mode;state.index=index;el('finish-summary').style.display='none';
  el('mode').value=(mode==='bike'||mode==='run-interval')?'interval':'countdown';
@@ -203,5 +212,7 @@ timerApplyLanguage();el('finish-return').onclick=()=>{
  }
  finish(false)
 };
-el('start').onclick=()=>{if(state.running)return;if(state.elapsed===0){if(!reset())return}else if(state.mode!=='stopwatch'&&state.remaining<=0){if(!reset())return}state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').disabled=false;el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');requestTimerWakeLock();chime();ticker=setInterval(tick,150)};el('pause').onclick=()=>{if(state.running){tick();if(state.mode!=='stopwatch'){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining);state.segments.length&&(state.segments[state.phase].seconds=state.remaining);if(!state.segments.length){el('duration').value=state.remaining;syncEditor('duration');}}stop();el('pause').disabled=false;el('pause').textContent=timerTranslateText('Resume');el('phase').textContent=timerTranslateText('Paused')}else{state.running=true;state.deadline=performance.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').textContent=timerTranslateText('Pause');el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');requestTimerWakeLock();ticker=setInterval(tick,150)}};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick();});
+window.addEventListener('focus',tick);
+el('start').onclick=()=>{if(state.running)return;if(state.elapsed===0){if(!reset())return}else if(state.mode!=='stopwatch'&&state.remaining<=0){if(!reset())return}state.running=true;state.deadline=Date.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').disabled=false;el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');requestTimerWakeLock();chime();ticker=setInterval(tick,150)};el('pause').onclick=()=>{if(state.running){tick();if(state.mode!=='stopwatch'){const current=state.segments.length?state.segments[state.phase].seconds:Number(el('duration').value);state.elapsed+=Math.max(0,current-state.remaining);state.segments.length&&(state.segments[state.phase].seconds=state.remaining);if(!state.segments.length){el('duration').value=state.remaining;syncEditor('duration');}}stop();el('pause').disabled=false;el('pause').textContent=timerTranslateText('Resume');el('phase').textContent=timerTranslateText('Paused')}else{state.running=true;state.deadline=Date.now()+(state.mode==='stopwatch'?-state.elapsed:state.remaining)*1000;el('start').disabled=true;el('pause').textContent=timerTranslateText('Pause');el('phase').textContent=timerTranslateText(state.mode==='interval'?state.segments[state.phase].name:'Running');requestTimerWakeLock();ticker=setInterval(tick,150)}};
 })();
