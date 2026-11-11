@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.75-triathlon-endurance-history-edit';
+const CACHE = 'trainlab-v2.76-triathlon-inline-activity-edit';
 
 const ASSETS = [
   './',

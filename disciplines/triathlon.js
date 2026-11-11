@@ -27,7 +27,7 @@
   'Pallof press':{sets:3,reps:10,equipment:'Cable or resistance band • reps per side'},
   'Dead bug':{sets:3,reps:8,equipment:'Exercise mat • reps per side'}
  };
- const activityUndo={previous:null};
+ const activityUndo={previous:null,exercise:null};
  function readActivities(){try{const value=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');return Array.isArray(value)?value:[];}catch(e){return [];}}
  function writeActivities(items){localStorage.setItem(LOG_KEY,JSON.stringify(items));}
  function activitySummary(entry){
@@ -64,7 +64,7 @@
     if(index<0){alert(t('Activity no longer exists.','La actividad ya no existe.'));return;}
     const updated={...current[index],details:{...current[index].details,distance:distance.value,distanceUnit:unit.value,durationMin:duration.value,rpe:rpe.value,environment:environment?.value||'',rideType:rideType?.value||''}};
     const next=current.slice();next[index]=updated;
-    try{writeActivities(next);activityUndo.previous=current;render();}catch(e){alert(t('Could not save change.','No se pudo guardar el cambio.'));}
+    try{writeActivities(next);activityUndo.previous=current;activityUndo.exercise=canonical(entry.exercise);render();}catch(e){alert(t('Could not save change.','No se pudo guardar el cambio.'));}
    }));
    actions.append(button(t('Cancel','Cancelar'),()=>render()));
    row.after(editor,actions);
@@ -73,7 +73,7 @@
   buttons.append(button('×',()=>{
    if(!confirm(t('Delete this activity? This cannot be undone unless you use Undo before leaving this page.','¿Eliminar esta actividad? Puedes deshacerlo antes de salir de esta página.')))return;
    const current=readActivities();
-   try{writeActivities(current.filter(x=>x.id!==entry.id));activityUndo.previous=current;render();}catch(e){alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
+   try{writeActivities(current.filter(x=>x.id!==entry.id));activityUndo.previous=current;activityUndo.exercise=canonical(entry.exercise);render();}catch(e){alert(t('Could not delete activity.','No se pudo eliminar la actividad.'));}
   }));
   row.append(buttons);host.append(row);
  }
@@ -248,25 +248,29 @@
      // The saved activity remains in history; selecting the exercise again starts a fresh session.
      sessions.delete(key);
     }
+    // Keep logged endurance activities and their correction controls inside this exercise card.
+    if(match.cat!=='Strength'){
+     const logged=readActivities().filter(entry=>entry.discipline===match.cat&&canonical(entry.exercise)===canonical(id));
+     if(logged.length){
+      wrap.append(el('div','tri-muted',logged.length+' '+t('activities logged','actividades registradas')));
+      logged.forEach((entry,index)=>{
+       const activity=el('div','tri-history-item');
+       activity.append(el('div','tri-muted',t('Activity ','Actividad ')+(index+1)));
+       activityActions(entry,activity);
+       wrap.append(activity);
+      });
+     }
+     if(activityUndo.previous&&activityUndo.exercise===canonical(id)){
+      const undo=button(t('Undo last activity change','Deshacer último cambio de actividad'),()=>{
+       try{writeActivities(activityUndo.previous);activityUndo.previous=null;activityUndo.exercise=null;render();}catch(e){alert(t('Could not undo change.','No se pudo deshacer el cambio.'));}
+      });
+      undo.className='tri-undo';wrap.append(undo);
+     }
+    }
     host.append(wrap);
    });
    if(scrollToActive){scrollToActive=false;const target=Array.from(host.querySelectorAll('[data-tri-exercise]')).find(n=>n.dataset.triExercise===activeId);if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));}
-   const history=el('h3','',t('Recent Triathlon Activities','Actividades recientes de triatlón'));host.append(history);
-   const entries=readActivities();
-   if(!entries.length)host.append(el('p','tri-muted',t('No activities recorded yet.','Aún no hay actividades registradas.')));
-   entries.slice(-8).reverse().forEach(entry=>{
-    const wrap=el('div','tri-history-item');
-    const d=new Date(entry.completedAt);
-    wrap.append(el('div','tri-muted',(find(entry.exercise)?.item?.[lang()==='es'?1:0]||entry.exercise)+(entry.elapsedMs>0?' · '+clock(entry.elapsedMs):'')+' · '+(isNaN(d.getTime())?'':d.toLocaleDateString())));
-    if(entry.discipline!=='Strength')activityActions(entry,wrap);
-    host.append(wrap);
-   });
-   if(activityUndo.previous){
-    const undo=button(t('Undo last activity change','Deshacer último cambio de actividad'),()=>{
-     try{writeActivities(activityUndo.previous);activityUndo.previous=null;render();}catch(e){alert(t('Could not undo change.','No se pudo deshacer el cambio.'));}
-    });
-    undo.className='tri-undo';host.append(undo);
-   }
+
   }
 
  }
