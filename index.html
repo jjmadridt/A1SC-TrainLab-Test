@@ -125,6 +125,30 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
   background-image:none!important;box-shadow:none!important;
   text-shadow:0 1px 2px rgba(0,0,0,.85),0 2px 5px rgba(0,0,0,.65)!important;
 }
+
+/* Step 18J: Move/Run original photographs had a framed inset and horizontal top highlight baked into the image. Cropped assets below remove that framing. Same single-layer rendering as other four cards. */
+#landing .refreshed-grid .module.move-card,
+#landing .refreshed-grid .module[data-module="run"]{
+ background-color:#12283d!important;
+ background-repeat:no-repeat!important;
+ background-size:cover!important;
+ background-position:center center!important;
+}
+#landing .refreshed-grid .module.move-card{background-image:url("home-images/move.webp?v=18j")!important}
+#landing .refreshed-grid .module[data-module="run"]{background-image:url("home-images/run.webp?v=18j")!important}
+#landing .refreshed-grid .module.move-card>img,
+#landing .refreshed-grid .module[data-module="run"]>img{display:none!important}
+#landing .refreshed-grid .module.move-card::before,
+#landing .refreshed-grid .module.move-card::after,
+#landing .refreshed-grid .module[data-module="run"]::before,
+#landing .refreshed-grid .module[data-module="run"]::after{content:none!important;display:none!important}
+#landing .refreshed-grid .module.move-card .module-content,
+#landing .refreshed-grid .module[data-module="run"] .module-content{
+ position:relative!important;z-index:2!important;
+ background:none!important;background-color:transparent!important;
+ background-image:none!important;box-shadow:none!important;
+ text-shadow:0 1px 2px rgba(0,0,0,.85),0 2px 5px rgba(0,0,0,.65)!important;
+}
 </style><style>
 .move-launch{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0;padding:14px 16px;background:#14273e;border:1px solid #4271a0;border-radius:16px;color:#fff;text-decoration:none;box-shadow:0 8px 18px #0004}
 .move-launch-brand{display:flex;flex-direction:column;min-width:90px;line-height:1}.move-launch-brand strong{font-size:26px;font-weight:850;font-style:italic;letter-spacing:.03em}.move-launch-brand small{color:#ff5aa6;font-weight:800;font-size:10px;margin-top:5px}
