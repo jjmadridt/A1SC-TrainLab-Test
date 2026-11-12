@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.92-no-card-shading-18h';
+const CACHE = 'trainlab-v2.93-single-layer-fullbleed-18i';
 
 const ASSETS = [
   './',
