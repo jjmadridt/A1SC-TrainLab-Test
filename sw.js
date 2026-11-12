@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.89-full-bleed-cards-18e';
+const CACHE = 'trainlab-v2.90-full-athlete-card-assets-18f';
 
 const ASSETS = [
   './',
