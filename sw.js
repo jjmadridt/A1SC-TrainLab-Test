@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.86-home-artwork18b';
+const CACHE = 'trainlab-v2.87-logo-v2-18c';
 
 const ASSETS = [
   './',
@@ -143,6 +143,7 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './brand-logo.png',
+  './train-lab-logo-v2.webp',
   './strength.jpg',
   './cycle.jpg',
   './run.jpg',
