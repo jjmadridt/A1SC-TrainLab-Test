@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.84-exercise-hr-statistics';
+const CACHE = 'trainlab-v2.85-split-duration-fields';
 
 const ASSETS = [
   './',

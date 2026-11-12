@@ -168,17 +168,21 @@
   if(session.finished){
   const logging=make('div','cy-logging');
   logging.appendChild(make('h3','',t('Log activity','Registrar actividad')));
-  const actualLabel=make('label','',t('Actual duration (mm:ss) — automatically measured; editable','Duración real (mm:ss) — automática; editable'));
-  const actual=make('input');actual.type='text';actual.inputMode='numeric';actual.value=String(Math.floor(elapsed()/60)).padStart(2,'0')+':'+String(elapsed()%60).padStart(2,'0');let manuallyEdited=false;actual.addEventListener('input',()=>{manuallyEdited=true;});actualLabel.appendChild(actual);logging.appendChild(actualLabel);
+  const actualLabel=make('div','',t('Actual duration — automatically measured; editable','Duración real — automática; editable'));
+  const actualHours=make('input');actualHours.type='number';actualHours.inputMode='numeric';actualHours.min='0';actualHours.step='1';actualHours.value=String(Math.floor(elapsed()/3600));
+  const actualMinutes=make('input');actualMinutes.type='number';actualMinutes.inputMode='numeric';actualMinutes.min='0';actualMinutes.max='59';actualMinutes.step='1';actualMinutes.value=String(Math.floor(elapsed()%3600/60));
+  const actualSeconds=make('input');actualSeconds.type='number';actualSeconds.inputMode='numeric';actualSeconds.min='0';actualSeconds.max='59';actualSeconds.step='1';actualSeconds.value=String(elapsed()%60);
+  const durationFields=make('div','');durationFields.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px';
+  [[actualHours,t('Hours','Horas')],[actualMinutes,t('Minutes','Minutos')],[actualSeconds,t('Seconds','Segundos')]].forEach(([input,label])=>{const field=make('label','',label);field.appendChild(input);durationFields.appendChild(field);});actualLabel.appendChild(durationFields);logging.appendChild(actualLabel);
   const effortLabel=make('label','',t('Actual effort (RPE 1–10)','Esfuerzo real (1–10)'));
   const effort=make('select');for(let i=1;i<=10;i++){const option=make('option','',String(i));option.value=String(i);if(i===5)option.selected=true;effort.appendChild(option);}effortLabel.appendChild(effort);logging.appendChild(effortLabel);
   const notesLabel=make('label','',t('Notes (optional)','Notas (opcional)'));
   const notes=make('textarea');notes.rows=2;notes.maxLength=1000;notesLabel.appendChild(notes);logging.appendChild(notesLabel);
   const saveBtn=make('button','cy-start',t('Save activity','Guardar actividad'));saveBtn.type='button';
   saveBtn.addEventListener('click',()=>{
-   const match=/^(\d{1,4}):(\d{2})$/.exec(actual.value.trim());const actualSeconds=match?Number(match[1])*60+Number(match[2]):NaN;const rpe=Number(effort.value);
-   if(!Number.isFinite(actualSeconds)||actualSeconds<0||actualSeconds>86400||Number(match?.[2])>59||rpe<1||rpe>10){root.alert(t('Check duration and effort.','Revisa duración y esfuerzo.'));return;}
-   const record={id:'cycle-'+Date.now(),date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:Math.floor(actualSeconds/60),actualSeconds,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
+   const h=Number(actualHours.value),m=Number(actualMinutes.value),sec=Number(actualSeconds.value);const durationSeconds=h*3600+m*60+sec;const rpe=Number(effort.value);
+   if(![h,m,sec].every(Number.isInteger)||h<0||m<0||m>59||sec<0||sec>59||durationSeconds>86400||rpe<1||rpe>10){root.alert(t('Check duration and effort.','Revisa duración y esfuerzo.'));return;}
+   const record={id:'cycle-'+Date.now(),date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:Math.floor(durationSeconds/60),actualSeconds:durationSeconds,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
    const updated=[record,...history];
    try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));history=updated;}catch(e){root.alert(t('Could not save activity. Check browser storage.','No se pudo guardar la actividad. Revisa el almacenamiento.'));return;}
    stopTick();releaseWake();session=null;persistSession();render();
@@ -219,10 +223,13 @@
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
    const item=make('div','cy-plan-item');const heading=make('div','cy-plan-heading');heading.appendChild(workoutIcon(w));heading.appendChild(make('strong','',w.name));item.appendChild(heading);
    const config=make('div','cy-config');config.appendChild(make('span','cy-note',t('Suggested: ','Sugerido: ')+w.defaultDurationMinutes+' min'));
-   const duration=make('input');duration.type='number';duration.min='5';duration.max='360';duration.step='1';duration.value=String(w.defaultDurationMinutes);duration.setAttribute('aria-label',t('Session minutes','Minutos de sesión'));
+   const durationHours=make('input');durationHours.type='number';durationHours.min='0';durationHours.step='1';durationHours.value=String(Math.floor(w.defaultDurationMinutes/60));
+   const durationMinutes=make('input');durationMinutes.type='number';durationMinutes.min='0';durationMinutes.max='59';durationMinutes.step='1';durationMinutes.value=String(w.defaultDurationMinutes%60);
+   const duration=make('div','');duration.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px';
+   [[durationHours,t('Hours','Horas')],[durationMinutes,t('Minutes','Minutos')]].forEach(([input,label])=>{const field=make('label','',label);field.appendChild(input);duration.appendChild(field);});
    const mode=make('select');[['guided',t('Guided','Guiado')],['manual',t('Manual','Manual')]].forEach(([v,label])=>{const o=make('option','',label);o.value=v;mode.appendChild(o);});
    const start=make('button','cy-start',t('Prepare session','Preparar sesión'));start.type='button';start.addEventListener('click',()=>{
-    const n=Number(duration.value);if(!Number.isFinite(n)||n<5||n>360){root.alert(t('Enter a duration between 5 and 360 minutes.','Ingresa una duración entre 5 y 360 minutos.'));return;}
+    const h=Number(durationHours.value),m=Number(durationMinutes.value),n=h*60+m;if(!Number.isInteger(h)||!Number.isInteger(m)||h<0||m<0||m>59||n<5||n>360){root.alert(t('Enter a duration between 5 and 360 minutes.','Ingresa una duración entre 5 y 360 minutos.'));return;}
     startSession(w,n,mode.value);
    });config.append(duration,mode,start);item.appendChild(config);summary.appendChild(item);
   }});mount.appendChild(summary);
