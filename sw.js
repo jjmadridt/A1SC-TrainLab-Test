@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.94-move-run-inset-removed-18j';
+const CACHE = 'trainlab-v2.82-run-icon-cleanup';
 
 const ASSETS = [
   './',
