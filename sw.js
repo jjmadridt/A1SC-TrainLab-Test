@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.89-farmer-carry-volume';
+const CACHE = 'trainlab-v2.90-swim-selected-exercises';
 
 const ASSETS = [
   './',

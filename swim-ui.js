@@ -57,6 +57,22 @@ if(view==='edit'){
  const envSummary=el('div','sw-note',settingsForDay.environment==='pool'?t('Pool','Alberca')+' · '+settingsForDay.pool+' '+settingsForDay.unit:t('Open water','Aguas abiertas'));
 envSummary.style.cssText='margin:6px 0 10px;color:#b5c7d7;font-size:14px';week.append(envSummary);
 }
+if(view==='edit'&&selected().length){
+ const chosen=panel(t('Selected exercises','Ejercicios seleccionados'));
+ selected().forEach(entry=>{
+  const w=data.workouts.find(item=>item.id===entry.id);if(!w)return;
+  const row=el('div','sw-workout');
+  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
+  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',entry.sets+' × '+entry.perSet+' '+settingsForDay.unit));row.append(info);
+  const remove=button(t('Remove','Quitar'),()=>{plan[day]=selected().filter(x=>x.id!==entry.id);persist();render();});remove.setAttribute('aria-label',t('Remove ','Quitar ')+w[lang()]);row.append(remove);chosen.append(row);
+  const fields=el('div','sw-fields');fields.style.cssText='margin:4px 0 12px;grid-template-columns:repeat(3,minmax(0,1fr))';
+  [['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{
+   const wrapper=el('label','',label),input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];
+   input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});
+   wrapper.append(input);fields.append(wrapper);
+  });chosen.append(fields);
+ });
+}
 if(view==='edit'){
  const focus=panel(t('Training focus','Enfoque de entrenamiento'));
  const cats=el('div','sw-buttons');data.categories.forEach(c=>cats.append(button(c[lang()],()=>{category=c.id;render();},category===c.id)));focus.append(cats);
@@ -65,17 +81,7 @@ if(view==='edit'){
  const row=el('label','sw-workout');const check=el('input');check.type='checkbox';check.checked=selected().some(x=>x.id===w.id);check.addEventListener('change',()=>{const existing=selected().filter(x=>x.id!==w.id);if(check.checked)existing.push({id:w.id,perSet:w.perSet,sets:w.sets,rest:w.rest});plan[day]=existing;persist();render()});row.append(check);
  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',w.sets+' × '+w.perSet+' '+settingsForDay.unit+(w.rest?' · '+w.rest+'s '+t('rest','descanso'):'')));row.append(info);list.append(row);
-  // Configure a selected workout in its selection row; no duplicate planned-session list.
-  if(check.checked){
-   const entry=selected().find(x=>x.id===w.id);
-   if(entry){const fields=el('div','sw-fields');fields.style.cssText='margin:4px 0 12px 32px;grid-template-columns:repeat(3,minmax(0,1fr))';
-    [['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{
-     const wrapper=el('label','',label),input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];
-     input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});
-     wrapper.append(input);fields.append(wrapper);
-    });list.append(fields);
-   }
-  }
+
 });exercises.append(list);}
 if(view==='edit')return;
 // Per-exercise logging: timers only prepare a draft; Log Activity commits it.
