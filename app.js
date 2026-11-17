@@ -235,33 +235,6 @@ function bodyAreaPicker(){
  </div>`;
 }
 
-// Total Body training volume: completed logged resistance sets only, stored internally in pounds.
-function totalBodyWeightMoved(dayName,sessionNumber){
- const logs=db.logs.filter(x=>x.day===dayName&&x.session===sessionNumber);
- let totalLb=0,sets=0;
- for(const x of logs){
-  if(x.unit==='minutes'||x.unit==='seconds'||x.unit==='seconds per side')continue;
-  const weight=Number(x.weight),reps=Number(x.count);
-  if(!Number.isFinite(weight)||!Number.isFinite(reps)||weight<=0||reps<=0)continue;
-  const equipment=String(x.equipment||'').toLowerCase();
-  // Recorded dumbbell weights explicitly marked "per hand" represent two implements.
-  const hands=equipment.includes('weight per hand')?2:1;
-  const sides=String(x.unit).toLowerCase()==='per side'||String(x.unit).toLowerCase()==='per leg'?2:1;
-  totalLb+=weight*reps*hands*sides;sets++;
- }
- return {totalLb,sets};
-}
-function totalBodyWeightSummary(dayName,sessionNumber){
- const {totalLb,sets}=totalBodyWeightMoved(dayName,sessionNumber);
- const unit=db.settings.unit==='kg'?'kg':'lb';
- const value=unit==='kg'?totalLb/2.2046226218:totalLb;
- const formatted=new Intl.NumberFormat(db.settings.lang==='es'?'es-MX':'en-US',{maximumFractionDigits:1}).format(value);
- return `<section class="card tb-weight-moved" aria-live="polite" aria-label="${tr('Total Weight Moved','Peso total movido')}">
- <small>🏋 ${tr('Total Weight Moved','Peso total movido')}</small>
- <div class="stat">${formatted} <span style="font-size:.55em;font-weight:500">${unit}</span></div>
- <small>${sets} ${tr('weighted sets logged','series con peso registradas')} · ${tr('Weight × repetitions','Peso × repeticiones')}</small>
- </section>`;
-}
 function workout(){
  let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
  if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
@@ -274,7 +247,6 @@ function workout(){
  ${type!=='training'?`<div class="card"><h3>${dayTypeLabel(type)}</h3><p class="muted">${type==='rest'?tr('No structured workout scheduled. Your saved exercises remain available when you switch back to Training Day.','No hay entrenamiento programado. Tus ejercicios guardados estarán disponibles al volver a Día de entrenamiento.'):tr('Keep movement gentle and optional. You can use your saved exercises below or edit the plan.','Mantén el movimiento suave y opcional. Puedes usar los ejercicios guardados abajo o editar el plan.')}</p></div>`:''}
  ${type==='rest'?'':`<div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
  ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Use Edit plan to add exercises.','No hay ejercicios seleccionados para este día. Usa Editar plan para agregarlos.')}</div>`}
- ${totalBodyWeightSummary(day,n)}
  ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
  document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();const root=document.getElementById('fitclimb');if(root)root.scrollIntoView({block:'start',behavior:'instant'});});
  if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
