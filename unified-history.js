@@ -46,10 +46,18 @@ function hrForRecord(record){
 function weightMoved(sets,tb){
  let pounds=0,count=0;
  for(const x of sets){
-  // Only resistance repetitions contribute. Time, distance, and carries are excluded.
   const unit=str(x.unit).trim().toLowerCase();
+  const name=str(x.name).trim().toLowerCase();
+  const w=Number(x.weight);
+  // A completed Farmer carry counts its saved total load exactly once per set.
+  // Ignore its time, distance and equipment label; do not infer a per-hand multiplier.
+  if(name==='farmer carry'||name==='caminata del granjero'){
+   if(Number.isFinite(w)&&w>0){pounds+=w;count++;}
+   continue;
+  }
+  // All other resistance work uses recorded repetitions only.
   if(!['reps','per side','per leg'].includes(unit))continue;
-  const w=Number(x.weight),r=Number(x.count);
+  const r=Number(x.count);
   if(!Number.isFinite(w)||!Number.isFinite(r)||w<=0||r<=0)continue;
   // Saved dumbbell weight already represents the logged load. Do not double it
   // simply because the equipment label says "weight per hand".
