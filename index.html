@@ -149,6 +149,20 @@ html:has(#fitclimb.visible){scroll-snap-type:y proximity;scroll-padding-top:12px
  background-image:none!important;box-shadow:none!important;
  text-shadow:0 1px 2px rgba(0,0,0,.85),0 2px 5px rgba(0,0,0,.65)!important;
 }
+
+/* Step 21: Keep the existing navigation controls accessible while workout/profile content scrolls. */
+body.tl-inner-screen .shell-head{
+ position:sticky;top:0;z-index:900;
+ background:#07121f;box-shadow:0 5px 14px rgba(0,0,0,.45);
+ padding-top:max(8px, env(safe-area-inset-top));padding-bottom:8px;
+}
+body.tl-inner-screen .shell-actions{flex-wrap:nowrap;justify-content:space-between;gap:4px}
+body.tl-inner-screen .shell-actions>.homebtn,
+body.tl-inner-screen .shell-actions>#tl-timer-open{
+ min-width:0;flex:0 1 auto;padding:9px 6px;font-size:11px;white-space:nowrap;
+}
+body.tl-inner-screen .shell-actions>#language-toggle{min-width:0;max-width:68px;padding:7px 3px;font-size:11px;flex:0 1 auto}
+@media(max-width:390px){body.tl-inner-screen .shell-actions{gap:3px}body.tl-inner-screen .shell-actions>.homebtn,body.tl-inner-screen .shell-actions>#tl-timer-open{font-size:10px;padding:9px 4px}}
 </style><style>
 .move-launch{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:15px 0;padding:14px 16px;background:#14273e;border:1px solid #4271a0;border-radius:16px;color:#fff;text-decoration:none;box-shadow:0 8px 18px #0004}
 .move-launch-brand{display:flex;flex-direction:column;min-width:90px;line-height:1}.move-launch-brand strong{font-size:26px;font-weight:850;font-style:italic;letter-spacing:.03em}.move-launch-brand small{color:#ff5aa6;font-weight:800;font-size:10px;margin-top:5px}
@@ -304,6 +318,7 @@ function translate(){
  if(active)document.getElementById('module-subtitle').textContent=subtitle[l][active];
 }
 function show(name){
+ document.body.classList.toggle('tl-inner-screen',name!=='home');
  for(const el of document.querySelectorAll('.screen'))el.classList.remove('visible');
  document.getElementById('fitclimb').classList.remove('visible');
  if(name==='profile'){document.getElementById('athlete-profile').classList.add('visible');if(window.renderAthleteProfile)window.renderAthleteProfile()}
