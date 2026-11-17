@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.87-profile-weight-moved';
+const CACHE = 'trainlab-v2.88-volume-correction';
 
 const ASSETS = [
   './',

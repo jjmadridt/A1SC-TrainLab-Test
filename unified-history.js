@@ -46,18 +46,21 @@ function hrForRecord(record){
 function weightMoved(sets,tb){
  let pounds=0,count=0;
  for(const x of sets){
-  if(['minutes','seconds','seconds per side'].includes(str(x.unit).toLowerCase()))continue;
+  // Only resistance repetitions contribute. Time, distance, and carries are excluded.
+  const unit=str(x.unit).trim().toLowerCase();
+  if(!['reps','per side','per leg'].includes(unit))continue;
   const w=Number(x.weight),r=Number(x.count);
   if(!Number.isFinite(w)||!Number.isFinite(r)||w<=0||r<=0)continue;
-  const equipment=str(x.equipment).toLowerCase();
-  const hands=equipment.includes('weight per hand')?2:1;
-  const sides=['per side','per leg'].includes(str(x.unit).toLowerCase())?2:1;
-  pounds+=w*r*hands*sides;count++;
+  // Saved dumbbell weight already represents the logged load. Do not double it
+  // simply because the equipment label says "weight per hand".
+  // A per-side/per-leg count explicitly represents repetitions on each side.
+  const sides=(unit==='per side'||unit==='per leg')?2:1;
+  pounds+=w*r*sides;count++;
  }
  const unit=tb?.settings?.unit==='kg'?'kg':'lb';
  const value=unit==='kg'?pounds/2.2046226218:pounds;
- const locale=document.getElementById('language-toggle')?.value==='es'?'es-MX':'en-US';
- return {label:tr('Total Weight Moved','Peso total movido'),value:new Intl.NumberFormat(locale,{maximumFractionDigits:1}).format(value)+' '+unit,count};
+ const locale=document.documentElement.lang==='es'?'es-MX':'en-US';
+ return {label:tr('Total Weight Moved','Peso total movido'),value:new Intl.NumberFormat(locale,{minimumFractionDigits:0,maximumFractionDigits:1}).format(value)+' '+unit,count};
 }
 function getRecords(){
  const records=[];
