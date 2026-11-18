@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.90-cross-discipline-navigation';
+const CACHE = 'trainlab-v2.91-cross-discipline-fix';
 
 const ASSETS = [
   './',
