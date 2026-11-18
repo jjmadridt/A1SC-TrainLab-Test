@@ -241,7 +241,7 @@ function workout(){
  if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
  const dt=new Date(getStart(day,n));const start=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
- <div class="row"><div><h2>${esc(tr('Weekly workout','Rutina semanal'))} — ${esc(db.settings.lang==='es'?ES[EN.indexOf(day)]:day)}</h2><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>${totalBodyPlanMode?'':`<span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span>`}</div>
+ <div class="row"><div><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>${totalBodyPlanMode?'':`<span class="pill">${p.ex.length} ${tr('exercises','ejercicios')}</span>`}</div>
  <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
  ${totalBodyPlanMode?dayTypePicker()+bodyAreaPicker():''}
  ${!totalBodyPlanMode?`
