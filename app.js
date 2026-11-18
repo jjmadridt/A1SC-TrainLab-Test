@@ -235,6 +235,7 @@ function bodyAreaPicker(){
  </div>`;
 }
 
+window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},getDay(){return WEEKDAYS.indexOf(day);}};
 function workout(){
  let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
  if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}

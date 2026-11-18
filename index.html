@@ -279,6 +279,7 @@ body.tl-inner-screen .shell-actions>#language-toggle{min-width:0;max-width:68px;
 <script src="workout-timer.js?v=20261111timer17v"></script>
 <script src="screen-awake.js?v=20261111wake17v"></script>
 <script src="ble-heart-rate.js?v=20261111ble17y"></script>
+<script src="unified-planner.js?v=step28a"></script>
 <script>
 /* Place the existing shared Timer launcher in the top navigation.
    Reuse the original button and its click handler; leave the timer engine untouched. */
@@ -346,6 +347,7 @@ function show(name){
  try{localStorage.setItem('trainlab-last-discipline',name)}catch(e){}
  window.scrollTo(0,0);
 }
+window.TrainLabShowDiscipline=show;
 document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.module)));
 document.getElementById('home-button').addEventListener('click',()=>show('home'));
 document.getElementById('back-button').addEventListener('click',()=>show('home'));

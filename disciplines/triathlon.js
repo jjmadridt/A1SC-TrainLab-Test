@@ -306,5 +306,5 @@
 
  }
  }
- root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render};
+ root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render,openPlan(i){day=i;view='edit';render();},getDay(){return day;}};
 })(window);

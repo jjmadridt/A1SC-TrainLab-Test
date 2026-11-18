@@ -182,5 +182,5 @@ if(records.length){
  });
 }
 }
-root.TrainLabSwimUI={render};
+root.TrainLabSwimUI={render,openPlan(i){day=i;view='edit';render();},getDay(){return day;}};
 })(window);
