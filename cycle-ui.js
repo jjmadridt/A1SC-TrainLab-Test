@@ -234,9 +234,25 @@
   heading.replaceWith(toggle);
   config.hidden=true;
   toggle.addEventListener('click',()=>{
-   config.hidden=!config.hidden;
-   toggle.setAttribute('aria-expanded',String(!config.hidden));
-   arrow.textContent=config.hidden?'▸':'▾';
+   // Keep only one workout expanded in the current CYCLE list.
+   // The existing activity controls and saved records are untouched.
+   const willOpen=config.hidden;
+   if(willOpen){
+    const list=item.parentElement;
+    if(list){
+     list.querySelectorAll('.cy28-toggle[aria-expanded="true"]').forEach(other=>{
+      if(other===toggle)return;
+      const otherConfig=other.parentElement?.querySelector('.cy-config');
+      if(otherConfig)otherConfig.hidden=true;
+      other.setAttribute('aria-expanded','false');
+      const otherArrow=other.querySelector('.cy28-arrow');
+      if(otherArrow)otherArrow.textContent='▸';
+     });
+    }
+   }
+   config.hidden=!willOpen;
+   toggle.setAttribute('aria-expanded',String(willOpen));
+   arrow.textContent=willOpen?'▾':'▸';
   });
  }
  function render(){
