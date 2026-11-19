@@ -4,6 +4,7 @@ const KEY='a1sc-swim-weekly-plan-v01',SETTINGS='a1sc-swim-settings-v01';
 const ACTIVE='a1sc-swim-active-v01',HISTORY='a1sc-swim-activity-history-v01';
 const DAY_TYPES='a1sc-swim-day-types-v01',DAY_ENV='a1sc-swim-day-environments-v01';
 let view='workout';
+let expandedWorkoutId=null; // One open workout at a time, retained through rerenders.
 let dayTypes=load(DAY_TYPES,{});
 function currentDayType(){return ['training','recovery','rest'].includes(dayTypes[day])?dayTypes[day]:'training';}
 const days={en:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],es:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']};
@@ -57,6 +58,22 @@ if(view==='edit'){
  const envSummary=el('div','sw-note',settingsForDay.environment==='pool'?t('Pool','Alberca')+' · '+settingsForDay.pool+' '+settingsForDay.unit:t('Open water','Aguas abiertas'));
 envSummary.style.cssText='margin:6px 0 10px;color:#b5c7d7;font-size:14px';week.append(envSummary);
 }
+if(view==='edit'&&selected().length){
+ const chosen=panel(t('Selected exercises','Ejercicios seleccionados'));
+ selected().forEach(entry=>{
+  const w=data.workouts.find(item=>item.id===entry.id);if(!w)return;
+  const row=el('div','sw-workout');
+  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
+  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',entry.sets+' × '+entry.perSet+' '+settingsForDay.unit));row.append(info);
+  const remove=button(t('Remove','Quitar'),()=>{plan[day]=selected().filter(x=>x.id!==entry.id);persist();render();});remove.setAttribute('aria-label',t('Remove ','Quitar ')+w[lang()]);row.append(remove);chosen.append(row);
+  const fields=el('div','sw-fields');fields.style.cssText='margin:4px 0 12px;grid-template-columns:repeat(3,minmax(0,1fr))';
+  [['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{
+   const wrapper=el('label','',label),input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];
+   input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});
+   wrapper.append(input);fields.append(wrapper);
+  });chosen.append(fields);
+ });
+}
 if(view==='edit'){
  const focus=panel(t('Training focus','Enfoque de entrenamiento'));
  const cats=el('div','sw-buttons');data.categories.forEach(c=>cats.append(button(c[lang()],()=>{category=c.id;render();},category===c.id)));focus.append(cats);
@@ -65,17 +82,7 @@ if(view==='edit'){
  const row=el('label','sw-workout');const check=el('input');check.type='checkbox';check.checked=selected().some(x=>x.id===w.id);check.addEventListener('change',()=>{const existing=selected().filter(x=>x.id!==w.id);if(check.checked)existing.push({id:w.id,perSet:w.perSet,sets:w.sets,rest:w.rest});plan[day]=existing;persist();render()});row.append(check);
  const img=el('img','sw-icon');img.src='swim-icons/'+w.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';row.append(img);
  const info=el('span');info.append(el('strong','',w[lang()]));info.append(el('small','',w.sets+' × '+w.perSet+' '+settingsForDay.unit+(w.rest?' · '+w.rest+'s '+t('rest','descanso'):'')));row.append(info);list.append(row);
-  // Configure a selected workout in its selection row; no duplicate planned-session list.
-  if(check.checked){
-   const entry=selected().find(x=>x.id===w.id);
-   if(entry){const fields=el('div','sw-fields');fields.style.cssText='margin:4px 0 12px 32px;grid-template-columns:repeat(3,minmax(0,1fr))';
-    [['perSet',t('Distance per set','Distancia por serie'),1],['sets',t('Sets','Series'),1],['rest',t('Rest (sec)','Descanso (seg)'),0]].forEach(([key,label,min])=>{
-     const wrapper=el('label','',label),input=el('input');input.type='number';input.min=String(min);input.step='1';input.value=entry[key];
-     input.addEventListener('change',()=>{const n=Number(input.value);if(Number.isFinite(n)&&n>=min&&n<=100000){entry[key]=Math.round(n);persist();render();}else input.value=entry[key];});
-     wrapper.append(input);fields.append(wrapper);
-    });list.append(fields);
-   }
-  }
+
 });exercises.append(list);}
 if(view==='edit')return;
 // Per-exercise logging: timers only prepare a draft; Log Activity commits it.
@@ -88,15 +95,54 @@ const setActive=(a)=>{try{if(a)localStorage.setItem(ACTIVE,JSON.stringify(a));el
 const field=(parent,label,value,min=0)=>{const l=el('label','',label),i=el('input');i.type='number';i.min=String(min);i.step='1';i.value=String(value);l.append(i);parent.append(l);return i;};
 const actions=(parent)=>{const row=el('div','sw-buttons');parent.append(row);return row;};
 const drafts={};
+const todaysRecords=historyRead().filter(r=>{
+ if(!r||!r.savedAt)return false;
+ const when=new Date(r.savedAt),now=new Date();
+ return !Number.isNaN(when.getTime())&&when.getFullYear()===now.getFullYear()&&when.getMonth()===now.getMonth()&&when.getDate()===now.getDate();
+});
+const completedIds=new Set(todaysRecords.flatMap(r=>Array.isArray(r.workouts)?r.workouts.map(w=>w.id).filter(Boolean):[]));
+const planned=selected().filter(e=>data.workouts.some(w=>w.id===e.id));
+const completedCount=planned.filter(e=>completedIds.has(e.id)).length;
+const progress=el('div','sw-daily-progress');
+progress.style.cssText='margin:10px 0 16px;padding:12px;border:1px solid #49647c;border-radius:12px';
+const progressLine=el('div');progressLine.style.cssText='display:flex;justify-content:space-between;gap:8px;font-size:13px;flex-wrap:wrap';progressLine.append(el('strong','',t('Today’s progress','Progreso de hoy')));progressLine.append(el('span','',completedCount+' '+t('of','de')+' '+planned.length+' '+t('completed','completados')));progress.append(progressLine);
+const track=el('div');track.style.cssText='height:5px;border-radius:20px;background:#344b5d;margin-top:8px;overflow:hidden';
+const fill=el('div');fill.style.cssText='height:100%;width:'+(planned.length?100*completedCount/planned.length:0)+'%;background:#26a777;border-radius:20px';track.append(fill);progress.append(track);if(planned.length)activityPanel.append(progress);
+if(active?.workoutId&&planned.some(e=>e.id===active.workoutId))expandedWorkoutId=active.workoutId;
 selected().forEach((entry)=>{
  const def=data.workouts.find(w=>w.id===entry.id);if(!def)return;
- const card=el('div','sw-plan sw-exercise-card');card.style.cssText='border:0;border-bottom:1px solid #29465e;padding:14px 0';activityPanel.append(card);
- const header=el('div');header.style.cssText='display:flex;align-items:center;gap:14px;cursor:pointer';
- const img=el('img','sw-icon');img.src='swim-icons/'+def.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';img.style.cssText='width:82px;height:82px;object-fit:cover;border-radius:10px';header.append(img);
- const description=el('div');description.style.flex='1';description.append(el('strong','',def[lang()]+' ▸'));description.append(el('small','',t('Planned: ','Planeado: ')+distance(entry)+' '+settingsForDay.unit));header.append(description);card.append(header);
+ const card=el('div','sw-exercise-card');card.style.cssText='border:0;border-bottom:1px solid #29465e;padding:10px 0';activityPanel.append(card);
+ const header=el('div','sw-exercise-row');header.style.cssText='display:flex;align-items:center;gap:10px;min-height:66px;cursor:pointer';
+ const img=el('img','sw-icon');img.src='swim-icons/'+def.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';img.style.cssText='width:56px;height:56px;flex:0 0 56px;object-fit:cover;border-radius:9px';header.append(img);
+ const isComplete=completedIds.has(entry.id);const statusIcon=el('span','sw-completion-icon',isComplete?'✓':'○');statusIcon.style.cssText='flex:0 0 23px;text-align:center;font-size:24px;font-weight:700;color:'+(isComplete?'#59d6a7':'#c5d0db');header.append(statusIcon);const description=el('div');description.style.cssText='flex:1;min-width:0;display:flex;flex-direction:column;gap:3px';
+ const name=el('strong','',def[lang()]);description.append(name);
+ const status=el('small','',isComplete?t('Completed','Completado'):t('Not Completed','No completado'));
+ status.style.cssText='font-size:12px;color:'+(isComplete?'#59d6a7':'#c5d0db');description.append(status);
+ description.append(el('small','',t('Planned: ','Planeado: ')+distance(entry)+' '+settingsForDay.unit));
+ header.append(description);const arrow=el('span','',expandedWorkoutId===entry.id?'▾':'▸');arrow.style.cssText='font-size:22px;flex:0 0 22px;text-align:center;color:#d3e5f1';header.append(arrow);card.append(header);
  const details=el('div');details.style.cssText='display:none;padding:10px 0 0';card.append(details);
- header.addEventListener('click',()=>{details.style.display=details.style.display==='none'?'block':'none';});
- if(active&&active.workoutId===entry.id)details.style.display='block';
+ header.setAttribute('role','button');header.setAttribute('tabindex','0');
+ header.setAttribute('aria-expanded',String(expandedWorkoutId===entry.id));
+ const toggle=()=>{
+  expandedWorkoutId=expandedWorkoutId===entry.id?null:entry.id;
+  // Update existing cards in place; do not rerender and discard draft field values.
+  activityPanel.querySelectorAll('.sw-exercise-card').forEach(c=>{
+   const open=c.dataset.workoutId===expandedWorkoutId;
+   const d=c.querySelector('.sw-exercise-details');
+   const a=c.querySelector('.sw-expand-arrow');
+   const h=c.querySelector('.sw-exercise-header');
+   if(d)d.style.display=open?'block':'none';
+   if(a)a.textContent=open?'▾':'▸';
+   if(h)h.setAttribute('aria-expanded',String(open));
+  });
+ };
+ header.classList.add('sw-exercise-header');
+ header.addEventListener('click',toggle);
+ header.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}});
+ card.dataset.workoutId=entry.id;
+ details.classList.add('sw-exercise-details');
+ arrow.classList.add('sw-expand-arrow');
+ details.style.display=expandedWorkoutId===entry.id?'block':'none';
  const existingTimer=active&&active.workoutId===entry.id?active:null;
  if(active&&!active.workoutId){details.append(el('small','',t('An older unfinished session is stored; finish it before starting a new timer.','Hay una sesión anterior sin terminar; termínala antes de iniciar otro cronómetro.')));}
  const reviewing=existingTimer?.status==='review';
@@ -176,5 +222,5 @@ if(records.length){
  });
 }
 }
-root.TrainLabSwimUI={render};
+root.TrainLabSwimUI={render,openPlan(i){day=i;view='edit';render();},getDay(){return day;}};
 })(window);

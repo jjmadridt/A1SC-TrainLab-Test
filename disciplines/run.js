@@ -106,6 +106,10 @@
       return `<label style="display:flex;flex-direction:column;gap:4px;font-size:13px;min-width:0"><span>${esc(title)}</span>${control}</label>`;
     };
     const record=(a,i)=>`<div class="run-record" style="padding:12px;margin:8px 0;border:1px solid #49647c;border-radius:10px"><div><strong>${esc(label(a.exercise))}</strong> · <small>${esc(new Date(a.timestamp).toLocaleString())}</small></div><div style="margin:6px 0">${esc(recordDetail(a))}</div>${editingRunIndex===i?`<div class="run-edit-fields" style="margin-top:10px;padding-top:10px;border-top:1px solid #49647c"><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px">${Object.entries(a.data||{}).map(editField).join('')}</div><div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button type="button" class="run-save" data-run-edit-save="${i}">${t('Save Changes','Guardar cambios')}</button><button type="button" data-run-edit-cancel>${t('Cancel','Cancelar')}</button></div></div>`:`<div style="display:flex;gap:8px"><button type="button" data-run-edit="${i}">${t('Edit','Editar')}</button><button type="button" data-run-delete="${i}">${t('Delete','Eliminar')}</button></div>`}</div>`;
+    const todayKey=new Date().toDateString();
+    const doneToday=n=>activities.some(a=>a.exercise===n&&a.timestamp&&new Date(a.timestamp).toDateString()===todayKey);
+    const completedCount=selected.filter(doneToday).length;
+    const progress=selected.length?`<div class="run-day-progress" role="status"><div class="run-day-progress-line"><strong>${t('Today’s progress','Progreso de hoy')}</strong><span>${completedCount} ${t('of','de')} ${selected.length} ${t('completed','completados')}</span></div><div class="run-progress-track"><div class="run-progress-fill" style="width:${completedCount/selected.length*100}%"></div></div></div>`:'';
     const navigation=`<div class="run-categories" style="margin-bottom:12px"><button type="button" data-run-view="workout" class="${view==='workout'?'active':''}">${t('Today’s Workout','Entrenamiento de hoy')}</button><button type="button" data-run-view="plan" class="${view==='plan'?'active':''}">${t('Edit Plan','Editar Plan')}</button></div>`;
     const dayNav=`<div class="run-days">${DAYS.map((d,i)=>`<button type="button" class="${day===d?'active':''}" data-run-day="${d}">${t(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i],['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][i])}</button>`).join('')}</div>`;
     el.innerHTML=dayNav+navigation+(view==='plan'?`<div class="card"><h3>${t('Build your weekly run program','Crea tu programa semanal de carrera')}</h3>
@@ -114,7 +118,7 @@
       <div class="run-categories">${Object.keys(CATALOG).map(c=>`<button type="button" class="${categories.includes(c)?'active':''}" data-run-category="${esc(c)}" aria-pressed="${categories.includes(c)}">${esc(label(c))}</button>`).join('')}</div>
       ${categories.length?`<div class="run-list"><strong>${t('Add exercises','Agregar ejercicios')}</strong>${available.length?available.map(n=>item(n,false)).join(''):`<p class="muted">${t('All exercises in these categories are selected.','Ya seleccionaste todos los ejercicios de estas categorías.')}</p>`}</div>`:''}
       <p class="muted" style="font-size:12px">${t('Saved automatically on this device','Guardado automáticamente en este dispositivo')}</p></div>
-`:`<div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${dayType(day)==='rest'?`<p class="muted">${t('Rest Day — no structured workout.','Día de descanso — sin entrenamiento programado.')}</p>`:dayType(day)==='recovery'?`<p class="muted">${t('Active Recovery — optional light movement. Your training plan is preserved.','Recuperación activa — movimiento ligero opcional. Tu plan se conserva.')}</p>`:selected.length?selected.map((n,i)=>`<div class="run-exercise-block"><div class="run-program-row">${runArt(n)}<button type="button" class="run-title-button" data-run-expand="${esc(n)}" aria-expanded="${expanded===n}">${i+1}. ${esc(label(n))} ${expanded===n?'▾':'▸'}</button><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>${expanded===n?controls(n):''}${activities.map((a,j)=>({a,j})).filter(x=>x.a.exercise===n&&new Date(x.a.timestamp).toDateString()===new Date().toDateString()).slice(0,5).map(x=>record(x.a,x.j)).join('')}</div>`).join(''):`<p class="muted">${t('Use Edit Plan to choose exercises for this day.','Usa Editar Plan para elegir los ejercicios de este día.')}</p>`}
+`:`<div class="card"><h3>${t('Today’s run program','Programa de carrera del día')}</h3>${dayType(day)==='rest'?`<p class="muted">${t('Rest Day — no structured workout.','Día de descanso — sin entrenamiento programado.')}</p>`:dayType(day)==='recovery'?`<p class="muted">${t('Active Recovery — optional light movement. Your training plan is preserved.','Recuperación activa — movimiento ligero opcional. Tu plan se conserva.')}</p>`:selected.length?progress+selected.map((n,i)=>`<div class="run-exercise-block"><div class="run-program-row">${runArt(n)}<span class="run-status ${doneToday(n)?'run-status-done':''}" aria-label="${doneToday(n)?t('Completed','Completado'):t('Not completed','Sin completar')}">${doneToday(n)?'✓':'○'}</span><button type="button" class="run-title-button" data-run-expand="${esc(n)}" aria-expanded="${expanded===n}">${i+1}. ${esc(label(n))} <span class="run-expand-chevron">${expanded===n?'▾':'▸'}</span><span class="run-status-text">${doneToday(n)?t('Completed','Completado'):t('Not completed','Sin completar')}</span></button><small>${esc(label(Object.keys(CATALOG).find(c=>CATALOG[c].includes(n))))}</small></div>${expanded===n?controls(n):''}${activities.map((a,j)=>({a,j})).filter(x=>x.a.exercise===n&&new Date(x.a.timestamp).toDateString()===new Date().toDateString()).slice(0,5).map(x=>record(x.a,x.j)).join('')}</div>`).join(''):`<p class="muted">${t('Use Edit Plan to choose exercises for this day.','Usa Editar Plan para elegir los ejercicios de este día.')}</p>`}
       <div class="run-log"><h3>${t('Recent Run Activities','Actividades recientes de carrera')}</h3>
       ${activities.length?activities.slice(0,5).map((a,i)=>record(a,i)).join(''):`<p class="muted">${t('No runs logged yet.','Aún no hay carreras registradas.')}</p>`}</div></div>`);
     el.querySelectorAll('[data-run-view]').forEach(b=>b.onclick=()=>{view=b.dataset.runView;expanded=null;render()});
@@ -190,5 +194,18 @@
       render();
     });
   }
-  window.TrainLabRun={name:'RUN',version:'0.5.0',status:'all-exercise-controls',render};
+  if(!document.getElementById('run-progress-styles')){
+    const st=document.createElement('style');st.id='run-progress-styles';st.textContent=`
+    #run-builder .run-day-progress{margin:10px 0 16px;padding:12px;border:1px solid #49647c;border-radius:12px}
+    #run-builder .run-day-progress-line{display:flex;justify-content:space-between;gap:8px;font-size:13px;flex-wrap:wrap}
+    #run-builder .run-progress-track{height:5px;background:#344b5d;border-radius:20px;margin-top:10px;overflow:hidden}
+    #run-builder .run-progress-fill{height:100%;background:#26a777;border-radius:20px;transition:width .2s}
+    #run-builder .run-status{font-size:23px;line-height:1;color:#91a4b3;flex-shrink:0}
+    #run-builder .run-status-done{color:#26bd85;font-weight:800}
+    #run-builder .run-status-text{display:block;font-size:11px;font-weight:500;color:#a8b9c7;margin-top:3px}
+    #run-builder .run-status-done~.run-title-button .run-status-text{color:#26bd85}
+    #run-builder .run-expand-chevron{float:right;margin-left:8px}
+    `;document.head.appendChild(st);
+  }
+  window.TrainLabRun={name:'RUN',version:'0.5.0',status:'all-exercise-controls',render,openPlan(i){day=DAYS[i];view='plan';render();},getDay(){return DAYS.indexOf(day);}};
 })();
