@@ -185,6 +185,8 @@
  let data={};try{const v=JSON.parse(localStorage.getItem(KEY)||'{}');if(v&&typeof v==='object'&&!Array.isArray(v))data=v;}catch(e){}
  let day=(new Date().getDay()+6)%7,view='workout',category='Swim';
  let activeId=null,scrollToActive=false;
+ // Step 28L: only one workout card may be expanded.
+ let expandedExercise=null;
  function newSession(id){return {id,sessionId:Date.now()+'-'+Math.random().toString(36).slice(2),elapsed:0,startedAt:null,phase:'active',notes:''};}
  function lang(){return document.getElementById('language-toggle')?.value==='es'?'es':'en';}
  function t(en,es){return lang()==='es'?es:en;}
@@ -231,7 +233,7 @@
  if(window.__triathlonSnapHandler){window.removeEventListener('scroll',window.__triathlonSnapHandler);window.__triathlonSnapHandler=null;}
  function render(){stopTick();const host=document.getElementById('tri-builder');if(!host)return;host.replaceChildren();host.classList.remove('tri-workout-snap');
  const css=el('style');css.textContent=`#tri-builder{color:#eaf4fc}#tri-builder button,#tri-builder select{font:inherit}#tri-builder .tri-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0}#tri-builder .tri-days button{padding:10px 0;border:1px solid #355875;border-radius:9px;background:#10273b;color:#d9eafb;font-size:12px}#tri-builder .tri-days button.tri-active,#tri-builder .tri-tabs button.tri-active,#tri-builder .tri-cats button.tri-active{background:#1676b7;border-color:#4bb3ed;color:white}#tri-builder .tri-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 18px}#tri-builder .tri-tabs button{min-height:58px;border-radius:12px;border:1px solid #355875;background:#112c44;color:white;font-weight:700}#tri-builder .tri-section{margin:14px 0}#tri-builder h3{font-size:16px;margin:14px 0 9px}#tri-builder .tri-type{width:100%;padding:13px;border-radius:11px;border:1px solid #41617b;background:#10283d;color:white}#tri-builder .tri-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#tri-builder .tri-cats button{padding:13px 4px;background:#10283d;color:white;border:1px solid #41617b;border-radius:11px;font-weight:700}#tri-builder .tri-cats button{padding:8px 4px;min-height:102px;display:flex;flex-direction:column;gap:3px;align-items:center;justify-content:center;overflow:hidden}#tri-builder .tri-category-icon{display:block;width:72px;height:72px;object-fit:contain;border-radius:8px}#tri-builder .tri-item{display:flex;align-items:center;gap:12px;min-height:74px;padding:9px 5px;border-bottom:1px solid #28445c;cursor:pointer}#tri-builder .tri-item img{width:68px;height:60px;object-fit:cover;border-radius:9px;background:#0c2235}#tri-builder .tri-item-name{flex:1;font-weight:600}#tri-builder .tri-check{color:#ff4a9b;font-size:25px;font-weight:800}#tri-builder .tri-select-box{width:22px;height:22px;min-width:22px;accent-color:#ff4a9b;cursor:pointer;margin:0 8px 0 auto}#tri-builder .tri-item:has(.tri-select-box:checked){background:rgba(20,105,158,.08)}#tri-builder .tri-muted{color:#a8bfd0;font-size:13px}#tri-builder .tri-session{border:1px solid #355875;border-radius:12px;padding:14px;margin:12px 0;background:#10283d}#tri-builder .tri-workout-snap .tri-session{scroll-margin-top:12px}#tri-builder .tri-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#tri-builder .tri-controls button{padding:11px 15px;border:1px solid #4a85aa;border-radius:9px;background:#176b9f;color:white;font-weight:700}#tri-builder .tri-controls button:disabled{opacity:.45}#tri-builder .tri-clock{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;margin:10px 0}#tri-builder .tri-strength{margin:12px 0;padding:10px;border-top:1px solid #355875}#tri-builder .tri-strength-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}#tri-builder .tri-strength-fields label{font-size:13px;display:flex;flex-direction:column;gap:5px}#tri-builder .tri-strength-fields select{width:100%;padding:9px}#tri-builder .tri-set-line{display:flex;justify-content:space-between;align-items:center;padding:5px 0}#tri-builder .tri-set-line button{width:auto;padding:5px 10px}#tri-builder .tri-set-actions{display:flex;gap:6px;align-items:center}#tri-builder .tri-history-item{border-bottom:1px solid #28445c;padding:10px 0}#tri-builder .tri-activity-entry{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0}#tri-builder .tri-activity-entry button{padding:6px 12px;border-radius:7px;background:#176b9f;color:white;border:1px solid #4a85aa}#tri-builder .tri-history-item .tri-strength-fields{margin:8px 0}#tri-builder .tri-history-item .tri-set-actions button{padding:7px 12px;border-radius:7px;background:#176b9f;color:white;border:1px solid #4a85aa}#tri-builder .tri-undo{width:100%;margin:9px 0;padding:10px;background:#214e61;border:1px solid #41617b;border-radius:9px;color:white;font-weight:600}#tri-builder .tri-strength>button{padding:12px 16px;border-radius:9px;background:#1284a7;color:white;font-weight:700;border:0;width:100%}#tri-builder .tri-strength>button:disabled{opacity:.4}#tri-builder .tri-session input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #41617b;border-radius:8px;background:#081b2d;color:white;font:inherit}`;host.append(css);
- const days=el('div','tri-days');DAYS[lang()].forEach((d,i)=>days.append(button(d,()=>{day=i;session=null;activeId=null;render();},day===i)));host.append(days);
+ const days=el('div','tri-days');DAYS[lang()].forEach((d,i)=>days.append(button(d,()=>{day=i;session=null;activeId=null;expandedExercise=null;render();},day===i)));host.append(days);
  const tabs=el('div','tri-tabs');tabs.append(button(t("Today's Workout",'Entrenamiento de hoy'),()=>{view='workout';render();},view==='workout'),button(t('Edit Plan','Editar plan'),()=>{view='edit';render();},view==='edit'));host.append(tabs);
  const r=record();if(view==='edit'){
   const label=el('h3','',t('Day Type','Tipo de día'));host.append(label);const select=el('select','tri-type');[['training',t('Training Day','Día de entrenamiento')],['recovery',t('Active Recovery','Recuperación activa')],['rest',t('Rest Day','Día de descanso')]].forEach(([value,name])=>{const opt=el('option','',name);opt.value=value;select.append(opt);});select.value=r.type||'training';select.addEventListener('change',()=>save({...r,type:select.value}));host.append(select);
@@ -246,6 +248,29 @@
   if(r.type==='rest'){host.append(el('p','tri-muted',t('Rest Day','Día de descanso')));}
   else if(!r.items?.length){host.append(el('p','tri-muted',t('No workouts selected. Open Edit Plan to choose exercises.','No hay ejercicios seleccionados. Abre Editar plan para elegir ejercicios.')));}
   else{
+   // Progress reflects completed activities logged today, not merely opening a card.
+   const today=new Date();
+   const isToday=value=>{const d=new Date(value);return Number.isFinite(d.getTime())&&d.getFullYear()===today.getFullYear()&&d.getMonth()===today.getMonth()&&d.getDate()===today.getDate();};
+   const completedActivities=new Set(readActivities().filter(x=>isToday(x.completedAt)).map(x=>canonical(x.exercise)));
+   const todaySets=readSets().filter(x=>isToday(x.timestamp));
+   const completedExercise=id=>{
+    const match=find(id);if(!match)return false;
+    if(completedActivities.has(canonical(id)))return true;
+    if(match.cat!=='Strength')return false;
+    const key=day+':'+canonical(id),current=sessions.get(key);
+    const planned=current?.planned||STRENGTH_PRESETS[canonical(id)]?.sets||3;
+    const counts=new Map();
+    todaySets.filter(x=>canonical(x.exercise)===canonical(id)&&x.day===day).forEach(x=>counts.set(x.sessionId,(counts.get(x.sessionId)||0)+1));
+    return [...counts.values()].some(count=>count>=planned);
+   };
+   const validItems=r.items.filter(id=>!!find(id));
+   const completeCount=validItems.filter(completedExercise).length;
+   const progress=el('div','tri-daily-progress');
+   progress.style.cssText='padding:10px 12px;margin:10px 0 14px;border:1px solid #355875;border-radius:12px;background:#10283d';
+   progress.append(el('strong','',t('Daily progress: ','Progreso diario: ')+completeCount+' / '+validItems.length+' '+t('completed','completados')));
+   const track=el('div');track.style.cssText='height:6px;background:#31485b;border-radius:8px;margin-top:9px;overflow:hidden';
+   const fill=el('div');fill.style.cssText='height:100%;width:'+(validItems.length?100*completeCount/validItems.length:0)+'%;background:#20b78b';track.append(fill);progress.append(track);host.append(progress);
+   // On a fresh visit, show the list collapsed, like RUN.
    // Every selected exercise has its own ready-to-use session.
    if(r.type==='recovery')host.append(el('p','tri-muted',t('Active Recovery','Recuperación activa')));
    host.classList.add('tri-workout-snap');
@@ -253,19 +278,45 @@
     const key=day+':'+canonical(id);
     if(!sessions.has(key))sessions.set(key,newSession(canonical(id)));
     const session=sessions.get(key);
-    const wrap=el('div','tri-session');wrap.dataset.triExercise=id;wrap.append(itemRow(match.item,false,null));
+    const wrap=el('div','tri-session');wrap.dataset.triExercise=id;
+    const isComplete=completedExercise(id);
+    const head=el('button','tri-exercise-toggle');head.type='button';
+    head.style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:4px 0 10px;text-align:left;background:transparent;color:#eaf4fc;border:0;cursor:pointer';
+    const marker=el('span','',isComplete?'✓':'○');marker.style.cssText='font-size:23px;color:'+(isComplete?'#59d6a7':'#b6c9d7');head.append(marker);
+    const labels=el('span');labels.style.cssText='flex:1;min-width:0';
+    labels.append(el('strong','',lang()==='es'?match.item[1]:match.item[0]));
+    const status=el('small','',isComplete?t('Completed','Completado'):t('Not Completed','No completado'));
+    status.style.cssText='display:block;margin-top:4px;color:'+(isComplete?'#59d6a7':'#c5d0db');labels.append(status);head.append(labels);
+    const chevron=el('span','',expandedExercise===id?'⌄':'›');chevron.style.cssText='font-size:24px';head.append(chevron);
+    head.setAttribute('aria-expanded',String(expandedExercise===id));
+    const details=el('div','tri-exercise-details');details.style.display=expandedExercise===id?'block':'none';
+    head.addEventListener('click',()=>{
+     expandedExercise=expandedExercise===id?null:id;
+     // Change visibility in place so entering exercise details does not erase form inputs.
+     host.querySelectorAll('[data-tri-exercise]').forEach(card=>{
+      const open=card.dataset.triExercise===expandedExercise;
+      const body=card.querySelector('.tri-exercise-details');
+      const toggle=card.querySelector('.tri-exercise-toggle');
+      if(body)body.style.display=open?'block':'none';
+      if(toggle){toggle.setAttribute('aria-expanded',String(open));toggle.lastElementChild.textContent=open?'⌄':'›';}
+     });
+    });
+    wrap.append(head);
+    // Preserve all original session and activity controls inside the expanded area.
+    const contentHost=details;
+
     if(session.phase!=='saved'){
-     if(match.cat==='Strength')strengthPanel(canonical(id),wrap,session);
-     else endurancePanel(match.cat,wrap,session);
+     if(match.cat==='Strength')strengthPanel(canonical(id),contentHost,session);
+     else endurancePanel(match.cat,contentHost,session);
      if(session.phase==='review'){
-      wrap.append(el('p','tri-muted',t('Review before saving.','Revisa antes de guardar.')));
-      const notes=el('input');notes.placeholder=t('Optional notes / distance / sets','Notas / distancia / series (opcional)');notes.value=session.notes||'';notes.addEventListener('input',()=>{session.notes=notes.value;});wrap.append(notes);
+      contentHost.append(el('p','tri-muted',t('Review before saving.','Revisa antes de guardar.')));
+      const notes=el('input');notes.placeholder=t('Optional notes / distance / sets','Notas / distancia / series (opcional)');notes.value=session.notes||'';notes.addEventListener('input',()=>{session.notes=notes.value;});contentHost.append(notes);
       const actions=el('div','tri-controls');
       actions.append(button(t('Save Activity','Guardar actividad'),()=>{
        const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise:id,discipline:match.cat,elapsedMs:session.elapsed,notes:session.notes||'',sets:match.cat==='Strength'?readSets().filter(x=>x.exercise===canonical(id)&&x.day===day&&x.sessionId===session.sessionId):[],details:match.cat==='Strength'?null:{distance:session.distance||'',distanceUnit:session.distanceUnit||(match.cat==='Swim'?'m':'km'),durationMin:session.durationMin||'',rpe:session.rpe||'',environment:session.environment||'',rideType:session.rideType||''},completedAt:new Date().toISOString()};
-       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));undoBySession.delete(session.sessionId);sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;scrollToActive=!!activeId;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
+       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));undoBySession.delete(session.sessionId);sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;expandedExercise=activeId;scrollToActive=false;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
       }));
-      actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}undoBySession.delete(session.sessionId);sessions.delete(key);activeId=id;render();}));wrap.append(actions);
+      actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}undoBySession.delete(session.sessionId);sessions.delete(key);activeId=id;expandedExercise=id;render();}));contentHost.append(actions);
      }else{
       const actions=el('div','tri-controls');
       actions.append(button(t('Finish & Review','Terminar y revisar'),()=>{
@@ -275,7 +326,7 @@
        }
        session.elapsed=0;session.startedAt=null;session.phase='review';render();
       }));
-      wrap.append(actions);
+      contentHost.append(actions);
      }
     }else{
      // The saved activity remains in history; selecting the exercise again starts a fresh session.
@@ -285,22 +336,22 @@
     if(match.cat!=='Strength'){
      const logged=readActivities().filter(entry=>entry.discipline===match.cat&&canonical(entry.exercise)===canonical(id));
      if(logged.length){
-      wrap.append(el('div','tri-muted',logged.length+' '+t('activities logged','actividades registradas')));
+      contentHost.append(el('div','tri-muted',logged.length+' '+t('activities logged','actividades registradas')));
       logged.forEach((entry,index)=>{
        const activity=el('div','tri-history-item');
        activity.append(el('div','tri-muted',t('Activity ','Actividad ')+(index+1)));
        activityActions(entry,activity);
-       wrap.append(activity);
+       contentHost.append(activity);
       });
      }
      if(activityUndo.previous&&activityUndo.exercise===canonical(id)){
       const undo=button(t('Undo last activity change','Deshacer último cambio de actividad'),()=>{
        try{writeActivities(activityUndo.previous);activityUndo.previous=null;activityUndo.exercise=null;render();}catch(e){alert(t('Could not undo change.','No se pudo deshacer el cambio.'));}
       });
-      undo.className='tri-undo';wrap.append(undo);
+      undo.className='tri-undo';contentHost.append(undo);
      }
     }
-    host.append(wrap);
+    wrap.append(details);host.append(wrap);
    });
    if(scrollToActive){scrollToActive=false;const target=Array.from(host.querySelectorAll('[data-tri-exercise]')).find(n=>n.dataset.triExercise===activeId);if(target)requestAnimationFrame(()=>target.scrollIntoView({behavior:'smooth',block:'start'}));}
 
