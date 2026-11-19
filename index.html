@@ -248,9 +248,16 @@ body.tl-inner-screen .shell-actions>#language-toggle{min-width:0;max-width:68px;
 #unified-history .uh-detail li{margin:4px 0}
 #unified-history .uh-note{font-size:11px;color:#9bb4c9;margin-top:14px}
 </style>
+<style id="tl-cross-toolbar-style">
+#tl-cross-toolbar{display:none;position:relative;z-index:5;margin:0 0 10px;clear:both}
+body:has(#fitclimb.visible) #tl-cross-toolbar,
+body:has(#module-page.visible) #tl-cross-toolbar{display:block}
+#tl-cross-toolbar .tl-cross-launch{display:block!important;position:relative!important;visibility:visible!important;opacity:1!important;width:100%;box-sizing:border-box;margin:6px 0 10px;min-height:48px}
+</style>
 </head>
 <body>
 <div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="tl-ble-open" class="homebtn" aria-label="Bluetooth heart rate">♥ HR</button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
+<div id="tl-cross-toolbar"><button type="button" class="tl-cross-launch" id="tl-cross-global-launch">+ Add from another discipline</button></div>
 <section id="landing" class="screen visible">
  <div class="hero"><img src="train-lab-logo-v2.webp" alt="TRAIN LAB by A1SC — Train, Track, Improve"></div>
  <div class="section-title"><h2 data-i18n="choose">Choose your discipline</h2></div>
@@ -264,8 +271,8 @@ body.tl-inner-screen .shell-actions>#language-toggle{min-width:0;max-width:68px;
  </div>
  
 </section>
-<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><button type="button" class="tl-cross-launch" id="tl-cross-module-launch">+ Add from another discipline</button><div id="run-builder" style="display:none"></div><div id="cycle-builder" style="display:none"></div><div id="swim-builder" style="display:none"></div><div id="tri-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
-<section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><button type="button" class="tl-cross-launch" id="tl-cross-strength-launch">+ Add from another discipline</button><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
+<section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div id="cycle-builder" style="display:none"></div><div id="swim-builder" style="display:none"></div><div id="tri-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
+<section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
 <div class="footer"><b>A1SC TRAINLAB</b></div>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
@@ -279,7 +286,7 @@ body.tl-inner-screen .shell-actions>#language-toggle{min-width:0;max-width:68px;
 <script src="workout-timer.js?v=20261111timer17v"></script>
 <script src="screen-awake.js?v=20261111wake17v"></script>
 <script src="ble-heart-rate.js?v=20261111ble17y"></script>
-<script src="unified-planner.js?v=step29c"></script>
+<script src="unified-planner.js?v=step29d"></script>
 <script src="compact-training-header.js?v=step29a"></script>
 <script>
 /* Place the existing shared Timer launcher in the top navigation.

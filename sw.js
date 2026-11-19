@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.98-static-cross-launch';
+const CACHE = 'trainlab-v2.99-global-cross-toolbar';
 
 const ASSETS = [
   './',
