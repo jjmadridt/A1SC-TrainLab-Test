@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.00-natural-exercise-scroll';
+const CACHE = 'trainlab-v3.01-history-to-plan';
 
 const ASSETS = [
   './',

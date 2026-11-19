@@ -235,6 +235,60 @@ function bodyAreaPicker(){
  </div>`;
 }
 
+// v29f: copy a recorded Total Body session into an editable weekly plan.
+// Original activity logs and completed sessions are never modified.
+function historicalTotalBodySessions(){
+ const groups=new Map();
+ for(const x of db.logs){if(!x||!WEEKDAYS.includes(x.day)||!BASE_BY_NAME.has(x.name))continue;
+  const key=x.day+'|'+x.session;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x);}
+ return [...groups].map(([key,sets])=>{
+  const [sourceDay,sourceSession]=key.split('|');
+  const finished=db.completed.find(x=>x.day===sourceDay&&String(x.session)===sourceSession);
+  return {key,sourceDay,sourceSession,sets,finishedAt:finished?.finishedAt||sets[sets.length-1]?.timestamp||sets[sets.length-1]?.date||'',complete:!!finished};
+ }).sort((a,b)=>String(b.finishedAt).localeCompare(String(a.finishedAt)));
+}
+function openTotalBodyHistoryPicker(selectedKey){
+ const sessions=historicalTotalBodySessions();
+ if(!sessions.length)return alert(tr('No recorded Total Body workouts yet.','Todavía no hay rutinas registradas de Cuerpo completo.'));
+ const overlay=document.createElement('div');overlay.className='tl-cross-overlay';
+ const panel=document.createElement('section');panel.className='tl-cross-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ const heading=document.createElement('h2');heading.textContent=tr('Use previous workout','Usar rutina anterior');
+ const explanation=document.createElement('p');explanation.textContent=tr('Copy exercises into a weekly plan. Original workout history stays unchanged.','Copia ejercicios a un plan semanal. El historial original no se modifica.');
+ const source=document.createElement('select');source.style.width='100%';
+ for(const x of sessions){const o=document.createElement('option');o.value=x.key;o.textContent=x.sourceDay+' · '+(x.finishedAt?String(x.finishedAt).slice(0,10):'')+' · '+x.sets.length+' '+tr('sets','series')+(x.complete?' ✓':'');source.append(o);}
+ if(selectedKey&&sessions.some(x=>x.key===selectedKey))source.value=selectedKey;
+ const destinationLabel=document.createElement('label');destinationLabel.textContent=tr('Destination day','Día de destino');
+ const destination=document.createElement('select');destination.style.width='100%';
+ for(const d of WEEKDAYS){const o=document.createElement('option');o.value=d;o.textContent=d;destination.append(o);}destination.value=day;
+ const preview=document.createElement('div');preview.className='history';preview.style.margin='12px 0';
+ const modeLabel=document.createElement('label');modeLabel.textContent=tr('How to apply','Cómo aplicar');
+ const mode=document.createElement('select');mode.style.width='100%';
+ for(const [v,en,es] of [['add','Add to current plan','Agregar al plan actual'],['replace','Replace current plan','Reemplazar el plan actual']]){const o=document.createElement('option');o.value=v;o.textContent=tr(en,es);mode.append(o);}
+ function updatePreview(){const x=sessions.find(z=>z.key===source.value);if(!x)return;const grouped=new Map();for(const set of x.sets){if(!grouped.has(set.name))grouped.set(set.name,[]);grouped.get(set.name).push(set);}
+  preview.replaceChildren();for(const [name,sets] of grouped){const line=document.createElement('div');const vals=sets.map(v=>v.weight+' × '+v.count).join(', ');line.textContent=exerciseName(name)+' — '+sets.length+' '+tr('sets','series')+' ('+vals+')';line.style.marginBottom='6px';preview.append(line);}}
+ source.onchange=updatePreview;updatePreview();
+ const apply=document.createElement('button');apply.type='button';apply.className='primary full';apply.textContent=tr('Use workout','Usar rutina');
+ const cancel=document.createElement('button');cancel.type='button';cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
+ const close=()=>overlay.remove();cancel.onclick=close;overlay.onclick=e=>{if(e.target===overlay)close();};
+ apply.onclick=()=>{const x=sessions.find(z=>z.key===source.value),d=destination.value;if(!x||!WEEKDAYS.includes(d))return;
+  const names=[...new Set(x.sets.map(z=>z.name))].filter(n=>BASE_BY_NAME.has(n));if(!names.length)return;
+  if(mode.value==='replace'&&!confirm(tr('Replace the saved exercises for '+d+'? Logged workout history will not be deleted.','¿Reemplazar los ejercicios guardados para '+d+'? El historial registrado no se borrará.')))return;
+  const existing=mode.value==='replace'?[]:db.weeklyProgram[d]||[];
+  db.weeklyProgram[d]=[...new Set([...existing,...names])];
+  for(const name of names){const rows=x.sets.filter(z=>z.name===name),base=BASE_BY_NAME.get(name);
+   if(base[2]!=='minutes'){db.setTargets[d+'|'+name]=Math.min(15,Math.max(1,rows.length));
+    const counts=rows.map(z=>Number(z.count)).filter(v=>Number.isFinite(v)&&v>0);
+    if(counts.length)db.repDefaults[name]=counts[0];}
+  }
+  PROGRAM[d].ex=db.weeklyProgram[d].map(n=>BASE_BY_NAME.get(n));
+  day=d;totalBodyPlanMode=true;tbExpandedExercise=null;save();close();
+  document.getElementById('athlete-profile')?.classList.remove('visible');
+  window.TrainLabShowDiscipline?.('strength');render();
+ };
+ panel.append(heading,explanation,source,preview,destinationLabel,destination,modeLabel,mode,apply,cancel);overlay.append(panel);document.body.append(overlay);source.focus();
+}
+window.TrainLabOpenTotalBodyHistoryPicker=openTotalBodyHistoryPicker;
+
 let tbExpandedExercise=null;
 window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},getDay(){return WEEKDAYS.indexOf(day);}};
 function workout(){
@@ -244,7 +298,7 @@ function workout(){
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
  <div class="tb-session-meta" ${totalBodyPlanMode?'':'hidden'}><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>
  <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
- ${totalBodyPlanMode?dayTypePicker()+bodyAreaPicker():''}
+ ${totalBodyPlanMode?`<button type="button" class="full" id="tb-use-history">${tr('Use previous workout','Usar rutina anterior')}</button>`+dayTypePicker()+bodyAreaPicker():''}
  ${!totalBodyPlanMode?`
  ${type!=='training'?`<div class="card"><h3>${dayTypeLabel(type)}</h3><p class="muted">${type==='rest'?tr('No structured workout scheduled. Your saved exercises remain available when you switch back to Training Day.','No hay entrenamiento programado. Tus ejercicios guardados estarán disponibles al volver a Día de entrenamiento.'):tr('Keep movement gentle and optional. You can use your saved exercises below or edit the plan.','Mantén el movimiento suave y opcional. Puedes usar los ejercicios guardados abajo o editar el plan.')}</p></div>`:''}
  ${type==='rest'?'':`<details class="tb-session-start"><summary>${tr('Session start date and time','Fecha y hora de inicio')}</summary><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></details>
@@ -252,6 +306,7 @@ function workout(){
  ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Use Edit plan to add exercises.','No hay ejercicios seleccionados para este día. Usa Editar plan para agregarlos.')}</div>`}
  ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
  document.querySelectorAll('[data-tb-expand]').forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.tbExpand);tbExpandedExercise=tbExpandedExercise===idx?null:idx;render();});
+ if($('tb-use-history'))$('tb-use-history').onclick=()=>openTotalBodyHistoryPicker();
  document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();});
  if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
  document.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const area=b.dataset.area;selectedBodyAreas=selectedBodyAreas.includes(area)?selectedBodyAreas.filter(x=>x!==area):[...selectedBodyAreas,area];render()});
