@@ -201,6 +201,44 @@
    });panel.appendChild(end);
   mount.appendChild(panel);
  }
+ // Step 28I-CYCLE: progress uses saved completed activity records only.
+ // Keep the existing session controls and saved workout plan unchanged.
+ function cycleCompletedToday(workoutId){
+  const now=new Date().toDateString();
+  return history.some(r=>r&&r.workoutId===workoutId&&r.completion==='complete'&&
+   r.date&&!Number.isNaN(new Date(r.date).getTime())&&new Date(r.date).toDateString()===now);
+ }
+ function cycleProgress(host,ids){
+  if(!ids.length)return;
+  const done=ids.filter(id=>cycleCompletedToday(id)).length;
+  const box=make('div','cy28-progress');
+  const row=make('div','cy28-progress-row');
+  row.append(make('strong','',t("Today's progress",'Progreso de hoy')),
+   make('span','',done+' '+t('of','de')+' '+ids.length+' '+t('completed','completados')));
+  const track=make('div','cy28-progress-track');
+  const fill=make('div','cy28-progress-fill');fill.style.width=(100*done/ids.length)+'%';
+  track.append(fill);box.append(row,track);host.append(box);
+ }
+ function cycleCollapse(item,workout){
+  const done=cycleCompletedToday(workout.id);
+  const heading=item.querySelector('.cy-plan-heading');
+  const config=item.querySelector('.cy-config');
+  if(!heading||!config)return;
+  const toggle=make('button','cy28-toggle');toggle.type='button';
+  toggle.setAttribute('aria-expanded','false');
+  const title=make('span','cy28-title');
+  while(heading.firstChild)title.append(heading.firstChild);
+  const state=make('span','cy28-status'+(done?' cy28-done':''),done?'✓ '+t('Completed','Completado'):'○ '+t('Not completed','Sin completar'));
+  const arrow=make('span','cy28-arrow','▸');
+  toggle.append(title,state,arrow);
+  heading.replaceWith(toggle);
+  config.hidden=true;
+  toggle.addEventListener('click',()=>{
+   config.hidden=!config.hidden;
+   toggle.setAttribute('aria-expanded',String(!config.hidden));
+   arrow.textContent=config.hidden?'▸':'▾';
+  });
+ }
  function render(){
   const mount=document.getElementById('cycle-builder');if(!mount)return;
   mount.replaceChildren();if(session){sessionView(mount);return;}const workouts=getWorkouts();
@@ -219,7 +257,7 @@
   });mount.appendChild(nav);
   if(view==='workout') {
   const summary=make('div','cy-panel');summary.appendChild(make('h3','',t('Selected workouts','Entrenamientos seleccionados')+' — '+(lang()==='es'?DAYS_ES:DAYS)[selectedDay]));
-  const current=dayType()==='rest'?[]:selected();if(dayType()==='recovery')summary.appendChild(make('p','cy-note',t('Active Recovery — choose an easy cycling session.','Recuperación activa — elige una sesión de ciclismo suave.')));if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
+  const current=dayType()==='rest'?[]:selected();cycleProgress(summary,current.filter(id=>workouts.some(w=>w.id===id)));if(dayType()==='recovery')summary.appendChild(make('p','cy-note',t('Active Recovery — choose an easy cycling session.','Recuperación activa — elige una sesión de ciclismo suave.')));if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
    const item=make('div','cy-plan-item');const heading=make('div','cy-plan-heading');heading.appendChild(workoutIcon(w));heading.appendChild(make('strong','',w.name));item.appendChild(heading);
    const config=make('div','cy-config');config.appendChild(make('span','cy-note',t('Suggested: ','Sugerido: ')+w.defaultDurationMinutes+' min'));
@@ -231,7 +269,7 @@
    const start=make('button','cy-start',t('Prepare session','Preparar sesión'));start.type='button';start.addEventListener('click',()=>{
     const h=Number(durationHours.value),m=Number(durationMinutes.value),n=h*60+m;if(!Number.isInteger(h)||!Number.isInteger(m)||h<0||m<0||m>59||n<5||n>360){root.alert(t('Enter a duration between 5 and 360 minutes.','Ingresa una duración entre 5 y 360 minutos.'));return;}
     startSession(w,n,mode.value);
-   });config.append(duration,mode,start);item.appendChild(config);summary.appendChild(item);
+   });config.append(duration,mode,start);item.appendChild(config);cycleCollapse(item,w);summary.appendChild(item);
   }});mount.appendChild(summary);
   }
   if(view==='edit') {
@@ -292,5 +330,19 @@
   }
  }
  const style=document.createElement('style');style.textContent='\n/* Cycle v0.7 session controls */\n#cycle-builder .cy-config{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 5px;align-items:center}\n#cycle-builder .cy-config input,#cycle-builder .cy-config select{background:#10283e;color:#fff;border:1px solid #567;border-radius:9px;padding:10px;min-height:43px}\n#cycle-builder .cy-config input{width:85px}\n#cycle-builder .cy-config select{width:110px}\n#cycle-builder .cy-start{background:#176a96;border-color:#5ebbe9}\n#cycle-builder .cy-session{border:1px solid #4281a4;border-radius:14px;padding:16px;background:#112b40}\n#cycle-builder .cy-clock{font-size:clamp(35px,10vw,62px);font-weight:800;letter-spacing:.03em;font-variant-numeric:tabular-nums;text-align:center;padding:16px 0}\n#cycle-builder .cy-controls{display:flex;gap:8px;flex-wrap:wrap}\n#cycle-builder .cy-controls button{flex:1 1 140px;background:#176a96}\n#cycle-builder .cy-end{margin-top:14px;background:#45283c;border-color:#ac6687}\n#cycle-builder .cy-discard-confirm{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}\n\n#cycle-builder .cy-rpe{font-weight:750;font-size:1.05rem;margin:10px 0 14px}\n#cycle-builder .cy-workout{display:flex;align-items:center;justify-content:space-between;gap:12px}\n#cycle-builder .cy-workout input[type=checkbox]{order:2;flex-shrink:0}\n#cycle-builder .cy-logging{display:grid;gap:10px;margin-top:18px;padding-top:12px;border-top:1px solid #42627b}\n#cycle-builder .cy-logging label{display:grid;gap:5px;font-weight:600}\n#cycle-builder .cy-logging input,#cycle-builder .cy-logging select,#cycle-builder .cy-logging textarea{background:#10283e;color:#fff;border:1px solid #567;border-radius:8px;padding:9px;max-width:100%}\n#cycle-builder .cy-log-item{display:grid;gap:4px;padding:10px 0;border-bottom:1px solid #42627b}\n#cycle-builder .cy-log-item small{overflow-wrap:anywhere}\n#cycle-builder .cy-delete,#cycle-builder .cy-delete-all{width:max-content;max-width:100%;padding:8px 12px;margin-top:6px;border:1px solid #9b6679;border-radius:8px;background:#3d2735;color:#fff;font-size:.9rem}\n\n#cycle-builder .cy-illustration{width:64px;height:64px;object-fit:cover;border-radius:12px;flex:0 0 64px;background:#071c30}\n#cycle-builder .cy-workout span{flex:1;min-width:0}\n#cycle-builder .cy-workout input[type=checkbox]{margin-left:auto}\n#cycle-builder .cy-plan-heading{display:flex;align-items:center;gap:12px;margin-bottom:8px}\n#cycle-builder .cy-plan-heading .cy-illustration{width:58px;height:58px;flex-basis:58px}\n#cycle-builder .cy-plan-heading h2{margin:0}\n\n/* Step 15B — Day Type and Edit Plan correction; session engine unchanged */\n#cycle-builder .cy-weekday-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:12px 0 10px;padding:0;background:transparent;border:0}\n#cycle-builder .cy-weekday-strip button{min-width:0;padding:11px 0;font-size:clamp(11px,2.7vw,14px);border-radius:9px}\n#cycle-builder .cy-view-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 16px}\n#cycle-builder .cy-view-tabs button{width:100%;min-width:0;min-height:58px;padding:10px 6px;font-size:16px;font-weight:700;border-radius:12px}\n\n/* Step 15C — match approved Total Body Edit Plan layout */\n#cycle-builder .cy-day-type{padding:16px 18px;margin-bottom:12px}\n#cycle-builder .cy-type-label{display:flex;flex-direction:column;gap:8px;font-size:14px;color:#b8c9d6}\n#cycle-builder .cy-type-select{display:block;width:100%;box-sizing:border-box;min-height:52px;padding:12px 14px;background:#0d2235;color:#fff;border:1px solid #486a82;border-radius:10px;font-size:17px;appearance:auto}\n#cycle-builder .cy-rest-note{margin:12px 0 0;font-size:14px;color:#b8c9d6}\n#cycle-builder .cy-edit-library{padding:20px 16px}\n#cycle-builder .cy-edit-library h2{font-size:21px;margin:0 0 16px}\n#cycle-builder .cy-edit-library h3{font-size:17px;margin:0 0 8px}\n#cycle-builder .cy-edit-library .cy-workout{padding:12px 4px;gap:12px;border-bottom:1px solid #35516a;min-height:70px}\n#cycle-builder .cy-edit-library .cy-workout strong{font-weight:500;font-size:16px}\n#cycle-builder .cy-edit-library .cy-workout input[type=checkbox]{width:23px;height:23px;accent-color:#ef3b9a}\n#cycle-builder .cy-edit-cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:18px 0 12px}\n#cycle-builder .cy-edit-cats button{min-height:50px;border-radius:11px;font-weight:700}\n';document.head.appendChild(style);
+ const progressStyle=document.createElement('style');
+ progressStyle.textContent=`
+ #cycle-builder .cy28-progress{margin:10px 0 14px;padding:8px 0}
+ #cycle-builder .cy28-progress-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+ #cycle-builder .cy28-progress-track{height:6px;border-radius:99px;background:#34516b;overflow:hidden}
+ #cycle-builder .cy28-progress-fill{height:100%;border-radius:99px;background:#26a978}
+ #cycle-builder .cy28-toggle{width:100%;display:flex;align-items:center;gap:10px;min-height:58px;text-align:left;padding:10px 12px;background:transparent;color:inherit;border:0;cursor:pointer}
+ #cycle-builder .cy28-title{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-weight:700}
+ #cycle-builder .cy28-title img{max-width:44px;max-height:44px;object-fit:contain}
+ #cycle-builder .cy28-status{font-size:12px;white-space:nowrap;color:#c1cfdb}
+ #cycle-builder .cy28-status.cy28-done{color:#5bdaa6}
+ #cycle-builder .cy28-arrow{font-size:20px}
+ #cycle-builder .cy-config[hidden]{display:none!important}
+ `;document.head.append(progressStyle);
  root.TrainLabCycleUI={render,openPlan(i){selectedDay=i;view='edit';render();},getDay(){return selectedDay;}};
 })(window);
