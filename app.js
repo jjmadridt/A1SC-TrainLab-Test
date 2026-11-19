@@ -235,6 +235,7 @@ function bodyAreaPicker(){
  </div>`;
 }
 
+let tbExpandedExercise=null;
 window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},getDay(){return WEEKDAYS.indexOf(day);}};
 function workout(){
  let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
@@ -249,10 +250,11 @@ function workout(){
  ${type==='rest'?'':`<div class="card"><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></div>
  ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Use Edit plan to add exercises.','No hay ejercicios seleccionados para este día. Usa Editar plan para agregarlos.')}</div>`}
  ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
+ document.querySelectorAll('[data-tb-expand]').forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.tbExpand);tbExpandedExercise=tbExpandedExercise===idx?null:idx;render();});
  document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();const root=document.getElementById('fitclimb');if(root)root.scrollIntoView({block:'start',behavior:'instant'});});
  if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
  document.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const area=b.dataset.area;selectedBodyAreas=selectedBodyAreas.includes(area)?selectedBodyAreas.filter(x=>x!==area):[...selectedBodyAreas,area];render()});
- document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=b.dataset.day;render()});
+ document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=b.dataset.day;tbExpandedExercise=null;render()});
  document.querySelectorAll('[data-weekly-exercise]').forEach(el=>el.onchange=()=>toggleWeeklyExercise(el.dataset.weeklyExercise));
  document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>logExercise(Number(b.dataset.log)));
  document.querySelectorAll('[data-distanceunit]').forEach(b=>b.onchange=()=>{
@@ -315,7 +317,9 @@ function exercise(e,i,locked){
  const count=target(day,name),past=relevant(day,name),today=current(day,name),last=past.length?past[past.length-1]:null;
  const bike=name==='Stationary bike',elliptical=name==='Elliptical warm-up',ride=name==='Outdoor ride',cardio=unit==='minutes',exUnit=exerciseUnit(name),distUnit=distanceUnit(name),weight=last?toDisplay(last.weight,exUnit):'';
  const completedSets=today.length;
- return `<section class="card exercise"><div class="row"><div><h3>${i+1}. ${esc(exerciseName(name))}</h3><small>${esc(equipment)}</small>${ride?'':`<div><span class="pill">${min}${max!==min?'–'+max:''} ${esc(unit)}</span></div>`}</div>${muscleArt(name)}</div>
+ const isDone=completedSets>=(bike||elliptical||ride?1:count);
+ const expanded=tbExpandedExercise===i;
+ return `<section class="card exercise tb-compact-exercise"><button type="button" class="tb-exercise-toggle" data-tb-expand="${i}" aria-expanded="${expanded}" aria-controls="tb-details-${i}"><span class="tb-exercise-heading"><strong>${i+1}. ${esc(exerciseName(name))}</strong><small>${esc(equipment)}</small><span class="tb-completion ${isDone?'tb-done':''}">${isDone?'✓ '+tr('Completed','Completado'):'○ '+tr('Not completed','No completado')}</span></span><span class="tb-exercise-chevron">${expanded?'▴':'▾'}</span></button><div id="tb-details-${i}" ${expanded?'':'hidden'}><div class="row"><div>${ride?'':`<div><span class="pill">${min}${max!==min?'–'+max:''} ${esc(unit)}</span></div>`}</div>${muscleArt(name)}</div>
  ${cardio&&!bike?`<div class="row" style="margin-top:8px"><label>${tr('Distance unit','Unidad de distancia')}</label><select data-distanceunit="${i}" style="width:100px" ${locked?'disabled':''}><option value="km" ${distUnit==='km'?'selected':''}>km</option><option value="mi" ${distUnit==='mi'?'selected':''}>mi</option></select></div>`:''}
  ${!cardio&&name!=='Side plank'?`<div class="row" style="margin-top:8px"><label>${tr('Exercise weight unit','Unidad de peso del ejercicio')}</label><select data-exunit="${i}" style="width:100px" ${locked?'disabled':''}><option value="lb" ${exUnit==='lb'?'selected':''}>lb</option><option value="kg" ${exUnit==='kg'?'selected':''}>kg</option></select></div>`:''}
  ${bike||elliptical||ride?'':`<div class="row" style="margin-top:8px"><label>${tr('Planned sets (1–15)','Series planeadas (1–15)')}</label><select data-target="${i}" style="width:90px" ${locked?'disabled':''}>${Array.from({length:15},(_,j)=>`<option value="${j+1}" ${count===j+1?'selected':''}>${j+1}</option>`).join('')}</select></div>`}
@@ -327,7 +331,7 @@ function exercise(e,i,locked){
  ${ride&&!locked?`<details style="margin-top:12px;margin-bottom:22px;padding:10px 0;border-bottom:1px solid var(--border, #555)"><summary>${tr('Additional ride details (optional)','Detalles adicionales (opcional)')}</summary><div class="grid" style="margin-top:8px"><div><label>${tr('Elevation gain','Desnivel positivo')} (${distUnit==='mi'?'ft':'m'})</label><input id="ride-elevation-${i}" type="number" min="0" step="1" placeholder="0"></div><div><label>${tr('Average speed','Velocidad promedio')} (${distUnit==='mi'?'mph':'km/h'})</label><input id="ride-speed-${i}" type="number" min="0" step="0.01" placeholder="—" readonly aria-readonly="true"></div></div></details>`:''}
  <button class="primary full log-activity" data-log="${i}" ${!bike&&!elliptical&&!ride&&completedSets>=count?'disabled':''}>+ ${bike||elliptical||ride?tr('Log activity','Registrar actividad'):tr('Log set','Registrar serie')}</button>`:''}
  ${today.length?`<div class="set-list" aria-label="${tr('Recorded sets','Series registradas')}">${today.map((x,j)=>`<div class="set-row"><span class="set-text"><b>${elliptical||ride?tr('Activity','Actividad'):tr('Set','Serie')} ${j+1}</b> · ${bike?`${x.count} ${esc(unit)}`:ride?`${distanceShown(x.weight,distUnit)} ${distUnit} · ${Math.floor(x.count/60)}h ${Math.round(x.count%60)}m${x.elevationGainM!=null?' · ↑'+Number((distUnit==='mi'?x.elevationGainM/0.3048:x.elevationGainM).toFixed(distUnit==='mi'?0:1))+(distUnit==='mi'?'ft':'m'):''}${x.averageSpeedKmh!=null?' · '+Number((distUnit==='mi'?x.averageSpeedKmh/1.609344:x.averageSpeedKmh).toFixed(1))+' '+(distUnit==='mi'?'mph':'km/h'):''}`:`${cardio?distanceShown(x.weight,distUnit):toDisplay(x.weight,exUnit)} ${cardio?distUnit:exUnit} × ${x.count} ${esc(unit)}`}</span>${!locked?`<button class="set-edit" data-edit="${i}:${j}" aria-label="${tr('Edit set','Editar serie')} ${j+1}">✎</button><button class="set-delete" data-delete="${i}:${j}" aria-label="${tr('Delete set','Eliminar serie')} ${j+1}">✕</button>`:''}</div>`).join('')}</div>`:''}
- ${!locked&&lastSetAction&&lastSetAction.day===day&&lastSetAction.session===session(day)&&lastSetAction.name===name?`<button class="undo-set" data-undo="${i}">${tr('Undo last set change','Deshacer último cambio')}</button>`:''}</section>`;
+ ${!locked&&lastSetAction&&lastSetAction.day===day&&lastSetAction.session===session(day)&&lastSetAction.name===name?`<button class="undo-set" data-undo="${i}">${tr('Undo last set change','Deshacer último cambio')}</button>`:''}</div></section>`;
 }
 function logExercise(i){
  const e=PROGRAM[day].ex[i],n=session(day);
@@ -464,3 +468,10 @@ function renderAthleteProfile(){
  progress(document.getElementById('profile-progress'));
  backup(document.getElementById('profile-backup'));
 }
+
+(function(){if(document.getElementById('tb-compact-progress-style'))return;const st=document.createElement('style');st.id='tb-compact-progress-style';st.textContent=`
+.tb-exercise-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;background:transparent;color:inherit;border:0;padding:4px 0;cursor:pointer;min-height:58px}
+.tb-exercise-heading{display:flex;flex-direction:column;gap:4px;min-width:0}.tb-exercise-heading small{opacity:.7}.tb-exercise-chevron{font-size:23px;flex:none}
+.tb-completion{font-size:12px;opacity:.85}.tb-completion.tb-done{color:#35c68b;opacity:1;font-weight:700}
+.tb-compact-exercise [hidden]{display:none!important}.tb-progress-summary{padding:12px 14px;margin:8px 0 12px;border:1px solid #46647a;border-radius:10px}.tb-progress-summary progress{width:100%;height:9px;accent-color:#35c68b}
+`;document.head.appendChild(st)})();
