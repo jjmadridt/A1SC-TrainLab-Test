@@ -230,7 +230,12 @@
   while(heading.firstChild)title.append(heading.firstChild);
   const state=make('span','cy28-status'+(done?' cy28-done':''),done?'✓ '+t('Completed','Completado'):'○ '+t('Not completed','Sin completar'));
   const arrow=make('span','cy28-arrow','▸');
-  toggle.append(title,state,arrow);
+  const icon=title.querySelector('img,.cy-illustration');
+  const name=make('span','cy28-name');
+  while(title.firstChild){const child=title.firstChild;if(child===icon){title.removeChild(child);continue;}name.appendChild(child);}
+  const text=make('span','cy28-text');text.append(name,state);
+  const circle=make('span','cy28-circle',done?'✓':'');circle.setAttribute('aria-hidden','true');
+  toggle.append(...(icon?[icon]:[]),circle,text,arrow);
   heading.replaceWith(toggle);
   config.hidden=true;
   toggle.addEventListener('click',()=>{
@@ -272,7 +277,7 @@
    b.setAttribute('aria-pressed',String(view===id));b.addEventListener('click',()=>{view=id;render();});nav.appendChild(b);
   });mount.appendChild(nav);
   if(view==='workout') {
-  const summary=make('div','cy-panel');summary.appendChild(make('h3','',t('Selected workouts','Entrenamientos seleccionados')+' — '+(lang()==='es'?DAYS_ES:DAYS)[selectedDay]));
+  const summary=make('div','cy28n-run-list');
   const current=dayType()==='rest'?[]:selected();cycleProgress(summary,current.filter(id=>workouts.some(w=>w.id===id)));if(dayType()==='recovery')summary.appendChild(make('p','cy-note',t('Active Recovery — choose an easy cycling session.','Recuperación activa — elige una sesión de ciclismo suave.')));if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
    const item=make('div','cy-plan-item');const heading=make('div','cy-plan-heading');heading.appendChild(workoutIcon(w));heading.appendChild(make('strong','',w.name));item.appendChild(heading);
@@ -358,6 +363,21 @@
  #cycle-builder .cy28-status{font-size:12px;white-space:nowrap;color:#c1cfdb}
  #cycle-builder .cy28-status.cy28-done{color:#5bdaa6}
  #cycle-builder .cy28-arrow{font-size:20px}
+
+ /* Step 28N: match RUN's open horizontal exercise list. Only CYCLE workout view. */
+ #cycle-builder .cy28n-run-list{margin:0;padding:0;background:transparent;border:0;box-shadow:none}
+ #cycle-builder .cy28n-run-list>.cy28-progress{border:1px solid #385a73;border-radius:12px;padding:12px;margin:8px 0 16px}
+ #cycle-builder .cy28n-run-list>.cy-plan-item{margin:0!important;padding:0!important;background:transparent!important;border:0!important;border-bottom:1px solid #35536b!important;border-radius:0!important;box-shadow:none!important}
+ #cycle-builder .cy28n-run-list .cy28-toggle{min-height:88px;padding:10px 5px;gap:10px;display:flex;align-items:center}
+ #cycle-builder .cy28n-run-list .cy28-toggle>.cy-illustration,#cycle-builder .cy28n-run-list .cy28-toggle>img{width:74px!important;height:74px!important;max-width:74px!important;max-height:74px!important;flex:0 0 74px;object-fit:contain}
+ #cycle-builder .cy28n-run-list .cy28-circle{width:19px;height:19px;flex:0 0 19px;border:2px solid #8da7b8;border-radius:50%;font-size:12px;line-height:15px;text-align:center;color:#57d5a1}
+ #cycle-builder .cy28n-run-list .cy28-text{display:flex;flex-direction:column;align-items:flex-start;flex:1;min-width:0;gap:3px}
+ #cycle-builder .cy28n-run-list .cy28-name{font-weight:700;color:#a8d8ff;text-decoration:underline;text-underline-offset:3px}
+ #cycle-builder .cy28n-run-list .cy28-status{white-space:normal;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+ #cycle-builder .cy28n-run-list .cy28-arrow{font-size:14px;flex:0 0 16px;text-align:center}
+ #cycle-builder .cy28n-run-list .cy-config{padding:8px 12px 16px 106px}
+ @media(max-width:430px){#cycle-builder .cy28n-run-list .cy28-toggle>.cy-illustration,#cycle-builder .cy28n-run-list .cy28-toggle>img{width:56px!important;height:56px!important;flex-basis:56px}#cycle-builder .cy28n-run-list .cy-config{padding-left:8px}}
+
  #cycle-builder .cy-config[hidden]{display:none!important}
  `;document.head.append(progressStyle);
  root.TrainLabCycleUI={render,openPlan(i){selectedDay=i;view='edit';render();},getDay(){return selectedDay;}};
