@@ -252,7 +252,7 @@ function workout(){
  ${p.ex.length?p.ex.map((e,i)=>exercise(e,i,locked)).join(''):`<div class="card">${tr('No exercises selected for this day. Use Edit plan to add exercises.','No hay ejercicios seleccionados para este día. Usa Editar plan para agregarlos.')}</div>`}
  ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
  document.querySelectorAll('[data-tb-expand]').forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.tbExpand);tbExpandedExercise=tbExpandedExercise===idx?null:idx;render();});
- document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();const root=document.getElementById('fitclimb');if(root)root.scrollIntoView({block:'start',behavior:'instant'});});
+ document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();});
  if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
  document.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const area=b.dataset.area;selectedBodyAreas=selectedBodyAreas.includes(area)?selectedBodyAreas.filter(x=>x!==area):[...selectedBodyAreas,area];render()});
  document.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{day=b.dataset.day;tbExpandedExercise=null;render()});
