@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v2.96-step28h-recovery';
+const CACHE = 'trainlab-v2.97-cross-discipline-persistent';
 
 const ASSETS = [
   './',
