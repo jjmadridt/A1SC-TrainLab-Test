@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.03-compact-plan-tools';
+const CACHE = 'trainlab-v3.04-share-download-fallback';
 
 const ASSETS = [
   './',

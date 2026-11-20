@@ -300,22 +300,39 @@ function tlShareDialog(){
  const choice=document.createElement('select');choice.style.width='100%';
  [['day',tr('Share this day','Compartir este día')],['week',tr('Share entire week','Compartir semana completa')]].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;choice.append(o)});
  const status=document.createElement('p');status.className='muted';
- const share=document.createElement('button');share.className='primary full';share.textContent=tr('Share plan','Compartir plan');
- const cancel=document.createElement('button');cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
+ const share=document.createElement('button');share.type='button';share.className='primary full';share.textContent=tr('Share plan','Compartir plan');
+ const download=document.createElement('button');download.type='button';download.className='full';download.textContent=tr('Download plan file','Descargar archivo del plan');
+ const cancel=document.createElement('button');cancel.type='button';cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
  const close=()=>overlay.remove();cancel.onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
- share.onclick=async()=>{
+ function planFile(){
   const days=choice.value==='week'?WEEKDAYS:[day];
   const payload={schema:TL_SHARE_SCHEMA,version:1,discipline:'total-body',days:days.map(tlPlanDay)};
-  const file=new File([JSON.stringify(payload,null,2)],'TRAIN-LAB-'+(choice.value==='week'?'week':day.toLowerCase())+'.json',{type:'application/json'});
+  return new File([JSON.stringify(payload,null,2)],'TRAIN-LAB-'+(choice.value==='week'?'week':day.toLowerCase())+'.json',{type:'application/json'});
+ }
+ function downloadPlan(){
   try{
-   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+   const file=planFile(),url=URL.createObjectURL(file),a=document.createElement('a');
+   a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();
+   setTimeout(()=>URL.revokeObjectURL(url),30000);
+   status.textContent=tr('Plan file saved. Attach it as a document in WhatsApp.','Archivo guardado. Adjúntalo como documento en WhatsApp.');
+  }catch(err){console.error('TRAIN LAB plan download:',err);status.textContent=tr('Unable to create the plan file.','No se pudo crear el archivo del plan.');}
+ }
+ download.onclick=downloadPlan;
+ share.onclick=async()=>{
+  let file;
+  try{file=planFile();}catch(err){console.error('TRAIN LAB plan generation:',err);status.textContent=tr('Unable to create the plan file.','No se pudo crear el archivo del plan.');return;}
+  try{
+   if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
     await navigator.share({files:[file],title:'A1SC TRAIN LAB',text:tr('Training plan','Plan de entrenamiento')});close();return;
    }
-   const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
-   status.textContent=tr('Plan downloaded. Send this file as a WhatsApp document.','Plan descargado. Envía este archivo como documento de WhatsApp.');
-  }catch(err){if(err.name!=='AbortError')status.textContent=tr('Sharing failed. Try again.','No se pudo compartir. Inténtalo de nuevo.');}
+   status.textContent=tr('Direct sharing is not supported here. Tap Download plan file, then send it as a WhatsApp document.','Este navegador no admite compartir directamente. Toca Descargar archivo del plan y envíalo como documento de WhatsApp.');
+  }catch(err){
+   if(err?.name==='AbortError')return;
+   console.warn('TRAIN LAB native file share unavailable:',err);
+   status.textContent=tr('Your phone could not share this file directly. Tap Download plan file, then attach it in WhatsApp.','Tu teléfono no pudo compartir este archivo directamente. Toca Descargar archivo del plan y adjúntalo en WhatsApp.');
+  }
  };
- panel.append(h,desc,choice,share,status,cancel);overlay.append(panel);document.body.append(overlay);
+ panel.append(h,desc,choice,share,download,status,cancel);overlay.append(panel);document.body.append(overlay);
 }
 function tlImportDialog(file){
  file.text().then(raw=>{
