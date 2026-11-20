@@ -292,6 +292,40 @@ window.TrainLabOpenTotalBodyHistoryPicker=openTotalBodyHistoryPicker;
 // v29g: portable, privacy-conscious Total Body plan sharing (no activity history).
 const TL_SHARE_SCHEMA='a1sc.trainlab.totalbody-plan';
 function tlPlanDay(d){return {day:d,dayType:dayType(d),exercises:(db.weeklyProgram[d]||[]).filter(n=>BASE_BY_NAME.has(n)).map(name=>{const e=BASE_BY_NAME.get(name);return {name,sets:e[2]==='minutes'?1:target(d,name),reps:db.repDefaults[name]??e[4]};})};}
+// v29k: share a compact plan link, no account or server. The URL fragment stays client-side.
+async function tlPlanLink(payload){
+ const bytes=new TextEncoder().encode(JSON.stringify(payload));
+ let encoded=bytes,kind='b';
+ if(typeof CompressionStream==='function'){
+  const stream=new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'));
+  encoded=new Uint8Array(await new Response(stream).arrayBuffer());kind='g';
+ }
+ let binary='';for(const b of encoded)binary+=String.fromCharCode(b);
+ const token=btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const url=new URL('./',location.href);url.hash='tlplan='+kind+token;
+ if(url.href.length>7000)throw Error('Plan link too long');
+ return url.href;
+}
+async function tlReadPlanLink(){
+ const hash=location.hash;
+ if(!hash.startsWith('#tlplan='))return;
+ // Clear the link so reopening TRAIN LAB won't import the same plan again.
+ history.replaceState(null,'',location.pathname+location.search);
+ try{
+  const code=hash.slice(8),kind=code[0],token=code.slice(1);
+  if(!['b','g'].includes(kind)||token.length>10000||!/^[A-Za-z0-9_-]+$/.test(token))throw Error('Invalid link');
+  const raw=atob(token.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-token.length%4)%4));
+  let bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));
+  if(kind==='g'){
+   if(typeof DecompressionStream!=='function')throw Error('Compression unsupported');
+   bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+  }
+  if(bytes.length>150000)throw Error('Plan too large');
+  const file=new File([bytes],'TRAIN-LAB-shared-plan.json',{type:'application/json'});
+  window.TrainLabShowDiscipline?.('strength');
+  tlImportDialog(file);
+ }catch(err){console.warn('TRAIN LAB shared link:',err);alert(tr('This workout link could not be opened. Ask the sender for the plan file.','No se pudo abrir este enlace. Solicita el archivo del plan.'));}
+}
 function tlShareDialog(){
  const overlay=document.createElement('div');overlay.className='tl-cross-overlay';
  const panel=document.createElement('section');panel.className='tl-cross-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
@@ -300,7 +334,7 @@ function tlShareDialog(){
  const choice=document.createElement('select');choice.style.width='100%';
  [['day',tr('Share this day','Compartir este día')],['week',tr('Share entire week','Compartir semana completa')]].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;choice.append(o)});
  const status=document.createElement('p');status.className='muted';
- const share=document.createElement('button');share.type='button';share.className='primary full';share.textContent=tr('Share plan','Compartir plan');
+ const share=document.createElement('button');share.type='button';share.className='primary full';share.textContent=tr('Share link (WhatsApp)','Compartir enlace (WhatsApp)');
  const download=document.createElement('button');download.type='button';download.className='full';download.textContent=tr('Download plan file','Descargar archivo del plan');
  const cancel=document.createElement('button');cancel.type='button';cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
  const close=()=>overlay.remove();cancel.onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
@@ -319,18 +353,19 @@ function tlShareDialog(){
  }
  download.onclick=downloadPlan;
  share.onclick=async()=>{
-  let file;
-  try{file=planFile();}catch(err){console.error('TRAIN LAB plan generation:',err);status.textContent=tr('Unable to create the plan file.','No se pudo crear el archivo del plan.');return;}
   try{
-   if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){
-    await navigator.share({files:[file],title:'A1SC TRAIN LAB',text:tr('Training plan','Plan de entrenamiento')});close();return;
+   const days=choice.value==='week'?WEEKDAYS:[day];
+   const payload={schema:TL_SHARE_SCHEMA,version:1,discipline:'total-body',days:days.map(tlPlanDay)};
+   const link=await tlPlanLink(payload);
+   const message=tr('A1SC TRAIN LAB workout plan — open to preview and import:','Plan de entrenamiento A1SC TRAIN LAB — abre para revisar e importar:')+'\n'+link;
+   if(navigator.share){
+    try{await navigator.share({title:'A1SC TRAIN LAB',text:message});close();return;}
+    catch(err){if(err?.name==='AbortError')return;console.warn('TRAIN LAB link share:',err);}
    }
-   status.textContent=tr('Direct sharing is not supported here. Tap Download plan file, then send it as a WhatsApp document.','Este navegador no admite compartir directamente. Toca Descargar archivo del plan y envíalo como documento de WhatsApp.');
-  }catch(err){
-   if(err?.name==='AbortError')return;
-   console.warn('TRAIN LAB native file share unavailable:',err);
-   status.textContent=tr('Your phone could not share this file directly. Tap Download plan file, then attach it in WhatsApp.','Tu teléfono no pudo compartir este archivo directamente. Toca Descargar archivo del plan y adjúntalo en WhatsApp.');
-  }
+   // Always provide a simple alternative without asking athletes to find a downloaded file.
+   if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(message);status.textContent=tr('Link copied. Paste it into WhatsApp.','Enlace copiado. Pégalo en WhatsApp.');}
+   else{window.prompt(tr('Copy this link and send it in WhatsApp:','Copia este enlace y envíalo por WhatsApp:'),message);}
+  }catch(err){console.warn('TRAIN LAB plan link:',err);status.textContent=tr('This plan is too large for a link on this device. Use Download plan file instead.','Este plan es demasiado grande para un enlace en este dispositivo. Usa Descargar archivo del plan.');}
  };
  panel.append(h,desc,choice,share,download,status,cancel);overlay.append(panel);document.body.append(overlay);
 }
