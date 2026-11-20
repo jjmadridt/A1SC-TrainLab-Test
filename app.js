@@ -289,6 +289,68 @@ function openTotalBodyHistoryPicker(selectedKey){
 }
 window.TrainLabOpenTotalBodyHistoryPicker=openTotalBodyHistoryPicker;
 
+// v29g: portable, privacy-conscious Total Body plan sharing (no activity history).
+const TL_SHARE_SCHEMA='a1sc.trainlab.totalbody-plan';
+function tlPlanDay(d){return {day:d,dayType:dayType(d),exercises:(db.weeklyProgram[d]||[]).filter(n=>BASE_BY_NAME.has(n)).map(name=>{const e=BASE_BY_NAME.get(name);return {name,sets:e[2]==='minutes'?1:target(d,name),reps:db.repDefaults[name]??e[4]};})};}
+function tlShareDialog(){
+ const overlay=document.createElement('div');overlay.className='tl-cross-overlay';
+ const panel=document.createElement('section');panel.className='tl-cross-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+ const h=document.createElement('h2');h.textContent=tr('Share training plan','Compartir plan de entrenamiento');
+ const desc=document.createElement('p');desc.textContent=tr('Send a day or the entire week through WhatsApp or save a file. No workout history or personal data is included.','Envía un día o la semana completa por WhatsApp o guarda un archivo. No incluye historial ni datos personales.');
+ const choice=document.createElement('select');choice.style.width='100%';
+ [['day',tr('Share this day','Compartir este día')],['week',tr('Share entire week','Compartir semana completa')]].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;choice.append(o)});
+ const status=document.createElement('p');status.className='muted';
+ const share=document.createElement('button');share.className='primary full';share.textContent=tr('Share plan','Compartir plan');
+ const cancel=document.createElement('button');cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
+ const close=()=>overlay.remove();cancel.onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
+ share.onclick=async()=>{
+  const days=choice.value==='week'?WEEKDAYS:[day];
+  const payload={schema:TL_SHARE_SCHEMA,version:1,discipline:'total-body',days:days.map(tlPlanDay)};
+  const file=new File([JSON.stringify(payload,null,2)],'TRAIN-LAB-'+(choice.value==='week'?'week':day.toLowerCase())+'.json',{type:'application/json'});
+  try{
+   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    await navigator.share({files:[file],title:'A1SC TRAIN LAB',text:tr('Training plan','Plan de entrenamiento')});close();return;
+   }
+   const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);
+   status.textContent=tr('Plan downloaded. Send this file as a WhatsApp document.','Plan descargado. Envía este archivo como documento de WhatsApp.');
+  }catch(err){if(err.name!=='AbortError')status.textContent=tr('Sharing failed. Try again.','No se pudo compartir. Inténtalo de nuevo.');}
+ };
+ panel.append(h,desc,choice,share,status,cancel);overlay.append(panel);document.body.append(overlay);
+}
+function tlImportDialog(file){
+ file.text().then(raw=>{
+  if(raw.length>150000)throw Error('File too large');
+  const data=JSON.parse(raw);
+  if(data.schema!==TL_SHARE_SCHEMA||data.version!==1||data.discipline!=='total-body'||!Array.isArray(data.days)||!data.days.length||data.days.length>7)throw Error('Invalid plan');
+  const seen=new Set();
+  const incoming=data.days.map(item=>{
+   if(!item||!WEEKDAYS.includes(item.day)||seen.has(item.day)||!DAY_TYPES.includes(item.dayType)||!Array.isArray(item.exercises)||item.exercises.length>BASE_EXERCISES.length)throw Error('Invalid plan day');
+   seen.add(item.day);const names=new Set();
+   const exercises=item.exercises.map(e=>{
+    if(!e||typeof e.name!=='string'||!BASE_BY_NAME.has(e.name)||names.has(e.name)||!Number.isInteger(e.sets)||e.sets<1||e.sets>15||!Number.isFinite(e.reps)||e.reps<=0||e.reps>10000)throw Error('Invalid exercise');
+    names.add(e.name);return e;
+   });return {...item,exercises};
+  });
+  const overlay=document.createElement('div');overlay.className='tl-cross-overlay';const panel=document.createElement('section');panel.className='tl-cross-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+  const h=document.createElement('h2');h.textContent=tr('Import training plan','Importar plan de entrenamiento');
+  const preview=document.createElement('div');preview.className='history';preview.style.margin='12px 0';
+  incoming.forEach(d=>{const line=document.createElement('p');line.textContent=d.day+' — '+d.exercises.length+' '+tr('exercises','ejercicios')+(d.exercises.length?': '+d.exercises.map(e=>exerciseName(e.name)).join(', '):'');preview.append(line)});
+  const mode=document.createElement('select');mode.style.width='100%';[['add',tr('Add to current plan','Agregar al plan actual')],['replace',tr('Replace selected days','Reemplazar días seleccionados')]].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;mode.append(o)});
+  const apply=document.createElement('button');apply.className='primary full';apply.textContent=tr('Import plan','Importar plan');
+  const cancel=document.createElement('button');cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
+  const close=()=>overlay.remove();cancel.onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
+  apply.onclick=()=>{
+   if(mode.value==='replace'&&!confirm(tr('Replace the selected days? Existing workout history will stay unchanged.','¿Reemplazar los días seleccionados? El historial de entrenamientos no cambiará.')))return;
+   for(const d of incoming){const existing=mode.value==='replace'?[]:(db.weeklyProgram[d.day]||[]);db.weeklyProgram[d.day]=[...new Set([...existing,...d.exercises.map(e=>e.name)])];
+    if(mode.value==='replace'||!db.dayTypes?.[d.day]){db.dayTypes=db.dayTypes||{};db.dayTypes[d.day]=d.dayType;}
+    for(const e of d.exercises){if(mode.value==='replace'||!existing.includes(e.name)){if(BASE_BY_NAME.get(e.name)[2]!=='minutes')db.setTargets[d.day+'|'+e.name]=e.sets;db.repDefaults[e.name]=e.reps;}}
+    PROGRAM[d.day].ex=db.weeklyProgram[d.day].map(n=>BASE_BY_NAME.get(n));
+   }
+   day=incoming[0].day;totalBodyPlanMode=true;tbExpandedExercise=null;save();close();window.TrainLabShowDiscipline?.('strength');render();
+  };
+  panel.append(h,preview,mode,apply,cancel);overlay.append(panel);document.body.append(overlay);
+ }).catch(()=>alert(tr('This is not a valid TRAIN LAB shared plan.','Este no es un plan compartido válido de TRAIN LAB.')));
+}
 let tbExpandedExercise=null;
 window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},getDay(){return WEEKDAYS.indexOf(day);}};
 function workout(){
@@ -298,7 +360,7 @@ function workout(){
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
  <div class="tb-session-meta" ${totalBodyPlanMode?'':'hidden'}><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>
  <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
- ${totalBodyPlanMode?`<button type="button" class="full" id="tb-use-history">${tr('Use previous workout','Usar rutina anterior')}</button>`+dayTypePicker()+bodyAreaPicker():''}
+ ${totalBodyPlanMode?`<button type="button" class="full" id="tb-share-plan">${tr('Share plan','Compartir plan')}</button><button type="button" class="full" id="tb-import-plan">${tr('Import shared plan','Importar plan compartido')}</button><input type="file" id="tb-import-file" accept=".json,application/json" hidden><button type="button" class="full" id="tb-use-history">${tr('Use previous workout','Usar rutina anterior')}</button>`+dayTypePicker()+bodyAreaPicker():''}
  ${!totalBodyPlanMode?`
  ${type!=='training'?`<div class="card"><h3>${dayTypeLabel(type)}</h3><p class="muted">${type==='rest'?tr('No structured workout scheduled. Your saved exercises remain available when you switch back to Training Day.','No hay entrenamiento programado. Tus ejercicios guardados estarán disponibles al volver a Día de entrenamiento.'):tr('Keep movement gentle and optional. You can use your saved exercises below or edit the plan.','Mantén el movimiento suave y opcional. Puedes usar los ejercicios guardados abajo o editar el plan.')}</p></div>`:''}
  ${type==='rest'?'':`<details class="tb-session-start"><summary>${tr('Session start date and time','Fecha y hora de inicio')}</summary><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></details>
@@ -307,6 +369,9 @@ function workout(){
  ${!locked?`<button class="primary full" id="finish">${tr('Finish session / start next','Finalizar sesión / iniciar siguiente')}</button>`:''}`}`:''}`;
  document.querySelectorAll('[data-tb-expand]').forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.tbExpand);tbExpandedExercise=tbExpandedExercise===idx?null:idx;render();});
  if($('tb-use-history'))$('tb-use-history').onclick=()=>openTotalBodyHistoryPicker();
+ if($('tb-share-plan'))$('tb-share-plan').onclick=tlShareDialog;
+ if($('tb-import-plan'))$('tb-import-plan').onclick=()=>$('tb-import-file').click();
+ if($('tb-import-file'))$('tb-import-file').onchange=e=>{const file=e.target.files?.[0];if(file)tlImportDialog(file);e.target.value='';};
  document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();});
  if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
  document.querySelectorAll('[data-area]').forEach(b=>b.onclick=()=>{const area=b.dataset.area;selectedBodyAreas=selectedBodyAreas.includes(area)?selectedBodyAreas.filter(x=>x!==area):[...selectedBodyAreas,area];render()});
