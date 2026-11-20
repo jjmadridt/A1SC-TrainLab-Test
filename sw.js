@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.06-plan-link-receiver';
+const CACHE = 'trainlab-v3.07-simplified-plan-tools';
 
 const ASSETS = [
   './',

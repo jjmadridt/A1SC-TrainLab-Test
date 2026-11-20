@@ -329,28 +329,13 @@ function tlShareDialog(){
  const overlay=document.createElement('div');overlay.className='tl-cross-overlay';
  const panel=document.createElement('section');panel.className='tl-cross-panel';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
  const h=document.createElement('h2');h.textContent=tr('Share training plan','Compartir plan de entrenamiento');
- const desc=document.createElement('p');desc.textContent=tr('Send a day or the entire week through WhatsApp or save a file. No workout history or personal data is included.','Envía un día o la semana completa por WhatsApp o guarda un archivo. No incluye historial ni datos personales.');
+ const desc=document.createElement('p');desc.textContent=tr('Send a day or the entire week through WhatsApp. No workout history or personal data is included.','Envía un día o la semana completa por WhatsApp. No incluye historial ni datos personales.');
  const choice=document.createElement('select');choice.style.width='100%';
  [['day',tr('Share this day','Compartir este día')],['week',tr('Share entire week','Compartir semana completa')]].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;choice.append(o)});
  const status=document.createElement('p');status.className='muted';
  const share=document.createElement('button');share.type='button';share.className='primary full';share.textContent=tr('Share link (WhatsApp)','Compartir enlace (WhatsApp)');
- const download=document.createElement('button');download.type='button';download.className='full';download.textContent=tr('Download plan file','Descargar archivo del plan');
  const cancel=document.createElement('button');cancel.type='button';cancel.className='full';cancel.textContent=tr('Cancel','Cancelar');
  const close=()=>overlay.remove();cancel.onclick=close;overlay.onclick=e=>{if(e.target===overlay)close()};
- function planFile(){
-  const days=choice.value==='week'?WEEKDAYS:[day];
-  const payload={schema:TL_SHARE_SCHEMA,version:1,discipline:'total-body',days:days.map(tlPlanDay)};
-  return new File([JSON.stringify(payload,null,2)],'TRAIN-LAB-'+(choice.value==='week'?'week':day.toLowerCase())+'.json',{type:'application/json'});
- }
- function downloadPlan(){
-  try{
-   const file=planFile(),url=URL.createObjectURL(file),a=document.createElement('a');
-   a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();
-   setTimeout(()=>URL.revokeObjectURL(url),30000);
-   status.textContent=tr('Plan file saved. Attach it as a document in WhatsApp.','Archivo guardado. Adjúntalo como documento en WhatsApp.');
-  }catch(err){console.error('TRAIN LAB plan download:',err);status.textContent=tr('Unable to create the plan file.','No se pudo crear el archivo del plan.');}
- }
- download.onclick=downloadPlan;
  share.onclick=async()=>{
   try{
    const days=choice.value==='week'?WEEKDAYS:[day];
@@ -364,9 +349,9 @@ function tlShareDialog(){
    // Always provide a simple alternative without asking athletes to find a downloaded file.
    if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(message);status.textContent=tr('Link copied. Paste it into WhatsApp.','Enlace copiado. Pégalo en WhatsApp.');}
    else{window.prompt(tr('Copy this link and send it in WhatsApp:','Copia este enlace y envíalo por WhatsApp:'),message);}
-  }catch(err){console.warn('TRAIN LAB plan link:',err);status.textContent=tr('This plan is too large for a link on this device. Use Download plan file instead.','Este plan es demasiado grande para un enlace en este dispositivo. Usa Descargar archivo del plan.');}
+  }catch(err){console.warn('TRAIN LAB plan link:',err);status.textContent=tr('This plan is too large to share as a link. Try sharing one day at a time.','Este plan es demasiado grande para compartir como enlace. Intenta compartir un día a la vez.');}
  };
- panel.append(h,desc,choice,share,download,status,cancel);overlay.append(panel);document.body.append(overlay);
+ panel.append(h,desc,choice,share,status,cancel);overlay.append(panel);document.body.append(overlay);
 }
 function tlImportDialog(file){
  file.text().then(raw=>{
@@ -411,7 +396,7 @@ function workout(){
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
  <div class="tb-session-meta" ${totalBodyPlanMode?'':'hidden'}><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>
  <div class="tb-view-actions" role="group" aria-label="${tr('Workout view','Vista de rutina')}"><button type="button" class="${!totalBodyPlanMode?'active':''}" data-tb-view="workout" aria-pressed="${!totalBodyPlanMode}">${tr("Today's workout",'Rutina de hoy')}</button><button type="button" class="${totalBodyPlanMode?'active':''}" data-tb-view="plan" aria-pressed="${totalBodyPlanMode}">${tr('Edit plan','Editar plan')}</button></div>
- ${totalBodyPlanMode?`<div class="tb-plan-quick-actions" role="group" aria-label="${tr('Plan tools','Herramientas del plan')}" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 12px"><button type="button" id="tb-share-plan" aria-label="${tr('Share plan','Compartir plan')}" style="min-width:0;padding:9px 3px;font-size:12px">${tr('Share','Compartir')}</button><button type="button" id="tb-import-plan" aria-label="${tr('Import shared plan','Importar plan compartido')}" style="min-width:0;padding:9px 3px;font-size:12px">${tr('Import','Importar')}</button><button type="button" id="tb-use-history" aria-label="${tr('Use previous workout','Usar rutina anterior')}" style="min-width:0;padding:9px 3px;font-size:12px">${tr('History','Historial')}</button></div><input type="file" id="tb-import-file" accept=".json,application/json" hidden>`+dayTypePicker()+bodyAreaPicker():''}
+ ${totalBodyPlanMode?`<div class="tb-plan-quick-actions" role="group" aria-label="${tr('Plan tools','Herramientas del plan')}" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 12px"><button type="button" id="tb-share-plan" aria-label="${tr('Share plan','Compartir plan')}" style="min-width:0;padding:9px 6px;font-size:12px">${tr('Share Plan','Compartir plan')}</button><button type="button" id="tb-use-history" aria-label="${tr('Use previous workout','Usar rutina anterior')}" style="min-width:0;padding:9px 6px;font-size:12px">${tr('Use History','Usar historial')}</button></div><input type="file" id="tb-import-file" accept=".json,application/json" hidden>`+dayTypePicker()+bodyAreaPicker():''}
  ${!totalBodyPlanMode?`
  ${type!=='training'?`<div class="card"><h3>${dayTypeLabel(type)}</h3><p class="muted">${type==='rest'?tr('No structured workout scheduled. Your saved exercises remain available when you switch back to Training Day.','No hay entrenamiento programado. Tus ejercicios guardados estarán disponibles al volver a Día de entrenamiento.'):tr('Keep movement gentle and optional. You can use your saved exercises below or edit the plan.','Mantén el movimiento suave y opcional. Puedes usar los ejercicios guardados abajo o editar el plan.')}</p></div>`:''}
  ${type==='rest'?'':`<details class="tb-session-start"><summary>${tr('Session start date and time','Fecha y hora de inicio')}</summary><label>${tr('Session start date and time','Fecha y hora de inicio')}</label><input type="datetime-local" id="start-time" value="${start}" ${locked?'disabled':''}></details>
@@ -421,7 +406,6 @@ function workout(){
  document.querySelectorAll('[data-tb-expand]').forEach(b=>b.onclick=()=>{const idx=Number(b.dataset.tbExpand);tbExpandedExercise=tbExpandedExercise===idx?null:idx;render();});
  if($('tb-use-history'))$('tb-use-history').onclick=()=>openTotalBodyHistoryPicker();
  if($('tb-share-plan'))$('tb-share-plan').onclick=tlShareDialog;
- if($('tb-import-plan'))$('tb-import-plan').onclick=()=>$('tb-import-file').click();
  if($('tb-import-file'))$('tb-import-file').onchange=e=>{const file=e.target.files?.[0];if(file)tlImportDialog(file);e.target.value='';};
  document.querySelectorAll('[data-tb-view]').forEach(b=>b.onclick=()=>{totalBodyPlanMode=b.dataset.tbView==='plan';render();});
  if($('tb-day-type'))$('tb-day-type').onchange=e=>{if(!DAY_TYPES.includes(e.target.value))return;db.dayTypes=db.dayTypes||{};db.dayTypes[day]=e.target.value;save();render()};
