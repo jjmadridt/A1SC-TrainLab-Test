@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.02-plan-sharing';
+const CACHE = 'trainlab-v3.03-compact-plan-tools';
 
 const ASSETS = [
   './',
