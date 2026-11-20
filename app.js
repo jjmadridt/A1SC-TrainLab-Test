@@ -309,8 +309,6 @@ async function tlPlanLink(payload){
 async function tlReadPlanLink(){
  const hash=location.hash;
  if(!hash.startsWith('#tlplan='))return;
- // Clear the link so reopening TRAIN LAB won't import the same plan again.
- history.replaceState(null,'',location.pathname+location.search);
  try{
   const code=hash.slice(8),kind=code[0],token=code.slice(1);
   if(!['b','g'].includes(kind)||token.length>10000||!/^[A-Za-z0-9_-]+$/.test(token))throw Error('Invalid link');
@@ -324,6 +322,7 @@ async function tlReadPlanLink(){
   const file=new File([bytes],'TRAIN-LAB-shared-plan.json',{type:'application/json'});
   window.TrainLabShowDiscipline?.('strength');
   tlImportDialog(file);
+  history.replaceState(null,'',location.pathname+location.search);
  }catch(err){console.warn('TRAIN LAB shared link:',err);alert(tr('This workout link could not be opened. Ask the sender for the plan file.','No se pudo abrir este enlace. Solicita el archivo del plan.'));}
 }
 function tlShareDialog(){
@@ -627,6 +626,9 @@ function backup(target=app){
  $('import').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const d=JSON.parse(await f.text());if(!Array.isArray(d.logs)||!Array.isArray(d.body)||!d.session||typeof d.session!=='object')throw Error('Invalid backup');if(confirm(tr('Replace current data?','¿Reemplazar los datos actuales?'))){db={logs:d.logs,body:d.body,session:d.session,settings:d.settings||{lang:'en',unit:'lb'},completed:d.completed||[],started:d.started||{},setTargets:d.setTargets||{},exerciseUnits:d.exerciseUnits||{},repDefaults:d.repDefaults||{},distanceUnits:d.distanceUnits||{},weeklyProgram:d.weeklyProgram||{}};restoreWeeklyProgram();save();render();if(document.getElementById('athlete-profile')?.classList.contains('visible'))renderAthleteProfile()}}catch(e){alert(e.message)}};
 }
 render();
+// v29l: Handle incoming workout links after app startup and on navigation.
+queueMicrotask(()=>{void tlReadPlanLink();});
+window.addEventListener('hashchange',()=>{void tlReadPlanLink();});
 
 // Shared Athlete Profile: same db.body and db.settings used by Total Body.
 window.renderAthleteProfile=renderAthleteProfile;
