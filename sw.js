@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.08-fuel-summary-phase1';
+const CACHE = 'trainlab-v3.09-fuel-sender-phase2';
 
 const ASSETS = [
   './',
@@ -71,6 +71,7 @@ const ASSETS = [
   './swim-icons/technique-male.webp',
   './swim-icons/technique-female.webp',
   './app.js',
+  './fuel-lab-sender.js',
   './unified-history.js',
   './workout-timer.js',
   './screen-awake.js',

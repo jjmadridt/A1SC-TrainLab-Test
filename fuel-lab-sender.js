@@ -30,5 +30,50 @@
   });
   return {schema:'a1sc.training-summary',version:1,source:'trainlab',weekStart:isoLocal(start),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',days};
  }
- root.TrainLabFuelLab={buildSummary:build};
+ const FUEL_URL='https://jjmadridt.github.io/A1SC-FuelLab-Test/';
+ const FUEL_ORIGIN='https://jjmadridt.github.io';
+ const FUEL_PATH='/A1SC-FuelLab-Test/';
+ const PROTOCOL='a1sc.trainlab-fuellab';
+ const TIMEOUT_MS=30000;
+ let active=false;
+ function sendToFuelLab(){
+  if(active){alert('A transfer is already in progress.');return}
+  if(!root.crypto||!root.crypto.getRandomValues){alert('Secure transfer is not supported in this browser.');return}
+  const bytes=new Uint8Array(16);root.crypto.getRandomValues(bytes);
+  const token=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+  const summary=build();
+  // The fragment carries only a random handshake token, NEVER training information.
+  const child=root.open(FUEL_URL+'#tlhandoff='+token,'_blank');
+  if(!child){alert('Allow TRAIN LAB to open FUEL LAB, then try again.');return}
+  active=true;
+  let done=false;
+  let timer;
+  function cleanup(){
+   if(done)return;
+   done=true;active=false;root.removeEventListener('message',onMessage);
+   root.clearTimeout(timer);
+  }
+  function fail(message){cleanup();alert(message)}
+  function onMessage(event){
+   if(done||event.source!==child||event.origin!==FUEL_ORIGIN)return;
+   const m=event.data;
+   if(!m||typeof m!=='object'||m.protocol!==PROTOCOL||m.version!==1||m.token!==token)return;
+   // GitHub Pages apps share an origin. Verify the actual receiver pathname too.
+   try{
+    if(child.location.origin===FUEL_ORIGIN &&
+       child.location.pathname!==FUEL_PATH)return;
+   }catch(_){return}
+   if(m.type==='READY'){
+    child.postMessage({protocol:PROTOCOL,version:1,type:'SUMMARY',token,payload:summary},FUEL_ORIGIN);
+   }else if(m.type==='RECEIVED'){
+    cleanup();
+   }else if(m.type==='ERROR'){
+    fail('FUEL LAB could not receive the training summary. No training data was changed.');
+   }
+  }
+  root.addEventListener('message',onMessage);
+  timer=root.setTimeout(()=>fail('FUEL LAB did not confirm the transfer. Check that its receiving feature is installed.'),TIMEOUT_MS);
+ }
+ root.TrainLabFuelLab={buildSummary:build,sendToFuelLab};
+
 })(window);
