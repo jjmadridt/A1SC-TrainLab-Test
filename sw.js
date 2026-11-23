@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.09-fuel-sender-phase2';
+const CACHE = 'trainlab-v3.10-fuel-sender-phase3';
 
 const ASSETS = [
   './',
