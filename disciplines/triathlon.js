@@ -251,7 +251,7 @@
    // Progress reflects completed activities logged today, not merely opening a card.
    const today=new Date();
    const isToday=value=>{const d=new Date(value);return Number.isFinite(d.getTime())&&d.getFullYear()===today.getFullYear()&&d.getMonth()===today.getMonth()&&d.getDate()===today.getDate();};
-   const completedActivities=new Set(readActivities().filter(x=>isToday(x.completedAt)).map(x=>canonical(x.exercise)));
+   const completedActivities=new Set(readActivities().filter(x=>isToday(x.completedAt)&&(Number.isInteger(x.day)?x.day:(new Date(x.completedAt).getDay()+6)%7)===day).map(x=>canonical(x.exercise)));
    const todaySets=readSets().filter(x=>isToday(x.timestamp));
    const completedExercise=id=>{
     const match=find(id);if(!match)return false;
@@ -282,8 +282,8 @@
     if(!sessions.has(key))sessions.set(key,newSession(canonical(id)));
     const session=sessions.get(key);
     const wrap=el('div','tri-session tri-run-style-row');wrap.dataset.triExercise=id;
-    const isComplete=completedExercise(id);
-    const head=el('button','tri-exercise-toggle');head.type='button';
+    const isComplete=completedExercise(id);wrap.dataset.tlCard='tri';wrap.dataset.tlId=id;wrap.dataset.tlDone=String(isComplete);
+    const head=el('button','tri-exercise-toggle');head.type='button';head.setAttribute('data-tl-toggle','');
     head.style.cssText='display:flex;align-items:center;gap:10px;width:100%;min-height:66px;padding:4px 0;text-align:left;background:transparent;color:#eaf4fc;border:0;cursor:pointer';
     const thumb=el('img','tri-exercise-thumbnail');thumb.src=imageFor(match.item);thumb.alt='';thumb.loading='lazy';
     thumb.style.cssText='width:56px;height:56px;flex:0 0 56px;object-fit:cover;border-radius:9px;background:#0c2235';
@@ -319,8 +319,8 @@
       const notes=el('input');notes.placeholder=t('Optional notes / distance / sets','Notas / distancia / series (opcional)');notes.value=session.notes||'';notes.addEventListener('input',()=>{session.notes=notes.value;});contentHost.append(notes);
       const actions=el('div','tri-controls');
       actions.append(button(t('Save Activity','Guardar actividad'),()=>{
-       const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise:id,discipline:match.cat,elapsedMs:session.elapsed,notes:session.notes||'',sets:match.cat==='Strength'?readSets().filter(x=>x.exercise===canonical(id)&&x.day===day&&x.sessionId===session.sessionId):[],details:match.cat==='Strength'?null:{distance:session.distance||'',distanceUnit:session.distanceUnit||(match.cat==='Swim'?'m':'km'),durationMin:session.durationMin||'',rpe:session.rpe||'',environment:session.environment||'',rideType:session.rideType||''},completedAt:new Date().toISOString()};
-       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));undoBySession.delete(session.sessionId);sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;expandedExercise=activeId;scrollToActive=false;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
+       const entry={id:Date.now()+'-'+Math.random().toString(36).slice(2,7),exercise:id,day,discipline:match.cat,elapsedMs:session.elapsed,notes:session.notes||'',sets:match.cat==='Strength'?readSets().filter(x=>x.exercise===canonical(id)&&x.day===day&&x.sessionId===session.sessionId):[],details:match.cat==='Strength'?null:{distance:session.distance||'',distanceUnit:session.distanceUnit||(match.cat==='Swim'?'m':'km'),durationMin:session.durationMin||'',rpe:session.rpe||'',environment:session.environment||'',rideType:session.rideType||''},completedAt:new Date().toISOString()};
+       try{const list=JSON.parse(localStorage.getItem(LOG_KEY)||'[]');if(!Array.isArray(list))throw Error('invalid log');list.push(entry);localStorage.setItem(LOG_KEY,JSON.stringify(list));undoBySession.delete(session.sessionId);sessions.delete(key);const next=r.items.indexOf(id)+1;activeId=r.items[next]||null;expandedExercise=window.TrainLabUnified?.active?null:activeId;scrollToActive=false;render();}catch(e){alert(t('Could not save activity.','No se pudo guardar la actividad.'));}
       }));
       actions.append(button(t('Discard','Descartar'),()=>{if(session&&match.cat==='Strength'){saveSets(readSets().filter(x=>x.sessionId!==session.sessionId));}undoBySession.delete(session.sessionId);sessions.delete(key);activeId=id;expandedExercise=id;render();}));contentHost.append(actions);
      }else{
@@ -365,5 +365,5 @@
 
  }
  }
- root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render,openPlan(i){day=i;view='edit';render();},openWorkout(i){day=i;view='workout';render();},getDay(){return day;}};
+ root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render,openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i){expandedExercise=null;activeId=null;}day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
 })(window);

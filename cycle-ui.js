@@ -15,7 +15,7 @@
  const DAYS_ES=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
  let selectedDay=(new Date().getDay()+6)%7, selectedCategory='endurance', view='workout';
  let plan={};
- let session=null, ticker=null, wakeLock=null;
+ let session=null, ticker=null, wakeLock=null, expandedId=null;
  // Step 16E: audio-only addition; no changes to timing, RPE, or stored sessions.
  
  const cycleBell=new Audio('./boxing-bell-double-ding.wav');cycleBell.preload='auto';
@@ -56,8 +56,8 @@
  }
  try{
   const stored=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');
-  if(stored&&stored.workout&&Array.isArray(stored.steps)&&stored.steps.length&&typeof stored.index==='number'&&stored.index>=0&&stored.index<stored.steps.length&&Number.isFinite(stored.activeMs)&&(!stored.running||Number.isFinite(stored.segmentEndAt))){
-   session=stored;syncSession();
+  if(stored&&stored.workout&&Array.isArray(stored.steps)&&stored.steps.length&&typeof stored.index==='number'&&stored.index>=0&&(stored.index<stored.steps.length||(stored.finished&&stored.index===stored.steps.length))&&Number.isFinite(stored.activeMs)&&(!stored.running||Number.isFinite(stored.segmentEndAt))){
+   session=stored;if(!Number.isInteger(session.day))session.day=selectedDay;expandedId=session.workout.id;syncSession();
   }
  }catch(e){}
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){syncSession();requestWake();render();}else{syncSession();releaseWake();}});
@@ -130,7 +130,7 @@
  }
  function startSession(w,minutes,mode){
   stopTick();releaseWake();
-  session={workout:w,steps:stepsFor(w,minutes),index:0,mode,remaining:0,running:false,finished:false,plannedMinutes:minutes,activeMs:0,activeSince:null,segmentEndAt:null};
+  expandedId=w.id;session={day:selectedDay,workout:w,steps:stepsFor(w,minutes),index:0,mode,remaining:0,running:false,finished:false,plannedMinutes:minutes,activeMs:0,activeSince:null,segmentEndAt:null};
   session.remaining=session.steps[0].duration;persistSession();render();
  }
  function resume(){
@@ -182,7 +182,7 @@
   saveBtn.addEventListener('click',()=>{
    const h=Number(actualHours.value),m=Number(actualMinutes.value),sec=Number(actualSeconds.value);const durationSeconds=h*3600+m*60+sec;const rpe=Number(effort.value);
    if(![h,m,sec].every(Number.isInteger)||h<0||m<0||m>59||sec<0||sec>59||durationSeconds>86400||rpe<1||rpe>10){root.alert(t('Check duration and effort.','Revisa duración y esfuerzo.'));return;}
-   const record={id:'cycle-'+Date.now(),date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:Math.floor(durationSeconds/60),actualSeconds:durationSeconds,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
+   const record={id:'cycle-'+Date.now(),day:session.day,date:new Date().toISOString(),workoutId:w.id,workoutName:w.name,plannedMinutes:session.plannedMinutes,actualMinutes:Math.floor(durationSeconds/60),actualSeconds:durationSeconds,rpe,completion:session.finished?'complete':'partial',mode:session.mode,notes:notes.value.trim()};
    const updated=[record,...history];
    try{localStorage.setItem(LOG_KEY,JSON.stringify(updated));history=updated;}catch(e){root.alert(t('Could not save activity. Check browser storage.','No se pudo guardar la actividad. Revisa el almacenamiento.'));return;}
    stopTick();releaseWake();session=null;persistSession();render();
@@ -206,7 +206,8 @@
  function cycleCompletedToday(workoutId){
   const now=new Date().toDateString();
   return history.some(r=>r&&r.workoutId===workoutId&&r.completion==='complete'&&
-   r.date&&!Number.isNaN(new Date(r.date).getTime())&&new Date(r.date).toDateString()===now);
+   r.date&&!Number.isNaN(new Date(r.date).getTime())&&new Date(r.date).toDateString()===now&&
+   (Number.isInteger(r.day)?r.day:(new Date(r.date).getDay()+6)%7)===selectedDay);
  }
  function cycleProgress(host,ids){
   if(!ids.length)return;
@@ -224,12 +225,13 @@
   const heading=item.querySelector('.cy-plan-heading');
   const config=item.querySelector('.cy-config');
   if(!heading||!config)return;
-  const toggle=make('button','cy28-toggle');toggle.type='button';
-  toggle.setAttribute('aria-expanded','false');
+  item.dataset.tlCard='cycle';item.dataset.tlId=workout.id;item.dataset.tlDone=String(done);
+  const toggle=make('button','cy28-toggle');toggle.type='button';toggle.setAttribute('data-tl-toggle','');
+  toggle.setAttribute('aria-expanded',String(expandedId===workout.id));
   const title=make('span','cy28-title');
   while(heading.firstChild)title.append(heading.firstChild);
   const state=make('span','cy28-status'+(done?' cy28-done':''),done?'✓ '+t('Completed','Completado'):'○ '+t('Not completed','Sin completar'));
-  const arrow=make('span','cy28-arrow','▸');
+  const arrow=make('span','cy28-arrow',expandedId===workout.id?'▾':'▸');
   const icon=title.querySelector('img,.cy-illustration');
   const name=make('span','cy28-name');
   while(title.firstChild){const child=title.firstChild;if(child===icon){title.removeChild(child);continue;}name.appendChild(child);}
@@ -237,7 +239,7 @@
   const circle=make('span','cy28-circle',done?'✓':'');circle.setAttribute('aria-hidden','true');
   toggle.append(...(icon?[icon]:[]),circle,text,arrow);
   heading.replaceWith(toggle);
-  config.hidden=true;
+  config.hidden=expandedId!==workout.id;
   toggle.addEventListener('click',()=>{
    // Keep only one workout expanded in the current CYCLE list.
    // The existing activity controls and saved records are untouched.
@@ -255,6 +257,7 @@
      });
     }
    }
+   expandedId=willOpen?workout.id:null;
    config.hidden=!willOpen;
    toggle.setAttribute('aria-expanded',String(willOpen));
    arrow.textContent=willOpen?'▾':'▸';
@@ -262,14 +265,14 @@
  }
  function render(){
   const mount=document.getElementById('cycle-builder');if(!mount)return;
-  mount.replaceChildren();if(session){sessionView(mount);return;}const workouts=getWorkouts();
+  mount.replaceChildren();const workouts=getWorkouts();
   if(!workouts.length){mount.appendChild(make('p','cy-empty',t('Cycle workout library unavailable.','La biblioteca de ciclismo no está disponible.')));return;}
   // Match RUN and SWIM: weekday strip directly below the discipline banner.
   const days=make('div','cy-days cy-weekday-strip');
   (lang()==='es'?DAYS_ES:DAYS).forEach((name,i)=>{
    const b=make('button',i===selectedDay?'cy-active':'',name);
    b.type='button';b.setAttribute('aria-pressed',String(i===selectedDay));
-   b.addEventListener('click',()=>{selectedDay=i;render();});days.appendChild(b);
+   b.addEventListener('click',()=>{selectedDay=i;expandedId=null;render();});days.appendChild(b);
   });mount.appendChild(days);
   const nav=make('div','cy-view-tabs');
   [[ 'workout',t("Today's Workout",'Entrenamiento de hoy') ],[ 'edit',t('Edit Plan','Editar plan') ]].forEach(([id,label])=>{
@@ -278,16 +281,19 @@
   });mount.appendChild(nav);
   if(view==='workout') {
   const summary=make('div','cy28n-run-list');
-  const current=dayType()==='rest'?[]:selected();cycleProgress(summary,current.filter(id=>workouts.some(w=>w.id===id)));if(dayType()==='recovery')summary.appendChild(make('p','cy-note',t('Active Recovery — choose an easy cycling session.','Recuperación activa — elige una sesión de ciclismo suave.')));if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
+  const current=dayType()==='rest'?[]:[...selected()];if(session?.day===selectedDay&&!current.includes(session.workout.id))current.push(session.workout.id);cycleProgress(summary,current.filter(id=>workouts.some(w=>w.id===id)));if(dayType()==='recovery')summary.appendChild(make('p','cy-note',t('Active Recovery — choose an easy cycling session.','Recuperación activa — elige una sesión de ciclismo suave.')));if(dayType()==='rest')summary.appendChild(make('p','cy-note',t('Rest Day — no workout scheduled. Your planned selections are preserved.','Día de descanso — sin entrenamiento programado. Se conservan tus selecciones.')));if(dayType()!=='rest'&&!current.length)summary.appendChild(make('p','cy-empty',t('No workouts selected for this day.','No hay entrenamientos seleccionados para este día.')));
   current.forEach(id=>{const w=workouts.find(w=>w.id===id);if(w){
    const item=make('div','cy-plan-item');const heading=make('div','cy-plan-heading');heading.appendChild(workoutIcon(w));heading.appendChild(make('strong','',w.name));item.appendChild(heading);
-   const config=make('div','cy-config');config.appendChild(make('span','cy-note',t('Suggested: ','Sugerido: ')+w.defaultDurationMinutes+' min'));
+   const config=make('div','cy-config');
+   if(session?.workout.id===id&&session.day===selectedDay){sessionView(config);item.append(config);cycleCollapse(item,w);summary.append(item);return;}
+   config.appendChild(make('span','cy-note',t('Suggested: ','Sugerido: ')+w.defaultDurationMinutes+' min'));
    const durationHours=make('input');durationHours.type='number';durationHours.min='0';durationHours.step='1';durationHours.value=String(Math.floor(w.defaultDurationMinutes/60));
    const durationMinutes=make('input');durationMinutes.type='number';durationMinutes.min='0';durationMinutes.max='59';durationMinutes.step='1';durationMinutes.value=String(w.defaultDurationMinutes%60);
    const duration=make('div','');duration.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px';
    [[durationHours,t('Hours','Horas')],[durationMinutes,t('Minutes','Minutos')]].forEach(([input,label])=>{const field=make('label','',label);field.appendChild(input);duration.appendChild(field);});
    const mode=make('select');[['guided',t('Guided','Guiado')],['manual',t('Manual','Manual')]].forEach(([v,label])=>{const o=make('option','',label);o.value=v;mode.appendChild(o);});
    const start=make('button','cy-start',t('Prepare session','Preparar sesión'));start.type='button';start.addEventListener('click',()=>{
+    if(session){root.alert(t('Finish or close the active cycling session first.','Finaliza o cierra primero la sesión de ciclismo activa.'));return;}
     const h=Number(durationHours.value),m=Number(durationMinutes.value),n=h*60+m;if(!Number.isInteger(h)||!Number.isInteger(m)||h<0||m<0||m>59||n<5||n>360){root.alert(t('Enter a duration between 5 and 360 minutes.','Ingresa una duración entre 5 y 360 minutos.'));return;}
     startSession(w,n,mode.value);
    });config.append(duration,mode,start);item.appendChild(config);cycleCollapse(item,w);summary.appendChild(item);
@@ -325,7 +331,7 @@
   }
   }
   if(view==='workout') {
-  const logPanel=make('div','cy-panel');logPanel.appendChild(make('h2','',t('Recent Cycle activities','Actividades recientes de ciclismo')));
+  const logPanel=make('div','cy-panel cy-history-panel');logPanel.appendChild(make('h2','',t('Recent Cycle activities','Actividades recientes de ciclismo')));
   if(!history.length)logPanel.appendChild(make('p','cy-note',t('No activities logged yet.','Todavía no hay actividades registradas.')));
   history.forEach(r=>{const item=make('div','cy-log-item');const date=new Date(r.date);item.appendChild(make('strong','',r.workoutName+' · '+(Number.isNaN(date.getTime())?'':date.toLocaleDateString())));item.appendChild(make('small','',t('Planned ','Planeado ')+r.plannedMinutes+' min · '+t('Actual ','Real ')+(Number.isFinite(r.actualSeconds)?String(Math.floor(r.actualSeconds/60))+'m '+String(r.actualSeconds%60).padStart(2,'0')+'s':r.actualMinutes+' min')+' · RPE '+r.rpe+' · '+(r.completion==='complete'?t('Complete','Completo'):t('Partial','Parcial'))));if(r.notes)item.appendChild(make('small','',r.notes));
    const del=make('button','cy-delete',t('Delete activity','Eliminar actividad'));del.type='button';
@@ -380,5 +386,5 @@
 
  #cycle-builder .cy-config[hidden]{display:none!important}
  `;document.head.append(progressStyle);
- root.TrainLabCycleUI={render,openPlan(i){selectedDay=i;view='edit';render();},openWorkout(i){selectedDay=i;view='workout';render();},getDay(){return selectedDay;}};
+ root.TrainLabCycleUI={render,openPlan(i){selectedDay=i;view='edit';render();},openWorkout(i){if(selectedDay!==i)expandedId=null;selectedDay=i;view='workout';render();},getDay(){return selectedDay;},getView(){return view;}};
 })(window);

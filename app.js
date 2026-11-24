@@ -388,10 +388,10 @@ function tlImportDialog(file){
  }).catch(()=>alert(tr('This is not a valid TRAIN LAB shared plan.','Este no es un plan compartido válido de TRAIN LAB.')));
 }
 let tbExpandedExercise=null;
-window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},openWorkout(i){day=WEEKDAYS[i];totalBodyPlanMode=false;tbExpandedExercise=null;render();},getDay(){return WEEKDAYS.indexOf(day);}};
+window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},openWorkout(i){day=WEEKDAYS[i];totalBodyPlanMode=false;tbExpandedExercise=null;render();},getDay(){return WEEKDAYS.indexOf(day);},getView(){return totalBodyPlanMode?'plan':'workout';}};
 function workout(){
  let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
- if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
+ if(!totalBodyPlanMode&&type!=='rest'&&p.ex.length&&!window.TrainLabUnified?.syncing&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
  const dt=new Date(getStart(day,n));const start=new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,16);
  app.innerHTML=`<div class="days">${Object.keys(PROGRAM).map(d=>`<button class="${day===d?'active':''}" data-day="${d}">${db.settings.lang==='es'?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][EN.indexOf(d)]:d.slice(0,3)}</button>`).join('')}</div>
  <div class="tb-session-meta" ${totalBodyPlanMode?'':'hidden'}><small>${tr('Session','Sesión')} ${n} · ${tr('Completed','Completada')}: ${locked?tr('Yes','Sí'):tr('No','No')}</small></div>
@@ -450,8 +450,8 @@ function workout(){
  if($('finish'))$('finish').onclick=()=>{
  db.completed.push({day,session:n,finishedAt:new Date().toISOString(),startedAt:getStart(day,n)});
  db.session[day]=n+1;
- day=EN[(EN.indexOf(day)+1)%7];
- save();render();window.scrollTo({top:0,behavior:'instant'});
+ if(!window.TrainLabUnified?.active)day=EN[(EN.indexOf(day)+1)%7];
+ tbExpandedExercise=null;save();render();window.scrollTo({top:0,behavior:'instant'});
  };
 }
 // Timer results remain pending until the athlete explicitly logs the activity.
@@ -475,7 +475,7 @@ function exercise(e,i,locked){
  const completedSets=today.length;
  const isDone=completedSets>=(bike||elliptical||ride?1:count);
  const expanded=tbExpandedExercise===i;
- return `<section class="card exercise tb-compact-exercise"><button type="button" class="tb-exercise-toggle" data-tb-expand="${i}" aria-expanded="${expanded}" aria-controls="tb-details-${i}"><span class="tb-run-thumb">${anatomyImage(name,db.settings.bodyIllustration)}</span><span class="tb-run-status-icon" aria-hidden="true">${isDone?'✓':'○'}</span><span class="tb-exercise-heading"><strong>${i+1}. ${esc(exerciseName(name))}</strong><small>${esc(equipment)}</small><span class="tb-completion ${isDone?'tb-done':''}">${isDone?'✓ '+tr('Completed','Completado'):'○ '+tr('Not completed','No completado')}</span></span><span class="tb-exercise-chevron">${expanded?'▴':'▾'}</span></button><div id="tb-details-${i}" ${expanded?'':'hidden'}><div class="row"><div>${ride?'':`<div><span class="pill">${min}${max!==min?'–'+max:''} ${esc(unit)}</span></div>`}</div>${muscleArt(name)}</div>
+ return `<section class="card exercise tb-compact-exercise" data-tl-card="strength" data-tl-id="${esc(name)}" data-tl-done="${isDone}"><button type="button" class="tb-exercise-toggle" data-tl-toggle data-tb-expand="${i}" aria-expanded="${expanded}" aria-controls="tb-details-${i}"><span class="tb-run-thumb">${anatomyImage(name,db.settings.bodyIllustration)}</span><span class="tb-run-status-icon" aria-hidden="true">${isDone?'✓':'○'}</span><span class="tb-exercise-heading"><strong>${i+1}. ${esc(exerciseName(name))}</strong><small>${esc(equipment)}</small><span class="tb-completion ${isDone?'tb-done':''}">${isDone?'✓ '+tr('Completed','Completado'):'○ '+tr('Not completed','No completado')}</span></span><span class="tb-exercise-chevron">${expanded?'▴':'▾'}</span></button><div id="tb-details-${i}" ${expanded?'':'hidden'}><div class="row"><div>${ride?'':`<div><span class="pill">${min}${max!==min?'–'+max:''} ${esc(unit)}</span></div>`}</div>${muscleArt(name)}</div>
  ${cardio&&!bike?`<div class="row" style="margin-top:8px"><label>${tr('Distance unit','Unidad de distancia')}</label><select data-distanceunit="${i}" style="width:100px" ${locked?'disabled':''}><option value="km" ${distUnit==='km'?'selected':''}>km</option><option value="mi" ${distUnit==='mi'?'selected':''}>mi</option></select></div>`:''}
  ${!cardio&&name!=='Side plank'?`<div class="row" style="margin-top:8px"><label>${tr('Exercise weight unit','Unidad de peso del ejercicio')}</label><select data-exunit="${i}" style="width:100px" ${locked?'disabled':''}><option value="lb" ${exUnit==='lb'?'selected':''}>lb</option><option value="kg" ${exUnit==='kg'?'selected':''}>kg</option></select></div>`:''}
  ${bike||elliptical||ride?'':`<div class="row" style="margin-top:8px"><label>${tr('Planned sets (1–15)','Series planeadas (1–15)')}</label><select data-target="${i}" style="width:90px" ${locked?'disabled':''}>${Array.from({length:15},(_,j)=>`<option value="${j+1}" ${count===j+1?'selected':''}>${j+1}</option>`).join('')}</select></div>`}
@@ -504,6 +504,7 @@ function logExercise(i){
  const elev=ride?optionalNumber('ride-elevation-'+i):null;
  const speed=ride&&count>0?distanceKm(raw,distanceUnit(e[0]))/(count/60):null;
  if(ride&&((elev!==null&&(!Number.isFinite(elev)||elev<0))))return alert(tr('Enter valid ride details.','Ingresa detalles válidos de la rodada.'));
+ if(!db.started[startKey(day,n)])db.started[startKey(day,n)]=new Date().toISOString();
  const record={date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:n,name:e[0],equipment:e[1],unit:e[2],weight:bike?0:e[2]==='minutes'?distanceKm(raw,distanceUnit(e[0])):toLbs(raw,exerciseUnit(e[0])),count,...(ride?{...(elev!==null?{elevationGainM:elev*(distanceUnit(e[0])==='mi'?0.3048:1)}:{}),...(speed!==null&&Number.isFinite(speed)?{averageSpeedKmh:speed}:{})}:{}),...(bike&&pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===n&&Math.abs(count-pendingBikeTimer.seconds/60)<0.02?{timerRecordedSeconds:pendingBikeTimer.seconds}:{})};
  db.logs.push(record);
  if(bike)pendingBikeTimer=null;

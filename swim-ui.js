@@ -98,23 +98,22 @@ const drafts={};
 const todaysRecords=historyRead().filter(r=>{
  if(!r||!r.savedAt)return false;
  const when=new Date(r.savedAt),now=new Date();
- return !Number.isNaN(when.getTime())&&when.getFullYear()===now.getFullYear()&&when.getMonth()===now.getMonth()&&when.getDate()===now.getDate();
+ return (Number.isInteger(r.day)?r.day:(when.getDay()+6)%7)===day&&!Number.isNaN(when.getTime())&&when.getFullYear()===now.getFullYear()&&when.getMonth()===now.getMonth()&&when.getDate()===now.getDate();
 });
 const completedIds=new Set(todaysRecords.flatMap(r=>Array.isArray(r.workouts)?r.workouts.map(w=>w.id).filter(Boolean):[]));
-const planned=selected().filter(e=>data.workouts.some(w=>w.id===e.id));
+const planned=currentDayType()==='rest'?[]:selected().filter(e=>data.workouts.some(w=>w.id===e.id));
 const completedCount=planned.filter(e=>completedIds.has(e.id)).length;
 const progress=el('div','sw-daily-progress');
 progress.style.cssText='margin:10px 0 16px;padding:12px;border:1px solid #49647c;border-radius:12px';
 const progressLine=el('div');progressLine.style.cssText='display:flex;justify-content:space-between;gap:8px;font-size:13px;flex-wrap:wrap';progressLine.append(el('strong','',t('Today’s progress','Progreso de hoy')));progressLine.append(el('span','',completedCount+' '+t('of','de')+' '+planned.length+' '+t('completed','completados')));progress.append(progressLine);
 const track=el('div');track.style.cssText='height:5px;border-radius:20px;background:#344b5d;margin-top:8px;overflow:hidden';
 const fill=el('div');fill.style.cssText='height:100%;width:'+(planned.length?100*completedCount/planned.length:0)+'%;background:#26a777;border-radius:20px';track.append(fill);progress.append(track);if(planned.length)activityPanel.append(progress);
-if(active?.workoutId&&planned.some(e=>e.id===active.workoutId))expandedWorkoutId=active.workoutId;
-selected().forEach((entry)=>{
+planned.forEach((entry)=>{
  const def=data.workouts.find(w=>w.id===entry.id);if(!def)return;
  const card=el('div','sw-exercise-card');card.style.cssText='border:0;border-bottom:1px solid #29465e;padding:10px 0';activityPanel.append(card);
  const header=el('div','sw-exercise-row');header.style.cssText='display:flex;align-items:center;gap:10px;min-height:66px;cursor:pointer';
  const img=el('img','sw-icon');img.src='swim-icons/'+def.category+'-'+gender()+'.webp';img.alt='';img.loading='lazy';img.style.cssText='width:56px;height:56px;flex:0 0 56px;object-fit:cover;border-radius:9px';header.append(img);
- const isComplete=completedIds.has(entry.id);const statusIcon=el('span','sw-completion-icon',isComplete?'✓':'○');statusIcon.style.cssText='flex:0 0 23px;text-align:center;font-size:24px;font-weight:700;color:'+(isComplete?'#59d6a7':'#c5d0db');header.append(statusIcon);const description=el('div');description.style.cssText='flex:1;min-width:0;display:flex;flex-direction:column;gap:3px';
+ const isComplete=completedIds.has(entry.id);card.dataset.tlCard='swim';card.dataset.tlId=entry.id;card.dataset.tlDone=String(isComplete);header.setAttribute('data-tl-toggle','');const statusIcon=el('span','sw-completion-icon',isComplete?'✓':'○');statusIcon.style.cssText='flex:0 0 23px;text-align:center;font-size:24px;font-weight:700;color:'+(isComplete?'#59d6a7':'#c5d0db');header.append(statusIcon);const description=el('div');description.style.cssText='flex:1;min-width:0;display:flex;flex-direction:column;gap:3px';
  const name=el('strong','',def[lang()]);description.append(name);
  const status=el('small','',isComplete?t('Completed','Completado'):t('Not Completed','No completado'));
  status.style.cssText='font-size:12px;color:'+(isComplete?'#59d6a7':'#c5d0db');description.append(status);
@@ -143,7 +142,7 @@ selected().forEach((entry)=>{
  details.classList.add('sw-exercise-details');
  arrow.classList.add('sw-expand-arrow');
  details.style.display=expandedWorkoutId===entry.id?'block':'none';
- const existingTimer=active&&active.workoutId===entry.id?active:null;
+ const existingTimer=active&&active.workoutId===entry.id&&(active.day==null||active.day===day)?active:null;
  if(active&&!active.workoutId){details.append(el('small','',t('An older unfinished session is stored; finish it before starting a new timer.','Hay una sesión anterior sin terminar; termínala antes de iniciar otro cronómetro.')));}
  const reviewing=existingTimer?.status==='review';
  const timing=existingTimer&&(existingTimer.status==='running'||existingTimer.status==='paused');
@@ -162,7 +161,7 @@ selected().forEach((entry)=>{
  if(existingTimer?.status==='running'){const interval=setInterval(()=>{if(!timerLine.isConnected){clearInterval(interval);return;}timerLine.textContent=clockText(elapsed(existingTimer));},1000);}
  const row=actions(details);row.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px';
  if(!existingTimer){
-  row.append(button(t('Start timer','Iniciar cronómetro'),()=>{if(active){alert(t('Finish the existing timer first.','Finaliza el cronómetro activo primero.'));return;}setActive({workoutId:entry.id,status:'running',startedAt:Date.now(),accumulatedMs:0});render();}));
+  row.append(button(t('Start timer','Iniciar cronómetro'),()=>{if(active){alert(t('Finish the existing timer first.','Finaliza el cronómetro activo primero.'));return;}setActive({day,workoutId:entry.id,status:'running',startedAt:Date.now(),accumulatedMs:0});render();}));
  }else if(existingTimer.status==='running'){
   row.append(button(t('Pause','Pausar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='paused';setActive(existingTimer);render();}));
   row.append(button(t('Finish & Review','Finalizar y revisar'),()=>{existingTimer.accumulatedMs+=Date.now()-existingTimer.startedAt;existingTimer.startedAt=0;existingTimer.status='review';setActive(existingTimer);render();}));
@@ -188,7 +187,7 @@ selected().forEach((entry)=>{
 if(!selected().length)activityPanel.append(el('p','sw-note',t('Add exercises in Edit Plan first.','Agrega ejercicios en Editar plan.')));
 const records=historyRead();
 if(records.length){
- const list=el('div','sw-plan');list.append(el('strong','',t('Logged activities','Actividades registradas')));activityPanel.append(list);
+ const list=el('div','sw-plan sw-history-panel');list.append(el('strong','',t('Logged activities','Actividades registradas')));activityPanel.append(list);
  records.slice().reverse().forEach(r=>{
   const item=el('div','sw-plan');list.append(item);
   const details=Array.isArray(r.workoutDetails)&&r.workoutDetails.length?r.workoutDetails:(Array.isArray(r.workouts)?r.workouts.map(w=>{const d=data.workouts.find(x=>x.id===w.id);return {id:w.id,en:d?.en||w.id,es:d?.es||d?.en||w.id};}):[]);
@@ -222,5 +221,5 @@ if(records.length){
  });
 }
 }
-root.TrainLabSwimUI={render,openPlan(i){day=i;view='edit';render();},openWorkout(i){day=i;view='workout';render();},getDay(){return day;}};
+root.TrainLabSwimUI={render,openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i)expandedWorkoutId=null;day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
 })(window);
