@@ -75,6 +75,21 @@
   if(!child){fail('Allow TRAIN LAB to open FUEL LAB, then try again.');return}
   timer=root.setTimeout(()=>fail('FUEL LAB transfer timed out: '+diagnostic+'. No TRAIN LAB data was changed.'),TIMEOUT_MS);
  }
- root.TrainLabFuelLab={buildSummary:build,sendToFuelLab};
+ function previewSummary(){
+  const p=build(), es=root.document.getElementById('language-toggle')?.value==='es';
+  const tr=(a,b)=>es?b:a;
+  const d=root.document; d.getElementById('tl-fuel-preview')?.remove();
+  const panel=d.createElement('section'); panel.id='tl-fuel-preview';
+  panel.style.cssText='margin:12px auto;padding:16px;max-width:560px;background:#102c43;color:white;border:1px solid #527fa0;border-radius:12px';
+  function add(tag,value){const el=d.createElement(tag);el.textContent=value;panel.append(el);return el;}
+  add('h3',tr('Weekly export preview — 3B.1','Vista previa semanal — 3B.1'));
+  add('p',tr('Local preview only. Nothing sent or changed.','Vista previa local. No se enviaron ni cambiaron datos.'));
+  add('p',p.weekStart+' · '+p.timezone);
+  const labels={strength:tr('Total Body','Cuerpo completo'),cycle:tr('Cycle','Ciclismo'),run:tr('Run','Carrera'),swim:tr('Swim','Natación'),triathlon:tr('Triathlon','Triatlón')};
+  p.days.forEach((day,i)=>add('p',new Intl.DateTimeFormat(es?'es':'en',{weekday:'long',timeZone:'UTC'}).format(new Date(day.date+'T00:00:00Z'))+' · '+day.date+' — '+(day.sessions.map(s=>labels[s.discipline]+' / '+tr('duration unknown; intensity unknown','duración e intensidad desconocidas')).join('; ')||tr('No saved sessions','Sin sesiones guardadas'))));
+  const close=add('button',tr('Close preview','Cerrar vista previa'));close.type='button';close.onclick=()=>panel.remove();
+  d.getElementById('tl-send-fuel').parentElement.after(panel);panel.scrollIntoView({block:'nearest'});
+ }
+ root.TrainLabFuelLab={buildSummary:build,sendToFuelLab,previewSummary};
 
 })(window);
