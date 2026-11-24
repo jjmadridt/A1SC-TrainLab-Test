@@ -365,5 +365,5 @@
 
  }
  }
- root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render,getPlanSelections(i){const r=data[i]||{type:'training',items:[]};return {type:r.type||'training',items:(r.items||[]).map(id=>{const m=find(id);return {id,label:m?.item[lang()==='es'?1:0]||id};})};},openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i){expandedExercise=null;activeId=null;}day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
+ root.TrainLabTriathlon={getPlanItems(i){return Array.isArray(data[i]?.items)?data[i].items:[];},replacePlanItems(i,expected,next){if(!Number.isInteger(i)||i<0||i>6||!Array.isArray(next)||JSON.stringify(this.getPlanItems(i))!==JSON.stringify(expected))return false;const r={...(data[i]||{type:"training"}),items:next};try{localStorage.setItem(KEY,JSON.stringify({...data,[i]:r}));}catch(e){return false;}data[i]=r;return true;},name:'TRIATHLON',version:'0.2.0',status:'development',render,getPlanSelections(i){const r=data[i]||{type:'training',items:[]};return {type:r.type||'training',items:(r.items||[]).map(id=>{const m=find(id);return {id,label:m?.item[lang()==='es'?1:0]||id};})};},openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i){expandedExercise=null;activeId=null;}day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
 })(window);

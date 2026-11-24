@@ -35,8 +35,22 @@ function decorate(all){
  document.body.classList.toggle('tl-unified-mixed',new Set(all.map(c=>c.dataset.tlCard)).size>1);
  all.forEach(c=>{const id=c.dataset.tlCard,i=ids.indexOf(id);if(c.querySelector('.tl-unified-discipline'))return;const target=c.querySelector(({strength:'.tb-exercise-heading',cycle:'.cy28-text',run:'.run-title-button',swim:'.sw-exercise-header > div',tri:'.tri-exercise-toggle > span:nth-child(3)'})[id]);if(target){const tag=document.createElement('small');tag.className='tl-unified-discipline';tag.textContent=names[i];target.append(tag);}});
 }
-// 3B.16: one read-only selection overview, derived from each original module.
-// Native controls remain the only writers of plan data, including Swim configuration.
+// 3B.17: edit original per-module plans directly; never write activity history.
+let undoRemoval=null, removalMessage=null;
+const clonePlan=items=>JSON.parse(JSON.stringify(items));
+function redrawPlan(){const i=activeModule();if(i>=0){modules()[i].openPlan(currentDay());refresh();}}
+function removePlanItem(j,d,id,label){
+ const m=modules()[j],before=clonePlan(m.getPlanItems(d));
+ const after=before.filter(item=>(j===3?item.id:item)!==id);
+ if(after.length===before.length)return;
+ if(!m.replacePlanItems(d,before,after)){removalMessage={d,en:'Could not save removal. Your plan is unchanged.',es:'No se pudo guardar. Tu plan no cambió.'};redrawPlan();return;}
+ undoRemoval={j,d,before,after,label};removalMessage=null;redrawPlan();
+}
+function undoPlanItem(){
+ const u=undoRemoval;if(!u||currentDay()!==u.d)return;
+ if(!modules()[u.j].replacePlanItems(u.d,u.after,u.before)){removalMessage={d:u.d,en:'Could not undo. The plan changed or storage is unavailable.',es:'No se pudo deshacer. El plan cambió o el almacenamiento no está disponible.'};}else{removalMessage=null;}
+ undoRemoval=null;redrawPlan();
+}
 let planOverview=null;
 function clearPlanOverview(){planOverview?.remove();planOverview=null;}
 function renderPlanOverview(i,d){
@@ -44,7 +58,7 @@ function renderPlanOverview(i,d){
  const tabs=host?.querySelector(['.tb-view-actions','.cy-view-tabs','.run-categories','.sw-view-tabs','.tri-tabs'][i]);
  if(!tabs){clearPlanOverview();return;}
  const groups=modules().map(m=>m.getPlanSelections(d));
- const signature=JSON.stringify([i,d,lang(),groups]);
+ const signature=JSON.stringify([i,d,lang(),groups,undoRemoval?.d===d?undoRemoval:null,removalMessage?.d===d?removalMessage:null]);
  if(planOverview?.isConnected&&planOverview.dataset.signature===signature&&planOverview.previousElementSibling===tabs)return;
  clearPlanOverview();
  const panel=document.createElement('section');panel.id='tl-plan-selected';panel.dataset.signature=signature;
@@ -56,13 +70,13 @@ function renderPlanOverview(i,d){
   const section=document.createElement('div');section.className='tl-plan-group';
   const top=document.createElement('div');top.className='tl-plan-group-head';
   const label=document.createElement('strong');label.textContent=names[j]+(g.type==='rest'?' · '+tr('Rest day — retained','Descanso — guardados'):'');top.append(label);
-  if(j!==i){const btn=document.createElement('button');btn.type='button';btn.dataset.tlEditDiscipline=ids[j];btn.textContent=tr('Edit','Editar');btn.setAttribute('aria-label',tr('Edit ','Editar ')+names[j]);btn.onclick=()=>{window.TrainLabShowDiscipline(ids[j]);modules()[j].openPlan(d);refresh();};top.append(btn);}
-  else{const badge=document.createElement('small');badge.textContent=tr('Editing below','Editando abajo');top.append(badge);}
   section.append(top);
-  g.items.forEach(item=>{const row=document.createElement('div');row.className='tl-plan-selected-item';row.dataset.tlSelectedDiscipline=ids[j];row.dataset.tlSelectedId=String(item.id);const mark=document.createElement('span');mark.textContent='✓';mark.setAttribute('aria-hidden','true');const title=document.createElement('span');title.textContent=item.label;row.append(mark,title);section.append(row);});
+  g.items.forEach(item=>{const row=document.createElement('div');row.className='tl-plan-selected-item';row.dataset.tlSelectedDiscipline=ids[j];row.dataset.tlSelectedId=String(item.id);const mark=document.createElement('span');mark.textContent='✓';mark.setAttribute('aria-hidden','true');const title=document.createElement('span');title.textContent=item.label;const remove=document.createElement('button');remove.type='button';remove.className='tl-plan-remove';remove.dataset.tlRemove=String(item.id);remove.textContent=tr('Remove','Quitar');remove.setAttribute('aria-label',tr('Remove ','Quitar ')+item.label);remove.onclick=()=>removePlanItem(j,d,item.id,item.label);row.append(mark,title,remove);section.append(row);});
   panel.append(section);
  });
  if(!count){const empty=document.createElement('p');empty.textContent=tr('No exercises selected for this day. Choose exercises below or add from another discipline.','No hay ejercicios seleccionados para este día. Elige ejercicios abajo o agrega de otra disciplina.');panel.append(empty);}
+ if(undoRemoval?.d===d){const notice=document.createElement('div');notice.className='tl-plan-undo';notice.setAttribute('role','status');const text=document.createElement('span');text.textContent=tr('Removed: ','Quitado: ')+undoRemoval.label;const btn=document.createElement('button');btn.type='button';btn.dataset.tlUndo='true';btn.textContent=tr('Undo','Deshacer');btn.onclick=undoPlanItem;notice.append(text,btn);panel.append(notice);}
+ if(removalMessage?.d===d){const msg=document.createElement('p');msg.setAttribute('role','alert');msg.textContent=lang()?removalMessage.es:removalMessage.en;panel.append(msg);}
  tabs.after(panel);planOverview=panel;
 }
 function refresh(){
@@ -99,8 +113,8 @@ const planStyle=document.createElement('style');planStyle.textContent=`
 .tl-plan-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;color:#8ac9f3}
 .tl-plan-group-head strong{min-width:0;overflow-wrap:anywhere}.tl-plan-group-head small{font-size:11px;color:#b8cddd}
 .tl-plan-group-head button{min-height:36px;padding:6px 12px;min-width:64px;font-size:12px;border-radius:8px}
-.tl-plan-selected-item{display:flex;align-items:baseline;gap:8px;padding:6px 0 3px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
-.tl-plan-selected-item>span:first-child{color:#6dd5aa;font-weight:bold;flex:none}.tl-plan-selected-item>span:last-child{min-width:0}
+.tl-plan-selected-item{display:flex;align-items:center;gap:8px;padding:6px 0 3px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.tl-plan-selected-item>span:first-child{color:#6dd5aa;font-weight:bold;flex:none}.tl-plan-selected-item>span:nth-child(2){min-width:0;flex:1}.tl-plan-remove{flex:none;min-height:44px;min-width:70px;padding:6px 9px!important;font-size:12px!important;border:1px solid #a85a78!important;background:#301e31!important;color:#ffb4cc!important;border-radius:8px}.tl-plan-undo{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid #45647c;margin-top:6px;font-size:13px;color:#cce8f7}.tl-plan-undo span{min-width:0;overflow-wrap:anywhere}.tl-plan-undo button{min-height:44px;flex:none}
 `;document.head.append(planStyle);
 const unifiedStyle=document.createElement('style');unifiedStyle.textContent=`
 #tl-unified-header,#tl-unified-footer{display:none}

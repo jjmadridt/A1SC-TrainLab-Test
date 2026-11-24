@@ -221,5 +221,5 @@ if(records.length){
  });
 }
 }
-root.TrainLabSwimUI={render,getPlanSelections(i){return {type:dayTypes[i]||'training',items:(Array.isArray(plan[i])?plan[i]:[]).map(e=>({id:e.id,label:root.TrainLabSwim.workouts.find(w=>w.id===e.id)?.[lang()]||e.id}))};},openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i)expandedWorkoutId=null;day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
+root.TrainLabSwimUI={getPlanItems(i){return Array.isArray(plan[i])?plan[i]:[];},replacePlanItems(i,expected,next){if(!Number.isInteger(i)||i<0||i>6||!Array.isArray(next)||JSON.stringify(this.getPlanItems(i))!==JSON.stringify(expected))return false;try{localStorage.setItem(KEY,JSON.stringify({...plan,[i]:next}));}catch(e){return false;}plan[i]=next;return true;},render,getPlanSelections(i){return {type:dayTypes[i]||'training',items:(Array.isArray(plan[i])?plan[i]:[]).map(e=>({id:e.id,label:root.TrainLabSwim.workouts.find(w=>w.id===e.id)?.[lang()]||e.id}))};},openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i)expandedWorkoutId=null;day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
 })(window);

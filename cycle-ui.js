@@ -386,5 +386,5 @@
 
  #cycle-builder .cy-config[hidden]{display:none!important}
  `;document.head.append(progressStyle);
- root.TrainLabCycleUI={render,getPlanSelections(i){return {type:dayTypes[i]||'training',items:(Array.isArray(plan[i])?plan[i]:[]).map(id=>({id,label:getWorkouts().find(w=>w.id===id)?.name||id}))};},openPlan(i){selectedDay=i;view='edit';render();},openWorkout(i){if(selectedDay!==i)expandedId=null;selectedDay=i;view='workout';render();},getDay(){return selectedDay;},getView(){return view;}};
+ root.TrainLabCycleUI={getPlanItems(i){return Array.isArray(plan[i])?plan[i]:[];},replacePlanItems(i,expected,next){if(!Number.isInteger(i)||i<0||i>6||!Array.isArray(next)||JSON.stringify(this.getPlanItems(i))!==JSON.stringify(expected))return false;try{localStorage.setItem(KEY,JSON.stringify({...plan,[i]:next}));}catch(e){return false;}plan[i]=next;return true;},render,getPlanSelections(i){return {type:dayTypes[i]||'training',items:(Array.isArray(plan[i])?plan[i]:[]).map(id=>({id,label:getWorkouts().find(w=>w.id===id)?.name||id}))};},openPlan(i){selectedDay=i;view='edit';render();},openWorkout(i){if(selectedDay!==i)expandedId=null;selectedDay=i;view='workout';render();},getDay(){return selectedDay;},getView(){return view;}};
 })(window);
