@@ -267,7 +267,7 @@ body:has(#module-page.visible) #tl-cross-toolbar{display:block}
  <button class="module" data-module="swim"><img src="home-images/swim.webp" alt=""><div class="module-content"><strong>SWIM</strong><span><span data-i18n="swimPreview">Technique · Endurance</span></span></div></button>
  <button class="module" data-module="tri"><img src="home-images/triathlon.webp" alt=""><div class="module-content"><strong>TRIATHLON</strong><span><span data-i18n="triTagline">Swim · Bike · Run</span></span></div></button>
  </div>
- <div style="display:flex;justify-content:center;margin:14px 0 2px"><button id="tl-send-fuel" type="button" style="border:1px solid #345c79;background:#102c43;color:#f2f8ff;border-radius:10px;padding:10px 18px;font-size:13px">Preview Fuel Lab export</button></div>
+ <div style="display:flex;justify-content:center;margin:14px 0 2px"><button id="tl-send-fuel" type="button" style="border:1px solid #345c79;background:#102c43;color:#f2f8ff;border-radius:10px;padding:10px 18px;font-size:13px">Open FUEL LAB</button></div>
 </section>
 <section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div id="cycle-builder" style="display:none"></div><div id="swim-builder" style="display:none"></div><div id="tri-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
 <section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
@@ -286,8 +286,8 @@ body:has(#module-page.visible) #tl-cross-toolbar{display:block}
 <script src="screen-awake.js?v=20261111wake17v"></script>
 <script src="ble-heart-rate.js?v=20261111ble17y"></script>
 <script src="unified-planner.js?v=unified-day-4"></script>
-<script src="fuel-lab-sender.js?v=phase3b2"></script>
-<script>document.getElementById("tl-send-fuel").addEventListener("click",()=>window.TrainLabFuelLab.previewSummary());</script>
+<script src="fuel-lab-sender.js?v=phase3b3"></script>
+<script>(function(){const button=document.getElementById('tl-send-fuel');const lang=document.getElementById('language-toggle');const translate=()=>{button.textContent=lang.value==='es'?'Abrir FUEL LAB':'Open FUEL LAB';};button.addEventListener('click',()=>window.TrainLabFuelLab.sendToFuelLab());lang.addEventListener('change',translate);new MutationObserver(translate).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});translate();})();</script>
 <script src="compact-training-header.js?v=mixed-day-2"></script>
 <script>
 /* Place the existing shared Timer launcher in the top navigation.
