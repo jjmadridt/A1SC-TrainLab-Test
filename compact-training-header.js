@@ -12,7 +12,6 @@ const css=document.createElement('style');css.textContent=`
 #fitclimb .days,#module-page .cy-weekday-strip,#module-page .run-days,#module-page .sw-days,#module-page .tri-days{position:sticky!important;top:calc(var(--tl28-shell,54px) + 39px);z-index:800;margin:0!important;padding:2px 0!important;background:#091b2c!important;min-height:36px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
 #fitclimb .days button,#module-page .cy-weekday-strip button,#module-page .run-days button,#module-page .sw-days button,#module-page .tri-days button{min-height:31px!important;height:31px!important;padding:3px 0!important;font-size:11px!important;border-radius:7px!important}
 #fitclimb .tl-cross-launch,#module-page .tl-cross-launch{position:sticky!important;top:calc(var(--tl28-shell,54px) + 75px);z-index:799;min-height:34px!important;height:34px!important;padding:4px 9px!important;margin:0 0 5px!important;font-size:12px!important;border-radius:7px!important}
-#fitclimb .tl-cross-summary,#module-page .tl-cross-summary,#tl-cross-queue{display:none!important}
 #fitclimb #app>.row:first-of-type h2{font-size:0!important;margin:0!important;line-height:0!important}
 #fitclimb #app>.row:first-of-type h2+small{font-size:12px}
 @media(max-width:370px){#fitclimb .days button,#module-page .cy-weekday-strip button,#module-page .run-days button,#module-page .sw-days button,#module-page .tri-days button{font-size:10px!important}}
@@ -30,7 +29,6 @@ function place(){updateShell();for(const [id,selector] of pairs){const section=d
    if(builder && days.parentElement!==builder)builder.insertBefore(days,builder.firstChild);
  }
  if(days.nextElementSibling!==launch)days.insertAdjacentElement('afterend',launch);
- section.querySelector('#tl-cross-queue')?.remove();
  // Remove redundant heading text only, not workout cards or saved selections.
  const redundant={
   'run-builder':['today’s run program','today\'s run program','programa de carrera del día'],

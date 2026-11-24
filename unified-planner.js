@@ -43,14 +43,15 @@ function refresh(){
  const old=document.getElementById('tl-cross-queue');
  if(old?.dataset.signature===signature)return;
  old?.remove();
- if(i<0||!items.some(([name])=>name!==names[i]))return;
+ if(i<0)return;
  const panel=summary(d);panel.id='tl-cross-queue';panel.dataset.signature=signature;
  panel.querySelector('h3').textContent=tr('Combined daily workout — ','Rutina combinada — ')+(lang()?daysEs:days)[d];
- names.forEach((name,j)=>{if(j===i||!items.some(([n])=>n===name))return;
+ names.forEach((name,j)=>{if(!items.some(([n])=>n===name))return;
  const b=document.createElement('button');b.type='button';b.textContent=tr('Open workout: ','Abrir rutina: ')+name;
  b.style.cssText='display:block;width:100%;margin-top:8px';
  b.addEventListener('click',()=>{window.TrainLabShowDiscipline?.(ids[j]);modules()[j]?.openWorkout?.(d);refresh();});panel.append(b);});
  toolbar.append(panel);
+ const note=document.createElement('p');note.textContent=tr('All saved activities for this day. Open a discipline to use its workout controls.','Todas las actividades guardadas para este día. Abre una disciplina para usar sus controles.');panel.append(note);
 }
 function install(){
  document.querySelectorAll('.tl-cross-launch').forEach(b=>b.addEventListener('click',open));
@@ -58,6 +59,8 @@ function install(){
  const observer=new MutationObserver(refresh);
  ['fitclimb','module-page'].forEach(id=>{const el=document.getElementById(id);if(el)observer.observe(el,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});});
  document.getElementById('language-toggle')?.addEventListener('change',refresh);
+ document.addEventListener('click',()=>queueMicrotask(refresh));
+ document.addEventListener('change',()=>queueMicrotask(refresh));
 }
 const style=document.createElement('style');style.textContent=`.tl-cross-launch{display:block;width:100%;min-height:48px;margin:12px 0;padding:12px;border:1px solid #527fa0;border-radius:10px;background:#122d43;color:#fff;font-weight:700}.tl-cross-overlay{position:fixed;inset:0;z-index:9999;background:#000c;display:flex;align-items:center;justify-content:center;padding:16px}.tl-cross-panel{background:#0e263b;border:1px solid #4d7796;border-radius:16px;padding:20px;width:min(100%,440px);max-height:90dvh;overflow:auto;color:white}.tl-cross-panel h2{font-size:20px}.tl-cross-panel p{font-size:13px;line-height:1.5;color:#c3d6e5}.tl-cross-options{display:grid;gap:8px;margin:16px 0}.tl-cross-options button{min-height:48px;text-align:left;padding:12px;background:#153b58;color:white;border:1px solid #477795;border-radius:9px}.tl-cross-summary{margin:12px 0;padding:12px;border:1px solid #456a83;border-radius:10px;background:#102d43;color:white}.tl-cross-summary h3{font-size:14px;margin:0 0 8px}.tl-cross-summary ul{margin:0;padding-left:20px;max-height:180px;overflow:auto}.tl-cross-summary li{padding:3px 0;font-size:13px}.tl-cross-summary p{font-size:13px}`;document.head.append(style);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
