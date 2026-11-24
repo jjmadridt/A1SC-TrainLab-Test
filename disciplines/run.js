@@ -207,5 +207,5 @@
     #run-builder .run-expand-chevron{float:right;margin-left:8px}
     `;document.head.appendChild(st);
   }
-  window.TrainLabRun={name:'RUN',version:'0.5.0',status:'all-exercise-controls',render,openPlan(i){day=DAYS[i];view='plan';render();},getDay(){return DAYS.indexOf(day);}};
+  window.TrainLabRun={name:'RUN',version:'0.5.0',status:'all-exercise-controls',render,openPlan(i){day=DAYS[i];view='plan';render();},openWorkout(i){day=DAYS[i];view='workout';expanded=null;render();},getDay(){return DAYS.indexOf(day);}};
 })();

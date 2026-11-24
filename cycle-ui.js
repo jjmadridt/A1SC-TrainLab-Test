@@ -380,5 +380,5 @@
 
  #cycle-builder .cy-config[hidden]{display:none!important}
  `;document.head.append(progressStyle);
- root.TrainLabCycleUI={render,openPlan(i){selectedDay=i;view='edit';render();},getDay(){return selectedDay;}};
+ root.TrainLabCycleUI={render,openPlan(i){selectedDay=i;view='edit';render();},openWorkout(i){selectedDay=i;view='workout';render();},getDay(){return selectedDay;}};
 })(window);

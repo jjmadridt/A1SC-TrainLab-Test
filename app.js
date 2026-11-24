@@ -388,7 +388,7 @@ function tlImportDialog(file){
  }).catch(()=>alert(tr('This is not a valid TRAIN LAB shared plan.','Este no es un plan compartido válido de TRAIN LAB.')));
 }
 let tbExpandedExercise=null;
-window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},getDay(){return WEEKDAYS.indexOf(day);}};
+window.TrainLabTotalBodyPlanner={openPlan(i){day=WEEKDAYS[i];totalBodyPlanMode=true;render();},openWorkout(i){day=WEEKDAYS[i];totalBodyPlanMode=false;tbExpandedExercise=null;render();},getDay(){return WEEKDAYS.indexOf(day);}};
 function workout(){
  let p=PROGRAM[day],n=session(day),locked=completed(day,n),type=dayType(day);
  if(type!=='rest'&&!db.started[startKey(day,n)]){db.started[startKey(day,n)]=new Date().toISOString();save()}
