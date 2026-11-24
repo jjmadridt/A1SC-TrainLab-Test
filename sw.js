@@ -1,5 +1,5 @@
 
-const CACHE = 'trainlab-v3.15-phase3b9';
+const CACHE = 'trainlab-v3.16-phase3b11';
 
 const ASSETS = [
   // Match versioned script URLs in index.html for offline startup.
