@@ -221,5 +221,5 @@ if(records.length){
  });
 }
 }
-root.TrainLabSwimUI={render,openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i)expandedWorkoutId=null;day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
+root.TrainLabSwimUI={render,getPlanSelections(i){return {type:dayTypes[i]||'training',items:(Array.isArray(plan[i])?plan[i]:[]).map(e=>({id:e.id,label:root.TrainLabSwim.workouts.find(w=>w.id===e.id)?.[lang()]||e.id}))};},openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i)expandedWorkoutId=null;day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
 })(window);

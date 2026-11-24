@@ -35,10 +35,40 @@ function decorate(all){
  document.body.classList.toggle('tl-unified-mixed',new Set(all.map(c=>c.dataset.tlCard)).size>1);
  all.forEach(c=>{const id=c.dataset.tlCard,i=ids.indexOf(id);if(c.querySelector('.tl-unified-discipline'))return;const target=c.querySelector(({strength:'.tb-exercise-heading',cycle:'.cy28-text',run:'.run-title-button',swim:'.sw-exercise-header > div',tri:'.tri-exercise-toggle > span:nth-child(3)'})[id]);if(target){const tag=document.createElement('small');tag.className='tl-unified-discipline';tag.textContent=names[i];target.append(tag);}});
 }
+// 3B.16: one read-only selection overview, derived from each original module.
+// Native controls remain the only writers of plan data, including Swim configuration.
+let planOverview=null;
+function clearPlanOverview(){planOverview?.remove();planOverview=null;}
+function renderPlanOverview(i,d){
+ const host=document.getElementById(rootIds[i]);
+ const tabs=host?.querySelector(['.tb-view-actions','.cy-view-tabs','.run-categories','.sw-view-tabs','.tri-tabs'][i]);
+ if(!tabs){clearPlanOverview();return;}
+ const groups=modules().map(m=>m.getPlanSelections(d));
+ const signature=JSON.stringify([i,d,lang(),groups]);
+ if(planOverview?.isConnected&&planOverview.dataset.signature===signature&&planOverview.previousElementSibling===tabs)return;
+ clearPlanOverview();
+ const panel=document.createElement('section');panel.id='tl-plan-selected';panel.dataset.signature=signature;
+ const h=document.createElement('h3');const count=groups.reduce((n,g)=>n+g.items.length,0);
+ h.textContent=tr('Selected for ','Seleccionados para ')+(lang()?daysEs:days)[d]+' ('+count+')';panel.append(h);
+ const note=document.createElement('p');note.textContent=tr('All disciplines · Saved selections','Todas las disciplinas · Selecciones guardadas');panel.append(note);
+ groups.forEach((g,j)=>{
+  if(!g.items.length)return;
+  const section=document.createElement('div');section.className='tl-plan-group';
+  const top=document.createElement('div');top.className='tl-plan-group-head';
+  const label=document.createElement('strong');label.textContent=names[j]+(g.type==='rest'?' · '+tr('Rest day — retained','Descanso — guardados'):'');top.append(label);
+  if(j!==i){const btn=document.createElement('button');btn.type='button';btn.dataset.tlEditDiscipline=ids[j];btn.textContent=tr('Edit','Editar');btn.setAttribute('aria-label',tr('Edit ','Editar ')+names[j]);btn.onclick=()=>{window.TrainLabShowDiscipline(ids[j]);modules()[j].openPlan(d);refresh();};top.append(btn);}
+  else{const badge=document.createElement('small');badge.textContent=tr('Editing below','Editando abajo');top.append(badge);}
+  section.append(top);
+  g.items.forEach(item=>{const row=document.createElement('div');row.className='tl-plan-selected-item';row.dataset.tlSelectedDiscipline=ids[j];row.dataset.tlSelectedId=String(item.id);const mark=document.createElement('span');mark.textContent='✓';mark.setAttribute('aria-hidden','true');const title=document.createElement('span');title.textContent=item.label;row.append(mark,title);section.append(row);});
+  panel.append(section);
+ });
+ if(!count){const empty=document.createElement('p');empty.textContent=tr('No exercises selected for this day. Choose exercises below or add from another discipline.','No hay ejercicios seleccionados para este día. Elige ejercicios abajo o agrega de otra disciplina.');panel.append(empty);}
+ tabs.after(panel);planOverview=panel;
+}
 function refresh(){
  if(!header||syncing)return;
  document.querySelectorAll('.tl-cross-launch').forEach(b=>setText(b,tr('+ Add from another discipline','+ Agregar de otra disciplina')));
- const i=activeModule();if(i<0||modules()[i]?.getView?.()!=='workout'){if(active)deactivate();return;}
+ const i=activeModule();if(i<0){if(active)deactivate();clearPlanOverview();return;}if(modules()[i]?.getView?.()!=='workout'){if(active)deactivate();const d=currentDay();lastDay=d;renderPlanOverview(i,d);return;}clearPlanOverview();
  const d=currentDay();
  if(!active||shownDay!==d||entry!==i){syncing=true;try{modules().forEach((m,j)=>{if(j!==i&&m?.openWorkout&&(!active||shownDay!==d||m.getDay()!==d||m.getView()!=='workout'))m.openWorkout(d);});}finally{syncing=false;}shownDay=d;lastDay=d;entry=i;active=true;document.body.classList.add('tl-unified-active');}
  const key=String(d)+'|'+lang();if(header.dataset.signature!==key){header.dataset.signature=key;setText(heading,tr('Daily workout','Rutina diaria')+' — '+(lang()?daysEs:days)[d]);daysRow.querySelectorAll('button').forEach((b,j)=>{setText(b,(lang()?['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'])[j]);b.setAttribute('aria-pressed',String(j===d));});setText(header.querySelector('.tl-unified-workout'),tr("Today's Workout",'Rutina de hoy'));setText(header.querySelector('.tl-unified-edit'),tr('Edit Plan','Editar plan'));setText(tools,tr('Session & history tools','Sesión e historial'));}
@@ -59,8 +89,19 @@ function install(){
  document.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')closeOtherDiscipline(e.target.closest('.sw-exercise-header[data-tl-toggle]'));},true);
  document.addEventListener('click',schedule);document.addEventListener('change',schedule);refresh();
 }
-window.TrainLabUnified={get active(){return active;},get syncing(){return syncing;},enter,onScreenChange(name){if(name==='home'||name==='profile'){if(active)deactivate();}schedule();}};
+window.TrainLabUnified={get active(){return active;},get syncing(){return syncing;},enter,onScreenChange(name){if(name==='home'||name==='profile'){if(active)deactivate();clearPlanOverview();}schedule();}};
 const style=document.createElement('style');style.textContent=`.tl-cross-launch{display:block;width:100%;min-height:48px;margin:12px 0;padding:12px;border:1px solid #527fa0;border-radius:10px;background:#122d43;color:#fff;font-weight:700}.tl-cross-overlay{position:fixed;inset:0;z-index:9999;background:#000c;display:flex;align-items:center;justify-content:center;padding:16px}.tl-cross-panel{background:#0e263b;border:1px solid #4d7796;border-radius:16px;padding:20px;width:min(100%,440px);max-height:90dvh;overflow:auto;color:white}.tl-cross-panel h2{font-size:20px}.tl-cross-panel p{font-size:13px;line-height:1.5;color:#c3d6e5}.tl-cross-options{display:grid;gap:8px;margin:16px 0}.tl-cross-options button{min-height:48px;text-align:left;padding:12px;background:#153b58;color:white;border:1px solid #477795;border-radius:9px}.tl-cross-summary{margin:12px 0;padding:12px;border:1px solid #456a83;border-radius:10px;background:#102d43;color:white}.tl-cross-summary h3{font-size:14px;margin:0 0 8px}.tl-cross-summary ul{margin:0;padding-left:20px;max-height:180px;overflow:auto}.tl-cross-summary li{padding:3px 0;font-size:13px}.tl-cross-summary p{font-size:13px}`;document.head.append(style);
+const planStyle=document.createElement('style');planStyle.textContent=`
+#tl-plan-selected{border:1px solid #45647c;background:#10283d;border-radius:12px;padding:12px;margin:10px 0 14px;color:#fff}
+#tl-plan-selected h3{font-size:16px!important;margin:0 0 4px!important;display:block!important}
+#tl-plan-selected p{font-size:12px;color:#bbd2e2;margin:4px 0 8px;line-height:1.4}
+.tl-plan-group{border-top:1px solid #34516c;padding:8px 0 4px}
+.tl-plan-group-head{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;font-size:11px;color:#8ac9f3}
+.tl-plan-group-head strong{min-width:0;overflow-wrap:anywhere}.tl-plan-group-head small{font-size:11px;color:#b8cddd}
+.tl-plan-group-head button{min-height:36px;padding:6px 12px;min-width:64px;font-size:12px;border-radius:8px}
+.tl-plan-selected-item{display:flex;align-items:baseline;gap:8px;padding:6px 0 3px;font-size:14px;line-height:1.35;overflow-wrap:anywhere}
+.tl-plan-selected-item>span:first-child{color:#6dd5aa;font-weight:bold;flex:none}.tl-plan-selected-item>span:last-child{min-width:0}
+`;document.head.append(planStyle);
 const unifiedStyle=document.createElement('style');unifiedStyle.textContent=`
 #tl-unified-header,#tl-unified-footer{display:none}
 body.tl-unified-active #tl-unified-header,body.tl-unified-active #tl-unified-footer{display:block}

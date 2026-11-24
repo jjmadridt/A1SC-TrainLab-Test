@@ -365,5 +365,5 @@
 
  }
  }
- root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render,openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i){expandedExercise=null;activeId=null;}day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
+ root.TrainLabTriathlon={name:'TRIATHLON',version:'0.2.0',status:'development',render,getPlanSelections(i){const r=data[i]||{type:'training',items:[]};return {type:r.type||'training',items:(r.items||[]).map(id=>{const m=find(id);return {id,label:m?.item[lang()==='es'?1:0]||id};})};},openPlan(i){day=i;view='edit';render();},openWorkout(i){if(day!==i){expandedExercise=null;activeId=null;}day=i;view='workout';render();},getDay(){return day;},getView(){return view;}};
 })(window);
