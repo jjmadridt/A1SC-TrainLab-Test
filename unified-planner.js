@@ -41,16 +41,17 @@ function refresh(){
  const items=i<0?[]:selections(d);
  const signature=JSON.stringify([i,d,lang(),items]);
  const old=document.getElementById('tl-cross-queue');
- if(old?.dataset.signature===signature)return;
+ const mount=i===0?document.querySelector('#app .tb-view-actions'):i===1?document.querySelector('#cycle-builder .cy-view-tabs'):i===2?document.querySelector('#run-builder [data-run-view]')?.parentElement:i===3?document.querySelector('#swim-builder .sw-view-tabs'):i===4?document.querySelector('#tri-builder .tri-tabs'):null;
+ if(old?.dataset.signature===signature && old.previousElementSibling===mount)return;
  old?.remove();
- if(i<0)return;
+ if(i<0||!mount)return;
  const panel=summary(d);panel.id='tl-cross-queue';panel.dataset.signature=signature;
  panel.querySelector('h3').textContent=tr('Combined daily workout — ','Rutina combinada — ')+(lang()?daysEs:days)[d];
  names.forEach((name,j)=>{if(!items.some(([n])=>n===name))return;
  const b=document.createElement('button');b.type='button';b.textContent=tr('Open workout: ','Abrir rutina: ')+name;
  b.style.cssText='display:block;width:100%;margin-top:8px';
  b.addEventListener('click',()=>{window.TrainLabShowDiscipline?.(ids[j]);modules()[j]?.openWorkout?.(d);refresh();});panel.append(b);});
- toolbar.append(panel);
+ mount.insertAdjacentElement('afterend',panel);
  const note=document.createElement('p');note.textContent=tr('All saved activities for this day. Open a discipline to use its workout controls.','Todas las actividades guardadas para este día. Abre una disciplina para usar sus controles.');panel.append(note);
 }
 function install(){
