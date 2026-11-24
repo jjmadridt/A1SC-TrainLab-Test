@@ -48,7 +48,7 @@
   if(u.href.length>8000)throw Error('oversized schedule');return u.href;
  }
  function sendToFuelLab(){
-  try{root.location.assign(buildTransfer());}catch(_){root.alert(root.document.documentElement.lang==='es'?'No se pudo abrir FUEL LAB. Tu plan no ha cambiado.':'Could not open FUEL LAB. Your plan has not changed.');}
+  try{const url=new URL(buildTransfer());url.searchParams.set('launch',Date.now().toString(36));root.location.assign(url.href);}catch(_){root.alert(root.document.documentElement.lang==='es'?'No se pudo abrir FUEL LAB. Tu plan no ha cambiado.':'Could not open FUEL LAB. Your plan has not changed.');}
  }
  root.TrainLabFuelLab={buildSummary:build,buildTransfer,sendToFuelLab};
 })(window);
