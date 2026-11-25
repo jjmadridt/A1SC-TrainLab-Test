@@ -1,14 +1,14 @@
 
-const CACHE = 'trainlab-v3.19-phase3b25';
+const CACHE = 'trainlab-v3.19.1-phase3b25-1';
 
 const ASSETS = [
   // Match versioned script URLs in index.html for offline startup.
   './disciplines/run.js?v=phase3b25',
   './disciplines/triathlon.js?v=phase3b25',
   './swim-ui.js?v=phase3b17',
-  './app.js?v=phase3b25',
+  './app.js?v=phase3b25-1',
   './cycle-ui.js?v=phase3b25',
-  './unified-history.js?v=phase3b25',
+  './unified-history.js?v=phase3b25-1',
   './workout-timer.js?v=20261111timer17v',
   './screen-awake.js?v=20261111wake17v',
   './ble-heart-rate.js?v=20261111ble17y',

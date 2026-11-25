@@ -146,12 +146,37 @@ function manageRow(x,refresh){
  const del=btn(tr('Delete entry','Eliminar registro'),async()=>{if(await window.TrainLabConfirmDelete(tr('Permanently delete this one entry? This cannot be undone.','¿Eliminar permanentemente este registro? No se puede deshacer.')))apply('delete');});del.style.color='#ff92a9';controls.append(del);return row;
 }
 
+// Empty completed sessions are metadata, not exercise records. Delete only the
+// selected metadata row, with the same stale-data guard as individual entries.
+function deleteEmptySession(x){
+ if(x.source==='triathlon'){
+  if(x.raw.discipline!=='Strength'||!Array.isArray(x.raw.sets)||x.raw.sets.length!==0)throw Error('invalid');
+  mutateHistory(x,'delete');return;
+ }
+ if(x.source!=='total')throw Error('invalid');
+ const key=SOURCES.total,raw=localStorage.getItem(key);
+ if(raw!==x.snapshot)throw Error('stale');
+ const db=strictRead(raw,{});
+ if(!Array.isArray(db.completed)||!Array.isArray(db.logs)||JSON.stringify(db.completed[x.index])!==JSON.stringify(x.raw))throw Error('stale');
+ if(db.logs.some(r=>r&&str(r.day)===str(x.raw.day)&&str(r.session)===str(x.raw.session)))throw Error('not empty');
+ const next={...db,completed:db.completed.filter((_,i)=>i!==x.index)};
+ localStorage.setItem(key,JSON.stringify(next));
+ window.TrainLabHistoryReloadTotal(next);
+}
+function emptySessionControl(x,refresh){
+ const row=document.createElement('div');row.className='uh-empty-session';row.style.cssText='display:grid;gap:8px;margin:8px 0';
+ const b=document.createElement('button');b.type='button';b.textContent=tr('Delete empty session','Eliminar sesión vacía');b.style.cssText='min-height:44px;color:#ff92a9';
+ const msg=document.createElement('p');msg.setAttribute('role','status');msg.style.margin='0';
+ b.onclick=async()=>{b.disabled=true;try{if(await window.TrainLabConfirmDelete(tr('Permanently delete this empty session? No exercise records will be deleted.','¿Eliminar permanentemente esta sesión vacía? No se eliminarán registros de ejercicios.'))){deleteEmptySession(x);refresh();}}catch(e){msg.textContent=tr('No change saved. Reopen History and try again.','No se guardó el cambio. Abre Historial de nuevo e inténtalo.');}finally{b.disabled=false;}};
+ row.append(b,msg);return row;
+}
+
 function getRecords(){
  const records=[];
  const tb=read(SOURCES.total,{}),logs=array(tb?.logs),done=array(tb?.completed),groups=new Map();
  for(const [index,x] of logs.entries()){if(!x||typeof x!=='object')continue;const key=str(x.day)+'|'+str(x.session);if(!groups.has(key))groups.set(key,[]);groups.get(key).push({raw:x,index});}
  const completedKeys=new Set();
- for(const c of done){if(!c||typeof c!=='object')continue;const key=str(c.day)+'|'+str(c.session);completedKeys.add(key);const sets=groups.get(key)||[];const d=dateOf(c.finishedAt,sets[sets.length-1]?.raw.timestamp||sets[sets.length-1]?.raw.date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(c.day),'Cuerpo completo — '+str(c.day)),summary:tr('Completed session','Sesión finalizada')+' · '+sets.length+' '+tr('entries','registros'),details:[],manage:sets.map(s=>ref("total",s.index,s.raw,totalDetail(s.raw,tb))),weightMoved:weightMoved(sets.map(s=>s.raw).filter(x=>!x.excludedFromProgress),tb),sourceSessionKey:key,note:''});}
+ for(const [index,c] of done.entries()){if(!c||typeof c!=='object')continue;const key=str(c.day)+'|'+str(c.session);completedKeys.add(key);const sets=groups.get(key)||[];const d=dateOf(c.finishedAt,sets[sets.length-1]?.raw.timestamp||sets[sets.length-1]?.raw.date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(c.day),'Cuerpo completo — '+str(c.day)),summary:tr('Completed session','Sesión finalizada')+' · '+sets.length+' '+tr('entries','registros'),details:[],manage:sets.map(s=>ref("total",s.index,s.raw,totalDetail(s.raw,tb))),weightMoved:weightMoved(sets.map(s=>s.raw).filter(x=>!x.excludedFromProgress),tb),sourceSessionKey:key,emptySession:sets.length===0&&Array.isArray(tb.logs)?ref("total",index,c):null,note:''});}
  for(const [key,sets] of groups){if(completedKeys.has(key)||!sets.length)continue;const d=dateOf(sets[sets.length-1].raw.timestamp,sets[sets.length-1].raw.date);if(!d)continue;records.push({discipline:'total',date:d,name:tr('Total Body — '+str(sets[0].raw.day),'Cuerpo completo — '+str(sets[0].raw.day)),summary:tr('Logged workout','Entrenamiento registrado')+' · '+sets.length+' '+tr('entries','registros'),details:[],manage:sets.map(s=>ref("total",s.index,s.raw,totalDetail(s.raw,tb))),weightMoved:weightMoved(sets.map(s=>s.raw).filter(x=>!x.excludedFromProgress),tb),sourceSessionKey:key,note:''});}
  for(const [index,r] of array(read(SOURCES.cycle,[])).entries()){if(!r||typeof r!=='object')continue;const d=dateOf(r.date);if(!d)continue;records.push({discipline:'cycle',manage:[ref('cycle',index,r)],date:d,name:str(r.workoutName||r.workoutId||'Cycle'),summary:[formatDuration(r.actualSeconds??(Number(r.actualMinutes)*60)),r.rpe?'RPE '+r.rpe:'',r.completion==='complete'?tr('Complete','Completo'):r.completion==='partial'?tr('Partial','Parcial'):''].filter(Boolean).join(' · '),details:[r.mode?tr('Mode: ','Modo: ')+str(r.mode):'',r.plannedMinutes!=null?tr('Planned: ','Planeado: ')+str(r.plannedMinutes)+' min':''].filter(Boolean),note:str(r.notes)});}
  for(const [index,r] of array(read(SOURCES.run,[])).entries()){if(!r||typeof r!=='object')continue;const d=dateOf(r.timestamp);if(!d)continue;const fields=r.data&&typeof r.data==='object'?Object.entries(r.data).filter(([,v])=>v!==''&&v!=null).map(([k,v])=>k+': '+str(v)):[];records.push({discipline:'run',manage:[ref('run',index,r)],date:d,name:str(r.exercise||'Run'),summary:[formatDuration(r.durationSeconds),r.distance?str(r.distance)+' '+str(r.unit):'',str(r.pace)].filter(Boolean).join(' · '),details:fields,note:'',hrStart:!r.historyCorrected&&Number(r.durationSeconds)>0?d.getTime()-Number(r.durationSeconds)*1000:undefined,hrEnd:!r.historyCorrected&&Number(r.durationSeconds)>0?d.getTime():undefined});}
@@ -164,7 +189,7 @@ function getRecords(){
   const sets=array(r.sets);for(const x of sets)if(x?.id)linked.add(x.id);
   const strength=r.discipline==='Strength';
   const refs=strength?sets.map((x,i)=>ref('triathlon',index,r,triSetDetail(x),i)): [ref('triathlon',index,r)];
-  records.push({discipline:'triathlon',date:d,name:str(r.exercise||'Triathlon'),summary:strength?sets.length+' '+tr('sets','series'):[r.details?.distance?str(r.details.distance)+' '+str(r.details.distanceUnit):'',r.details?.durationMin?str(r.details.durationMin)+' min':''].filter(Boolean).join(' · '),details:[],manage:refs,note:str(r.notes)});
+  records.push({discipline:'triathlon',date:d,name:str(r.exercise||'Triathlon'),summary:strength?sets.length+' '+tr('sets','series'):[r.details?.distance?str(r.details.distance)+' '+str(r.details.distanceUnit):'',r.details?.durationMin?str(r.details.durationMin)+' min':''].filter(Boolean).join(' · '),details:[],manage:refs,emptySession:strength&&Array.isArray(r.sets)&&r.sets.length===0?ref("triathlon",index,r):null,note:str(r.notes)});
  }
  for(const [index,x] of triSets.entries()){
   if(!x||linked.has(x.id))continue;const d=dateOf(x.timestamp);if(!d)continue;
@@ -185,7 +210,9 @@ function mount(){const host=document.getElementById('athlete-profile-content');i
  const small=document.createElement('small');small.textContent=' · '+r.weightMoved.count+' '+tr('weighted sets','series con peso');
  weight.append(strong,small);body.append(weight);
  }
- if(r.manage?.length)for(const item of r.manage)body.append(manageRow(item,()=>{render();const progress=document.getElementById("profile-progress");if(progress&&typeof window.TrainLabRefreshHistoryProgress==="function")window.TrainLabRefreshHistoryProgress(progress);}));
+ const refresh=()=>{render();const progress=document.getElementById("profile-progress");if(progress&&typeof window.TrainLabRefreshHistoryProgress==="function")window.TrainLabRefreshHistoryProgress(progress);};
+ if(r.manage?.length)for(const item of r.manage)body.append(manageRow(item,refresh));
+ if(r.emptySession)body.append(emptySessionControl(r.emptySession,refresh));
  const hrResult=hrForRecord(r);if(hrResult.lines.length||hrResult.note){const heading=document.createElement('h4');heading.textContent=tr('Heart rate (journal)','Frecuencia cardíaca (registro)');body.append(heading);const hrList=document.createElement('ul');for(const line of hrResult.lines){const li=document.createElement('li');li.textContent=line;hrList.append(li);}body.append(hrList);const caveat=document.createElement('small');caveat.textContent=hrResult.note;body.append(caveat);}if(r.note){const p=document.createElement('p');p.textContent=tr('Notes: ','Notas: ')+r.note;body.append(p);}if(!body.childNodes.length)body.textContent=tr('No additional details saved.','No se guardaron más detalles.');if(r.discipline==='total'&&r.sourceSessionKey&&r.manage?.some(x=>!excluded(x))){const use=document.createElement('button');use.type='button';use.className='primary full';use.textContent=tr('Use as new plan','Usar como plan nuevo');use.onclick=()=>{if(typeof window.TrainLabOpenTotalBodyHistoryPicker==='function')window.TrainLabOpenTotalBodyHistoryPicker(r.sourceSessionKey);};body.append(use);}details.append(body);list.append(details);}}
  render();}
  const old=window.renderAthleteProfile;if(typeof old!=='function')return;window.renderAthleteProfile=function(){old.apply(this,arguments);mount();};

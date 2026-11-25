@@ -657,5 +657,5 @@ function renderAthleteProfile(){
 #fitclimb .tb-view-actions button.active{background:#2b85ad!important;border:1px solid #ff4c9c!important}
 `;document.head.appendChild(st)})();
 
-window.TrainLabHistoryReloadTotal=function(next){db.logs=next.logs;lastSetAction=null;};
+window.TrainLabHistoryReloadTotal=function(next){db.logs=next.logs;db.completed=next.completed;lastSetAction=null;};
 window.TrainLabRefreshHistoryProgress=function(target){progress(target);};
