@@ -49,39 +49,69 @@
   const num=(v,max,zero=false)=>{if(v===''||v==null||!['number','string'].includes(typeof v)||!Number.isFinite(Number(v))||Number(v)>max||Number(v)<0)return null;const n=Math.round(Number(v)*100)/100;return n>0||zero?n:null;};
   const label=v=>typeof v==='string'&&v.trim().length>0&&v.trim().length<=80?v.trim():null;
   const date=v=>v==null||v===''?null:Number.isFinite(+new Date(v))?new Date(v):null;
-  function add(d,name,kind,when,session,a,b,context='',raw){
+  function groupKey(d,name,kind,ctx){return JSON.stringify([d,name,kind,String(ctx||'').slice(0,80)])}
+  function addSimple(d,name,kind,when,session,a,b,context='',raw){
    if(raw?.excludedFromProgress||!label(name)||!when||+when<cutoff||+when>+now||a===null&&b===null)return;
    if(a===null&&kind==='lift'||b===null&&kind==='lift')return;
    if(!['lift','reps','timed','distance','duration'].includes(kind))return;
-   const ctx=String(context||'').slice(0,80),k=JSON.stringify([d,name,kind,ctx]);
+   const ctx=String(context||'').slice(0,80),k=groupKey(d,name,kind,ctx);
    if(!groups.has(k))groups.set(k,{d,name,kind,ctx,obs:new Map()});const g=groups.get(k),key=isoLocal(when)+'|'+String(session??'');
    const v={date:isoLocal(when),at:+when,a,b};const old=g.obs.get(key);
-   // Strength: compare the heaviest recorded set, breaking ties by repetitions; timed activities: latest record.
    if(!old||(kind==='lift'?(a>old.a||a===old.a&&b>old.b):v.at>=old.at))g.obs.set(key,v);
+  }
+  function addVolume(d,name,when,session,volume,reps,sets,maxWeight,context=''){
+   if(!label(name)||!when||+when<cutoff||+when>+now)return;
+   const vol=num(volume,10000000),totalReps=num(reps,10000),totalSets=num(sets,1000),max=num(maxWeight,3000,true);
+   if(vol===null||totalReps===null||totalSets===null||max===null)return;
+   const ctx=String(context||'').slice(0,80),k=groupKey(d,name,'volume',ctx);
+   if(!groups.has(k))groups.set(k,{d,name,kind:'volume',ctx,obs:new Map()});
+   const g=groups.get(k),key=isoLocal(when)+'|'+String(session??'');
+   const v={date:isoLocal(when),at:+when,volume:vol,reps:totalReps,sets:totalSets,max};
+   const old=g.obs.get(key);if(!old||v.at>=old.at)g.obs.set(key,v);
   }
   const dist=(v,u)=>{const n=num(v,10000000);return n===null||!['km','mi','m','yd'].includes(u)?null:num(n*({km:1000,mi:1609.344,m:1,yd:0.9144}[u]),10000000)};
   const seconds=(v)=>num(v,86400);
+  function strengthAggregate(keyObj,when,weight,reps){
+   if(!when||weight===null||reps===null||weight<=0||reps<=0)return;
+   const key=JSON.stringify(keyObj);
+   let row=groups.get(key);
+   if(!row){row={pending:true,...keyObj,at:+when,date:isoLocal(when),volume:0,reps:0,sets:0,max:0};groups.set(key,row)}
+   row.at=Math.max(row.at,+when);row.date=isoLocal(when);row.volume=Math.round((row.volume+weight*reps)*100)/100;row.reps=Math.round((row.reps+reps)*100)/100;row.sets+=1;row.max=Math.max(row.max,weight);
+  }
+  const pendingGroups=new Map();
+  function volumeKey(d,name,ctx,when,session){return JSON.stringify({d,name,ctx:String(ctx||'').slice(0,80),session:String(session??''),date:isoLocal(when)})}
+  function addStrengthSet(d,name,when,session,weight,reps,context=''){
+   const n=label(name),w=num(weight,3000,true),r=num(reps,10000);if(!n||!when||w===null||r===null||w<=0||r<=0)return;
+   const key=volumeKey(d,n,context,when,session);let row=pendingGroups.get(key);
+   if(!row){row={d,name:n,ctx:String(context||'').slice(0,80),when,session,volume:0,reps:0,sets:0,max:0};pendingGroups.set(key,row)}
+   row.volume=Math.round((row.volume+w*r)*100)/100;row.reps=Math.round((row.reps+r)*100)/100;row.sets+=1;row.max=Math.max(row.max,w);
+  }
   const tb=source('fitclimb-v1',{logs:[]});
-  for(const x of tb.logs){if(!x||x.excludedFromProgress)continue;const d=date(x.timestamp??x.date),n=label(x.name),s=x.session??'',u=String(x.unit||'').toLowerCase();if(!n)continue;
-   if(u==='minutes'){add(0,n,'distance',d,s,dist(x.weight,'km'),seconds(Number(x.count)*60),'',x);}
-   else if(['reps','per side','per leg'].includes(u))add(0,n,'lift',d,s,num(x.weight,3000,true),num(x.count,10000),String(x.equipment||'')+' · '+u,x);
-   else if(['seconds','sec','s'].includes(u))add(0,n,'timed',d,s,seconds(x.count),null,u,x);
+  for(const x of tb.logs){if(!x||x.excludedFromProgress)continue;const d=date(x.timestamp??x.date),n=label(x.name),s=x.session??'',u=String(x.unit||'').toLowerCase();if(!n||!d)continue;
+   if(u==='minutes'){addSimple(0,n,'distance',d,s,dist(x.weight,'km'),seconds(Number(x.count)*60),'',x);}
+   else if(['reps','per side','per leg'].includes(u)){
+    const w=num(x.weight,3000,true),r=num(x.count,10000),ctx=String(x.equipment||'').trim();
+    if(w!==null&&w>0&&r!==null&&r>0)addStrengthSet(0,n,d,s,w,r,ctx); else addSimple(0,n,'reps',d,s,r,null,ctx,x);
+   }
+   else if(['seconds','sec','s'].includes(u))addSimple(0,n,'timed',d,s,seconds(x.count),null,u,x);
   }
-  for(const x of source('a1sc-cycle-activity-log-v05',[])){if(!x)continue;add(1,label(x.workoutName)||label(x.workoutId),'duration',date(x.date),x.id,seconds(x.actualSeconds??Number(x.actualMinutes)*60),null,[x.mode,x.completion].filter(Boolean).join(' · '),x)}
-  for(const x of source('a1sc-run-activities-v1',[])){if(!x)continue;add(2,label(x.exercise),'distance',date(x.timestamp),x.timestamp,dist(x.distance,x.unit),seconds(x.durationSeconds),x.kind,x)}
-  for(const x of source('a1sc-swim-activity-history-v01',[])){if(!x)continue;const w=list(x.workoutDetails),name=w.length?w.map(z=>z.en||z.id).join(' + '):list(x.workouts).map(z=>z.en||z.name||z.id).join(' + ');add(3,label(name)||'Swim session','distance',date(x.savedAt??x.startedAt),x.id,dist(x.distance,x.unit),seconds(x.durationSeconds),[x.environment,x.pool&&x.unit?x.pool+' '+x.unit:''].filter(Boolean).join(' · '),x)}
-  const tri=source('a1sc-triathlon-activity-log-v01',[]),mirror=source('a1sc-triathlon-strength-sets-v01',[]),linked=new Set();
-  function triSet(x,when,session){if(!x)return;const n=label(x.exercise);if(n==='Side plank')add(4,n,'timed',when,session,seconds(x.reps),null,'Strength',x);else add(4,n,'lift',when,session,num(x.weightLb,3000,true),num(x.reps,10000),'Strength',x)}
+  for(const row of pendingGroups.values())addVolume(row.d,row.name,row.when,row.session,row.volume,row.reps,row.sets,row.max,row.ctx);
+  for(const x of source('a1sc-cycle-activity-log-v05',[])){if(!x)continue;addSimple(1,label(x.workoutName)||label(x.workoutId),'duration',date(x.date),x.id,seconds(x.actualSeconds??Number(x.actualMinutes)*60),null,[x.mode,x.completion].filter(Boolean).join(' · '),x)}
+  for(const x of source('a1sc-run-activities-v1',[])){if(!x)continue;addSimple(2,label(x.exercise),'distance',date(x.timestamp),x.timestamp,dist(x.distance,x.unit),seconds(x.durationSeconds),x.kind,x)}
+  for(const x of source('a1sc-swim-activity-history-v01',[])){if(!x)continue;const w=list(x.workoutDetails),name=w.length?w.map(z=>z.en||z.id).join(' + '):list(x.workouts).map(z=>z.en||z.name||z.id).join(' + ');addSimple(3,label(name)||'Swim session','distance',date(x.savedAt??x.startedAt),x.id,dist(x.distance,x.unit),seconds(x.durationSeconds),[x.environment,x.pool&&x.unit?x.pool+' '+x.unit:''].filter(Boolean).join(' · '),x)}
+  const tri=source('a1sc-triathlon-activity-log-v01',[]),mirror=source('a1sc-triathlon-strength-sets-v01',[]),linked=new Set(),triPending=new Map();
+  function addTriStrengthSet(x,when,session){if(!x||x.excludedFromProgress)return;const n=label(x.exercise);if(!n||!when)return; if(n==='Side plank'){addSimple(4,n,'timed',when,session,seconds(x.reps),null,'Strength',x);return;} const reps=num(x.reps,10000); const weight=num(x.weightLb,3000,true); if(weight!==null&&weight>0&&reps!==null&&reps>0){const key=volumeKey(4,n,'Strength',when,session); let row=triPending.get(key); if(!row){row={d:4,name:n,ctx:'Strength',when,session,volume:0,reps:0,sets:0,max:0}; triPending.set(key,row);} row.volume=Math.round((row.volume+weight*reps)*100)/100; row.reps=Math.round((row.reps+reps)*100)/100; row.sets+=1; row.max=Math.max(row.max,weight);} else if(reps!==null&&reps>0) addSimple(4,n,'reps',when,session,reps,null,'Strength',x); }
   for(const r of tri){if(!r)continue;for(const x of list(r.sets))if(x?.id)linked.add(x.id);if(r.excludedFromProgress)continue;
-   if(r.discipline==='Strength'){for(const x of list(r.sets))triSet(x,date(x?.timestamp??r.completedAt),r.id??r.completedAt);}
-   else {const x=r.details||{};add(4,label(r.exercise),'distance',date(r.completedAt),r.id,dist(x.distance,x.distanceUnit),seconds(Number(x.durationMin)*60),[r.discipline,x.environment,x.rideType].filter(Boolean).join(' · '),r)}
+   if(r.discipline==='Strength'){for(const x of list(r.sets))addTriStrengthSet(x,date(x?.timestamp??r.completedAt),r.id??r.completedAt);}
+   else {const x=r.details||{};addSimple(4,label(r.exercise),'distance',date(r.completedAt),r.id,dist(x.distance,x.distanceUnit),seconds(Number(x.durationMin)*60),[r.discipline,x.environment,x.rideType].filter(Boolean).join(' · '),r)}
   }
-  for(const x of mirror){if(x?.id&&!linked.has(x.id))triSet(x,date(x.timestamp),x.sessionId??x.timestamp)}
-  const rows=[...groups.values()].map(g=>{const obs=[...g.obs.values()].sort((a,b)=>b.at-a.at).slice(0,2);return {at:obs[0].at,row:[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.a,x.b])]}}).sort((a,b)=>b.at-a.at);
-  // Guarantee room for each represented discipline before filling with the newest comparisons.
+  for(const x of mirror){if(x?.id&&!linked.has(x.id))addTriStrengthSet(x,date(x.timestamp),x.sessionId??x.timestamp)}
+  for(const row of triPending.values())addVolume(row.d,row.name,row.when,row.session,row.volume,row.reps,row.sets,row.max,row.ctx);
+  const rows=[...groups.values()].filter(g=>!g.pending).map(g=>{const obs=[...g.obs.values()].sort((a,b)=>b.at-a.at).slice(0,2);return {at:obs[0].at,row:g.kind==='volume'?[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.volume,x.reps,x.sets,x.max])]:[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.a,x.b])]};}).sort((a,b)=>b.at-a.at);
   const chosen=[];for(let d=0;d<5;d++){const first=rows.find(x=>x.row[0]===d);if(first)chosen.push(first)}for(const r of rows)if(chosen.length<18&&!chosen.includes(r))chosen.push(r);
   return {v:1,asOf:isoLocal(now),rows:chosen.map(x=>x.row),total:rows.length};
  }
+
 
  function buildTransfer(now=new Date(),includeHistory=false){
   const rows=rowsForWeek(now),saved=loadFor(rows);
