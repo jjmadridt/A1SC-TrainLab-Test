@@ -57,6 +57,7 @@
    const ctx=String(context||'').slice(0,80),k=groupKey(d,name,kind,ctx);
    if(!groups.has(k))groups.set(k,{d,name,kind,ctx,obs:new Map()});const g=groups.get(k),key=isoLocal(when)+'|'+String(session??'');
    const v={date:isoLocal(when),at:+when,a,b};const old=g.obs.get(key);
+   if(old&&['reps','timed'].includes(kind)){v.a=old.a+a;v.at=Math.max(old.at,v.at);g.obs.set(key,v);return;}
    if(!old||(kind==='lift'?(a>old.a||a===old.a&&b>old.b):v.at>=old.at))g.obs.set(key,v);
   }
   function addVolume(d,name,when,session,volume,reps,sets,maxWeight,context=''){
@@ -81,17 +82,17 @@
   const pendingGroups=new Map();
   function volumeKey(d,name,ctx,when,session){return JSON.stringify({d,name,ctx:String(ctx||'').slice(0,80),session:String(session??''),date:isoLocal(when)})}
   function addStrengthSet(d,name,when,session,weight,reps,context=''){
-   const n=label(name),w=num(weight,3000,true),r=num(reps,10000);if(!n||!when||w===null||r===null||w<=0||r<=0)return;
+   const n=label(name),w=num(weight,3000,true),r=num(reps,10000);if(!n||!when||+when<cutoff||+when>+now||w===null||r===null||w<=0||r<=0)return;
    const key=volumeKey(d,n,context,when,session);let row=pendingGroups.get(key);
    if(!row){row={d,name:n,ctx:String(context||'').slice(0,80),when,session,volume:0,reps:0,sets:0,max:0};pendingGroups.set(key,row)}
    row.volume=Math.round((row.volume+w*r)*100)/100;row.reps=Math.round((row.reps+r)*100)/100;row.sets+=1;row.max=Math.max(row.max,w);
   }
   const tb=source('fitclimb-v1',{logs:[]});
-  for(const x of tb.logs){if(!x||x.excludedFromProgress)continue;const d=date(x.timestamp??x.date),n=label(x.name),s=x.session??'',u=String(x.unit||'').toLowerCase();if(!n||!d)continue;
+  for(const x of tb.logs){if(!x||x.excludedFromProgress)continue;const d=date(x.timestamp??x.date),n=label(x.name),s=String(x.day||'')+'|'+String(x.session??''),u=String(x.unit||'').trim().toLowerCase();if(!n||!d)continue;
    if(u==='minutes'){addSimple(0,n,'distance',d,s,dist(x.weight,'km'),seconds(Number(x.count)*60),'',x);}
    else if(['reps','per side','per leg'].includes(u)){
-    const w=num(x.weight,3000,true),r=num(x.count,10000),ctx=String(x.equipment||'').trim();
-    if(w!==null&&w>0&&r!==null&&r>0)addStrengthSet(0,n,d,s,w,r,ctx); else addSimple(0,n,'reps',d,s,r,null,ctx,x);
+    const w=num(x.weight,3000,true),count=num(x.count,10000),r=count===null?null:count*(u==='per side'||u==='per leg'?2:1),ctx=String(x.equipment||'').trim()+' · '+u;
+    if(w!==null&&w>0&&r!==null&&r>0)addStrengthSet(0,n,d,s,w,r,ctx); else if(w===0&&r!==null)addSimple(0,n,'reps',d,s,r,null,ctx,x);
    }
    else if(['seconds','sec','s'].includes(u))addSimple(0,n,'timed',d,s,seconds(x.count),null,u,x);
   }
@@ -107,7 +108,7 @@
   }
   for(const x of mirror){if(x?.id&&!linked.has(x.id))addTriStrengthSet(x,date(x.timestamp),x.sessionId??x.timestamp)}
   for(const row of triPending.values())addVolume(row.d,row.name,row.when,row.session,row.volume,row.reps,row.sets,row.max,row.ctx);
-  const rows=[...groups.values()].filter(g=>!g.pending).map(g=>{const obs=[...g.obs.values()].sort((a,b)=>b.at-a.at).slice(0,2);return {at:obs[0].at,row:g.kind==='volume'?[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.volume,x.reps,x.sets,x.max])]:[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.a,x.b])]};}).sort((a,b)=>b.at-a.at);
+  const rows=[...groups.values()].filter(g=>!g.pending&&[...g.obs.values()].some(x=>g.kind==='reps'?x.a<=10000:g.kind==='timed'?x.a<=86400:true)).map(g=>{const obs=[...g.obs.values()].filter(x=>g.kind==='volume'||g.kind==='reps'?g.kind==='volume'||x.a<=10000:g.kind==='timed'?x.a<=86400:true).sort((a,b)=>b.at-a.at).slice(0,2);return {at:obs[0].at,row:g.kind==='volume'?[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.volume,x.reps,x.sets,x.max])]:[g.d,g.name,g.kind,g.ctx,...obs.map(x=>[x.date,x.a,x.b])]};}).sort((a,b)=>b.at-a.at);
   const chosen=[];for(let d=0;d<5;d++){const first=rows.find(x=>x.row[0]===d);if(first)chosen.push(first)}for(const r of rows)if(chosen.length<18&&!chosen.includes(r))chosen.push(r);
   return {v:1,asOf:isoLocal(now),rows:chosen.map(x=>x.row),total:rows.length};
  }
