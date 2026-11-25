@@ -29,10 +29,17 @@
   const x=saved[rowKey(day,session)];
   return x&&x.signature===session.signature&&validMinutes(x.plannedMinutes)&&INTENSITIES.includes(x.intensity)?{plannedMinutes:x.plannedMinutes,intensity:x.intensity}:{plannedMinutes:null,intensity:'unknown'};
  }
+
+ // Version 2: classify actual selected exercise IDs. Source namespace disambiguates duplicate names.
+ const CLASS_CODES=["strength", "cycle", "run", "swim", "triathlon", "cardio", "stability", "mobility", "technique", "unknown"];
+ const EXERCISE_CLASSES={"strength": {"stationary bike": "cycle", "outdoor ride": "cycle", "elliptical warm-up": "cardio", "romanian deadlift": "strength", "leg press": "strength", "standing calf raise": "strength", "chest press": "strength", "seated cable row": "strength", "lat pulldown": "strength", "dumbbell shoulder press": "strength", "goblet squat": "strength", "glute bridge": "strength", "step-up": "strength", "farmer carry": "strength", "dead bug": "stability", "pallof press": "stability", "side plank": "stability"}, "run": {"easy run": "run", "long run": "run", "recovery run": "run", "treadmill run": "run", "tempo run": "run", "short intervals": "run", "long intervals": "run", "hill repeats": "run", "treadmill intervals": "run", "strides": "technique", "high knees": "technique", "butt kicks": "technique", "a-skips": "technique", "cadence drills": "technique", "single-leg balance": "stability", "step-ups": "strength", "calf raises": "strength", "glute bridges": "strength", "dynamic mobility": "mobility"}, "triathlon": {"continuous swim": "swim", "technique drills": "swim", "interval sets": "swim", "threshold swim": "swim", "open water sighting": "swim", "endurance ride": "cycle", "tempo ride": "cycle", "threshold intervals": "cycle", "vo₂max intervals": "cycle", "cadence drills": "cycle", "goblet squat": "strength", "romanian deadlift": "strength", "split squat": "strength", "standing calf raise": "strength", "seated cable row": "strength", "side plank": "stability", "pallof press": "stability", "dead bug": "stability", "easy aerobic run": "run", "long run": "run", "tempo run": "run", "interval repeats": "run", "strides": "technique"}, "cycle": {"recovery-ride": "cycle", "aerobic-base": "cycle", "long-endurance": "cycle", "progressive-endurance": "cycle", "tempo-endurance": "cycle", "tempo-intervals": "cycle", "threshold-intervals": "cycle", "vo2-max-intervals": "cycle", "sprint-repeats": "cycle", "over-under-intervals": "cycle", "cadence-intervals": "cycle", "sustained-climbing": "cycle", "climbing-intervals": "cycle", "seated-climbing": "cycle", "standing-climbing": "cycle", "cadence-control": "cycle", "bike-handling": "technique"}, "swim": {"continuous": "swim", "aerobic": "swim", "progression": "swim", "recovery": "swim", "sprints": "swim", "pace": "swim", "threshold": "swim", "speedendurance": "swim", "freestyle": "swim", "breathing": "swim", "kickboard": "swim", "pullbuoy": "swim", "coordination": "swim"}};
+ function exerciseClass(source,item){const id=typeof item==='string'?item:item?.id;return typeof id==='string'&&Object.prototype.hasOwnProperty.call(EXERCISE_CLASSES[source]||{},id.trim().toLowerCase())?EXERCISE_CLASSES[source][id.trim().toLowerCase()]:'unknown';}
+ // Compact change detection only; not authentication or encryption. No exercise names transferred.
+ function planFingerprint(value){let h=2166136261;for(const c of JSON.stringify(value)){h=Math.imul(h^c.charCodeAt(0),16777619);}return (h>>>0).toString(16).padStart(8,'0');}
+ function classifiedRows(now){const rows=rowsForWeek(now),saved=loadFor(rows);return rows.map(day=>{const groups=new Map();for(const parent of day.sessions){const items=JSON.parse(parent.signature),classified=items.map(item=>[exerciseClass(parent.discipline,item),item]);const homogeneous=new Set(classified.map(x=>x[0])).size===1;const estimate=homogeneous?savedEstimate(saved,day,parent):{plannedMinutes:null,intensity:'unknown'};for(const [cls,item] of classified){if(!groups.has(cls))groups.set(cls,{discipline:cls,items:[],parents:new Set(),estimates:[]});const g=groups.get(cls);g.items.push([parent.discipline,item]);if(!g.parents.has(parent.discipline)){g.parents.add(parent.discipline);g.estimates.push(estimate);}}}return {date:day.date,sessions:[...groups.values()].map(g=>{const minutes=g.estimates.every(e=>e.plannedMinutes!==null)?g.estimates.reduce((a,e)=>a+e.plannedMinutes,0):null;const effort=new Set(g.estimates.map(e=>e.intensity));return {discipline:g.discipline,activityCount:g.items.length,plannedMinutes:minutes!==null&&minutes<=1440?minutes:null,intensity:effort.size===1?[...effort][0]:'unknown',fingerprint:planFingerprint(g.items),overlap:g.parents.has('triathlon')&&g.parents.size>1};}).sort((a,b)=>CLASS_CODES.indexOf(a.discipline)-CLASS_CODES.indexOf(b.discipline))};});}
  function build(now=new Date()){
-  const rows=rowsForWeek(now),saved=loadFor(rows);
-  const days=rows.map(day=>({date:day.date,sessions:day.sessions.map(session=>({discipline:session.discipline,...savedEstimate(saved,day,session)}))}));
-  return {schema:'a1sc.training-summary',version:1,source:'trainlab',weekStart:rows[0].date,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',days};
+  const days=classifiedRows(now);
+  return {schema:'a1sc.training-summary',version:2,source:'trainlab',weekStart:days[0].date,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',days};
  }
  const FUEL_URL='https://jjmadridt.github.io/A1SC-FuelLab-Test/';
  const DISCIPLINES=['strength','cycle','run','swim','triathlon'];
@@ -115,16 +122,13 @@
 
 
  function buildTransfer(now=new Date(),includeHistory=false){
-  const rows=rowsForWeek(now),saved=loadFor(rows);
-  const compact={v:1,w:rows[0].date,z:Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC',d:rows.map(day=>day.sessions.map(session=>{
-   const estimate=savedEstimate(saved,day,session);
-   return [DISCIPLINES.indexOf(session.discipline),session.count,estimate.plannedMinutes,INTENSITIES.indexOf(estimate.intensity)];
-  }))};
+  const summary=build(now);
+  const compact={v:2,w:summary.weekStart,z:summary.timezone,d:summary.days.map(day=>day.sessions.map(x=>[CLASS_CODES.indexOf(x.discipline),x.activityCount,x.plannedMinutes,INTENSITIES.indexOf(x.intensity),x.fingerprint,x.overlap?1:0]))};
   const u=new URL(FUEL_URL);if(includeHistory){try{const progress=buildProgress(now);compact.h=progress;while(progress.rows.length&&('tlplan='+encodeURIComponent(JSON.stringify(compact))).length>7600)progress.rows.pop();}catch(_){compact.he=1;}}u.hash='tlplan='+encodeURIComponent(JSON.stringify(compact));
   if(u.href.length>8000)throw Error('oversized schedule');return u.href;
  }
  function sendToFuelLab(){
   try{let consent=historyConsent();if(consent===null){const es=root.document.documentElement.lang==='es';const ok=root.confirm(es?'¿Compartir automáticamente resúmenes recientes de entrenamiento con FUEL LAB? El enlace temporal contiene medidas de rendimiento, no notas ni datos corporales. No está cifrado. Puedes desactivar esto en Perfil → Historial. Cancelar envía solo el programa.':'Automatically share recent training summaries with FUEL LAB? The temporary link contains performance measurements, not notes or body data. It is not encrypted. Change this in Profile → History. Cancel sends schedule only.');setHistoryConsent(ok);consent=ok?'yes':'no';}const url=new URL(buildTransfer(new Date(),consent==='yes'));url.searchParams.set('launch',Date.now().toString(36));root.location.assign(url.href);}catch(_){root.alert(root.document.documentElement.lang==='es'?'No se pudo abrir FUEL LAB. Tu plan no ha cambiado.':'Could not open FUEL LAB. Your plan has not changed.');}
  }
- root.TrainLabFuelLab={buildSummary:build,buildTransfer,sendToFuelLab,buildProgress,historyConsent,setHistoryConsent};
+ root.TrainLabFuelLab={classifyExercise:exerciseClass,buildSummary:build,buildTransfer,sendToFuelLab,buildProgress,historyConsent,setHistoryConsent};
 })(window);
