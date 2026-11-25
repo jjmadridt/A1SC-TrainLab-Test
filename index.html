@@ -268,7 +268,7 @@ body:has(#module-page.visible) #tl-cross-toolbar{display:block}
 </style>
 </head>
 <body>
-<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="tl-ble-open" class="homebtn" aria-label="Bluetooth heart rate">♥ HR</button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><select id="language-toggle" aria-label="Language / Idioma"><option value="en">ENG</option><option value="es">ESP</option></select></div></div>
+<div class="shell-head"><div class="shell-actions"><button class="homebtn" id="home-button">⌂ <span id="home-label">Home</span></button><button type="button" id="tl-ble-open" class="homebtn" aria-label="Bluetooth heart rate">♥ HR</button><button type="button" id="athlete-profile-button" class="homebtn" aria-expanded="false">Athlete Profile</button><button type="button" class="homebtn" id="language-toggle" value="en" aria-label="Cambiar a español">ESP</button></div></div>
 <details id="a1sc-safety-notice"><summary><span class="a1sc-safety-icon" aria-hidden="true">ⓘ</span><span data-i18n="safetyNotice0" class="a1sc-safety-copy">Training guidance only — not medical advice.</span><span class="a1sc-safety-arrow" aria-hidden="true">⌄</span></summary><div class="a1sc-safety-details"><p data-i18n="safetyNotice1">TRAIN LAB is a tool for planning and tracking exercise, not for diagnosing or treating medical conditions. Exercise programs, technique illustrations and recorded measurements are not a substitute for individualized professional assessment.</p><p data-i18n="safetyNotice2">Consult a qualified healthcare professional before starting or changing training if you have a health condition, injury, symptoms or concerns. Adapt exercise to your ability and seek qualified coaching when needed. Stop if you feel unwell; seek urgent medical care for chest pain, fainting or severe shortness of breath.</p></div></details>
 <div id="tl-cross-toolbar"><button type="button" class="tl-cross-launch" id="tl-cross-global-launch">+ Add from another discipline</button></div>
 <section id="landing" class="screen visible">
@@ -286,7 +286,7 @@ body:has(#module-page.visible) #tl-cross-toolbar{display:block}
 </section>
 <section id="module-page" class="screen"><div class="module-header"><img id="module-image" src="cycle.jpg" alt=""><div><h1 id="module-title">CYCLE</h1><p id="module-subtitle">Training module</p></div></div><div id="run-builder" style="display:none"></div><div id="cycle-builder" style="display:none"></div><div id="swim-builder" style="display:none"></div><div id="tri-builder" style="display:none"></div><div class="coming" id="module-coming"><h2 data-i18n="inDevelopment">In development</h2><p data-i18n="placeholder">This discipline is reserved for a volunteer team to build its training programs, tools, and progress tracking.</p><p class="note" data-i18n="previewOnly">Presentation preview — no workouts or tracking are active in this module yet.</p></div><button class="back" id="back-button" data-i18n="back">← All disciplines</button></section>
 <section id="athlete-profile" class="screen" aria-label="Athlete Profile"><div class="module-header"><div><h1 id="athlete-profile-heading">Athlete Profile</h1><p id="athlete-profile-subtitle">Your measurements and training progress</p></div></div><div id="athlete-profile-content"></div></section><section id="fitclimb"><div class="module-header" style="min-height:125px"><img src="strength.jpg" alt=""><div><h1>TOTAL BODY</h1><p data-i18n="fitSubtitle">Strength training · Active module</p></div></div><div class="tabs" id="tabs"></div><main id="app"></main><footer class="footer" data-i18n="localData">Your training data stays on this device. Export backups regularly.</footer></section>
-<div class="footer"><b>A1SC TRAINLAB · 3B.39 BIKE TEST</b></div>
+<div class="footer"><b>A1SC TRAINLAB · 3B.40 LANGUAGE TEST</b></div>
 <script src="shared/strength-core.js"></script>
 <script src="disciplines/fitclimb.js"></script>
 <script src="disciplines/cycle.js"></script>
@@ -294,9 +294,9 @@ body:has(#module-page.visible) #tl-cross-toolbar{display:block}
 <script src="disciplines/swim.js"></script>
 <script src="disciplines/triathlon.js?v=phase3b25"></script>
 <script src="swim-ui.js?v=phase3b17"></script>
-<script src="app.js?v=phase3b39-bike"></script>
+<script src="app.js?v=phase3b40-language"></script>
 <script src="cycle-ui.js?v=phase3b25"></script>
-<script src="unified-history.js?v=phase3b39-bike"></script>
+<script src="unified-history.js?v=phase3b40-language"></script>
 <script src="workout-timer.js?v=20261111timer17v"></script>
 <script src="screen-awake.js?v=20261111wake17v"></script>
 <script src="ble-heart-rate.js?v=20261111ble17y"></script>
@@ -335,6 +335,8 @@ function syncGlobalGender(){
 
 function translate(){
  const l=lang.value;
+ lang.textContent=l==='es'?'ENG':'ESP';
+ lang.setAttribute('aria-label',l==='es'?'Switch to English':'Cambiar a español');
  syncGlobalGender();
  document.documentElement.lang=l;
  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=dict[l][el.dataset.i18n]||el.textContent});
@@ -377,6 +379,7 @@ document.querySelectorAll('[data-module]').forEach(el=>el.addEventListener('clic
 document.getElementById('home-button').addEventListener('click',()=>show('home'));
 document.getElementById('back-button').addEventListener('click',()=>show('home'));
 lang.value=db.settings.lang==='es'?'es':'en';
+lang.addEventListener('click',()=>{lang.value=lang.value==='es'?'en':'es';lang.dispatchEvent(new Event('change',{bubbles:true}));});
 lang.addEventListener('change',()=>{db.settings.lang=lang.value;save();render();translate();if(document.getElementById('athlete-profile').classList.contains('visible'))window.renderAthleteProfile();if(window.TrainLabRun)window.TrainLabRun.render();if(window.TrainLabCycleUI)window.TrainLabCycleUI.render();if(window.TrainLabSwimUI)window.TrainLabSwimUI.render();if(window.TrainLabTriathlon)window.TrainLabTriathlon.render();});
 window.trainlabTranslate=translate;
 translate();

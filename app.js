@@ -150,8 +150,10 @@ function legacyMuscleArt(n){
 }
 function render(){
  document.documentElement.lang=db.settings.lang;
- document.getElementById('language-toggle').value=db.settings.lang;
- document.getElementById('language-toggle').onchange=e=>{db.settings.lang=e.target.value;save();render();if(window.trainlabTranslate)window.trainlabTranslate()};
+ const languageButton=document.getElementById('language-toggle');
+ languageButton.value=db.settings.lang;
+ languageButton.textContent=db.settings.lang==='es'?'ENG':'ESP';
+ languageButton.setAttribute('aria-label',db.settings.lang==='es'?'Switch to English':'Cambiar a español');
  document.getElementById('tabs').innerHTML='';
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;render();window.scrollTo({top:0,behavior:'instant'})});
  if(tab==='Workout')workout();if(tab==='Progress')progress();if(tab==='Body')body();if(tab==='Backup')backup();
@@ -251,11 +253,11 @@ function openTotalBodyHistoryPicker(selectedKey){
  const heading=document.createElement('h2');heading.textContent=tr('Use previous workout','Usar rutina anterior');
  const explanation=document.createElement('p');explanation.textContent=tr('Copy exercises into a weekly plan. Original workout history stays unchanged.','Copia ejercicios a un plan semanal. El historial original no se modifica.');
  const source=document.createElement('select');source.style.width='100%';
- for(const x of sessions){const o=document.createElement('option');o.value=x.key;o.textContent=x.sourceDay+' · '+(x.finishedAt?String(x.finishedAt).slice(0,10):'')+' · '+x.sets.length+' '+tr('sets','series')+(x.complete?' ✓':'');source.append(o);}
+ for(const x of sessions){const o=document.createElement('option');o.value=x.key;o.textContent=(db.settings.lang==='es'?(ES[EN.indexOf(x.sourceDay)]||x.sourceDay):x.sourceDay)+' · '+(x.finishedAt?String(x.finishedAt).slice(0,10):'')+' · '+x.sets.length+' '+tr('sets','series')+(x.complete?' ✓':'');source.append(o);}
  if(selectedKey&&sessions.some(x=>x.key===selectedKey))source.value=selectedKey;
  const destinationLabel=document.createElement('label');destinationLabel.textContent=tr('Destination day','Día de destino');
  const destination=document.createElement('select');destination.style.width='100%';
- for(const d of WEEKDAYS){const o=document.createElement('option');o.value=d;o.textContent=d;destination.append(o);}destination.value=day;
+ for(const d of WEEKDAYS){const o=document.createElement('option');o.value=d;o.textContent=db.settings.lang==='es'?(ES[EN.indexOf(d)]||d):d;destination.append(o);}destination.value=day;
  const preview=document.createElement('div');preview.className='history';preview.style.margin='12px 0';
  const modeLabel=document.createElement('label');modeLabel.textContent=tr('How to apply','Cómo aplicar');
  const mode=document.createElement('select');mode.style.width='100%';
