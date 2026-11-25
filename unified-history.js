@@ -86,7 +86,7 @@ function mutateHistory(x,operation,patch){
  let mirrorNext=null,mirrorRaw=null;
  if(x.nested!==null){
   const sets=r.sets.slice(),v=change(old);if(v===null)sets.splice(x.nested,1);else sets[x.nested]=v;
-  if(sets.length)next[x.index]={...r,sets};else next.splice(x.index,1);
+  next[x.index]={...r,sets};
   mirrorRaw=localStorage.getItem(SOURCES.triSets);if(mirrorRaw!==x.mirror)throw Error('stale');
   const mirror=strictRead(mirrorRaw,[]);if(!Array.isArray(mirror))throw Error('invalid');
   if(old.id){if(list.flatMap(a=>array(a?.sets)).filter(a=>a?.id===old.id).length!==1)throw Error('ambiguous');const matches=mirror.map((m,i)=>m?.id===old.id?i:-1).filter(i=>i>=0);if(matches.length>1)throw Error('ambiguous');
@@ -148,9 +148,12 @@ function manageRow(x,refresh){
 
 // Empty completed sessions are metadata, not exercise records. Delete only the
 // selected metadata row, with the same stale-data guard as individual entries.
+function isEmptyTriStrength(r){
+ return r?.discipline==='Strength'&&(r.sets==null||(Array.isArray(r.sets)&&r.sets.length===0));
+}
 function deleteEmptySession(x){
  if(x.source==='triathlon'){
-  if(x.raw.discipline!=='Strength'||!Array.isArray(x.raw.sets)||x.raw.sets.length!==0)throw Error('invalid');
+  if(!isEmptyTriStrength(x.raw))throw Error('invalid');
   mutateHistory(x,'delete');return;
  }
  if(x.source!=='total')throw Error('invalid');
@@ -189,7 +192,7 @@ function getRecords(){
   const sets=array(r.sets);for(const x of sets)if(x?.id)linked.add(x.id);
   const strength=r.discipline==='Strength';
   const refs=strength?sets.map((x,i)=>ref('triathlon',index,r,triSetDetail(x),i)): [ref('triathlon',index,r)];
-  records.push({discipline:'triathlon',date:d,name:str(r.exercise||'Triathlon'),summary:strength?sets.length+' '+tr('sets','series'):[r.details?.distance?str(r.details.distance)+' '+str(r.details.distanceUnit):'',r.details?.durationMin?str(r.details.durationMin)+' min':''].filter(Boolean).join(' · '),details:[],manage:refs,emptySession:strength&&Array.isArray(r.sets)&&r.sets.length===0?ref("triathlon",index,r):null,note:str(r.notes)});
+  records.push({discipline:'triathlon',date:d,name:str(r.exercise||'Triathlon'),summary:strength?sets.length+' '+tr('sets','series'):[r.details?.distance?str(r.details.distance)+' '+str(r.details.distanceUnit):'',r.details?.durationMin?str(r.details.durationMin)+' min':''].filter(Boolean).join(' · '),details:[],manage:refs,emptySession:isEmptyTriStrength(r)?ref("triathlon",index,r):null,note:str(r.notes)});
  }
  for(const [index,x] of triSets.entries()){
   if(!x||linked.has(x.id))continue;const d=dateOf(x.timestamp);if(!d)continue;
@@ -204,7 +207,7 @@ function mount(){const host=document.getElementById('athlete-profile-content');i
  const summary=section.querySelector('.uh-summary'),filters=section.querySelector('.uh-filters'),list=section.querySelector('.uh-list');
  const tabs=document.createElement('div');tabs.className='uh-tabs';for(const key of Object.keys(labels)){const b=document.createElement('button');b.type='button';b.textContent=labels[key];b.dataset.key=key;b.onclick=()=>{state.discipline=key;render();};tabs.append(b);}filters.append(tabs);
  const period=document.createElement('select');period.setAttribute('aria-label',tr('Date range','Rango de fechas'));for(const [value,label] of [['7',tr('Last 7 days','Últimos 7 días')],['30',tr('Last 30 days','Últimos 30 días')],['90',tr('Last 90 days','Últimos 90 días')],['all',tr('All time','Todo el historial')]]){const o=document.createElement('option');o.value=value;o.textContent=label;period.append(o);}period.value=state.period;period.onchange=()=>{state.period=period.value;render();};filters.append(period);
- function render(){const records=getRecords();const now=Date.now();const visible=records.filter(r=>(state.discipline==='all'||r.discipline===state.discipline)&&(state.period==='all'||(r.date.getTime()<=now&&r.date.getTime()>=now-Number(state.period)*86400000)));summary.textContent=visible.length+' '+tr('activities','actividades')+' · '+new Set(visible.map(r=>r.discipline)).size+' '+tr('disciplines','disciplinas');for(const b of tabs.children){b.classList.toggle('uh-selected',b.dataset.key===state.discipline);b.setAttribute('aria-pressed',String(b.dataset.key===state.discipline));}list.replaceChildren();if(!visible.length){const p=document.createElement('p');p.textContent=tr('No recorded activities for this filter.','No hay actividades registradas para este filtro.');list.append(p);return;}for(const r of visible){const details=document.createElement('details');details.className='uh-entry';const heading=document.createElement('summary');const tag=document.createElement('span');tag.className='uh-tag';tag.textContent=labels[r.discipline];const title=document.createElement('strong');title.textContent=r.name;const date=document.createElement('small');date.textContent=r.date.toLocaleDateString(document.documentElement.lang==='es'?'es-MX':'en-US');const desc=document.createElement('div');desc.className='uh-desc';desc.textContent=(r.manage?.length&&r.manage.every(x=>excluded(x))?tr('Excluded · ','Excluido · '):'')+r.summary+(r.weightMoved?' · '+r.weightMoved.label+': '+r.weightMoved.value:'');heading.append(tag,title,date,desc);details.append(heading);const body=document.createElement('div');body.className='uh-detail';if(r.details.length){const ul=document.createElement('ul');for(const line of r.details){const li=document.createElement('li');li.textContent=line;ul.append(li);}body.append(ul);}if(r.weightMoved){
+ function render(){const records=getRecords();const now=Date.now();const visible=records.filter(r=>(state.discipline==='all'||r.discipline===state.discipline)&&(state.period==='all'||(r.date.getTime()<=now&&r.date.getTime()>=now-Number(state.period)*86400000)));summary.textContent=visible.length+' '+tr('activities','actividades')+' · '+new Set(visible.map(r=>r.discipline)).size+' '+tr('disciplines','disciplinas');for(const b of tabs.children){b.classList.toggle('uh-selected',b.dataset.key===state.discipline);b.setAttribute('aria-pressed',String(b.dataset.key===state.discipline));}list.replaceChildren();if(!visible.length){const p=document.createElement('p');p.textContent=tr('No recorded activities for this filter.','No hay actividades registradas para este filtro.');list.append(p);return;}for(const r of visible){const details=document.createElement('details');details.className='uh-entry';if(r.emptySession)details.open=true;const heading=document.createElement('summary');const tag=document.createElement('span');tag.className='uh-tag';tag.textContent=labels[r.discipline];const title=document.createElement('strong');title.textContent=r.name;const date=document.createElement('small');date.textContent=r.date.toLocaleDateString(document.documentElement.lang==='es'?'es-MX':'en-US');const desc=document.createElement('div');desc.className='uh-desc';desc.textContent=(r.manage?.length&&r.manage.every(x=>excluded(x))?tr('Excluded · ','Excluido · '):'')+r.summary+(r.weightMoved?' · '+r.weightMoved.label+': '+r.weightMoved.value:'');heading.append(tag,title,date,desc);details.append(heading);const body=document.createElement('div');body.className='uh-detail';if(r.details.length){const ul=document.createElement('ul');for(const line of r.details){const li=document.createElement('li');li.textContent=line;ul.append(li);}body.append(ul);}if(r.weightMoved){
  const weight=document.createElement('div');weight.className='uh-weight-moved';
  const strong=document.createElement('strong');strong.textContent=r.weightMoved.label+': '+r.weightMoved.value;
  const small=document.createElement('small');small.textContent=' · '+r.weightMoved.count+' '+tr('weighted sets','series con peso');
