@@ -10,7 +10,7 @@ function workout(){let p=PROGRAM[day];app.innerHTML=`${bodyAreaPicker()}<div cla
  document.querySelectorAll('[data-weekly-exercise]').forEach(el=>el.onchange=()=>toggleWeeklyExercise(el.dataset.weeklyExercise));document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>logExercise(Number(b.dataset.log)));if($('finish'))$('finish').onclick=()=>{if(confirm('Start a new session for '+day+'?')){db.session[day]=session(day)+1;save();render()}}}
 function exercise(e,i){let [name,equipment,unit,sets,min,max]=e;let past=relevant(day,name),today=current(day,name),last=past.length?past[past.length-1]:null;let advice=!last?'Establish a comfortable baseline with controlled form.':last.rir>=2&&last.count>=max?'At the top of the rep range: if all sets were controlled, consider 2–5% more load next session.':last.count<min?'Below target: maintain or reduce resistance and prioritize form.':'Keep the same load and work toward the top of the range.';let cardio=unit==='minutes';return `<section class="card exercise"><div class="row"><div><h3>${i+1}. ${esc(name)}</h3><small>${esc(equipment)}</small><div><span class="pill">${sets} × ${min}${max!==min?'–'+max:''} ${unit}</span></div></div><span class="pill">${today.length}/${sets} logged</span></div><div class="grid" style="margin-top:12px"><div><label>${cardio?'Distance (km, optional)':'Weight (lb; 0 for bodyweight)'}</label><input id="weight-${i}" ${ride?`data-ride-input="${i}"`:``} type="number" step="0.5" min="0" placeholder="0" value="${last?last.weight:''}"></div><div><label>${cardio?'Minutes':unit}</label><input id="count-${i}" data-reps="${i}" type="number" min="0.01" step="0.01" value="${bike?(pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===session(day)?(pendingBikeTimer.seconds/60).toFixed(2):''):(db.repDefaults[name]??(last?last.count:min))}"></div></div>${!cardio?`<label style="margin-top:9px">Reps left in reserve (RIR)</label><select id="rir-${i}"><option value="3">3+ reps</option><option value="2" selected>2 reps</option><option value="1">1 rep</option><option value="0">0 reps</option></select>`:''}<button class="primary full log-activity" data-log="${i}">+ Log ${cardio?'activity':'set'}</button>${today.length?`<div class="history success">${today.map(x=>`✓ ${x.weight} ${cardio?'km':'lb'} × ${x.count} ${unit}`).join('<br>')}</div>`:''}<div class="notice"><small>Progression coach</small><div>${advice}</div></div></section>`}
 function logExercise(i){let e=PROGRAM[day].ex[i],weight=Number($('weight-'+i).value||0),count=Number($('count-'+i).value),rir=$('rir-'+i)?Number($('rir-'+i).value):null;if(!Number.isFinite(weight)||weight<0||!Number.isFinite(count)||count<=0){alert('Enter valid values.');return}db.logs.push({date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:session(day),name:e[0],equipment:e[1],unit:e[2],weight,count,rir});save();render()}
-function progress(){let exercises=[...new Set(db.logs.map(x=>x.name))];app.innerHTML=`<h2>Progress</h2><div class="grid"><div class="card"><small>Logged sets</small><div class="stat">${db.logs.length}</div></div><div class="card"><small>Sessions</small><div class="stat">${new Set(db.logs.map(x=>x.day+'-'+x.session)).size}</div></div></div>${exercises.length?`<label>Exercise history</label><select id="history-select">${exercises.map(x=>`<option>${esc(x)}</option>`).join('')}</select><div class="card" id="history"></div>`:'<div class="card">Log your first workout to see progression.</div>'}`;if($('history-select')){$('history-select').onchange=renderHistory;renderHistory()}}
+function progress(){let exercises=[...new Set(db.logs.filter(x=>!x.excludedFromProgress).map(x=>x.name))];app.innerHTML=`<h2>Progress</h2><div class="grid"><div class="card"><small>Logged sets</small><div class="stat">${db.logs.filter(x=>!x.excludedFromProgress).length}</div></div><div class="card"><small>Sessions</small><div class="stat">${new Set(db.logs.map(x=>x.day+'-'+x.session)).size}</div></div></div>${exercises.length?`<label>Exercise history</label><select id="history-select">${exercises.map(x=>`<option>${esc(x)}</option>`).join('')}</select><div class="card" id="history"></div>`:'<div class="card">Log your first workout to see progression.</div>'}`;if($('history-select')){$('history-select').onchange=renderHistory;renderHistory()}}
 function setRef(code){
  const [i,j]=String(code).split(':').map(Number);
  const e=PROGRAM[day]?.ex[i];
@@ -56,7 +56,7 @@ function undoSet(i){
  else if(a.type==='edit')db.logs[a.index]=a.record;
  lastSetAction=null;save();render();
 }
-function renderHistory(){let name=$('history-select').value,rows=db.logs.filter(x=>x.name===name).slice(-30).reverse();$('history').innerHTML=`<h3>${esc(name)}</h3><div class="history">${rows.map(x=>`${x.date} · ${x.weight} ${x.unit==='minutes'?'km':'lb'} × ${x.count} ${x.unit}${x.rir===null?'':' · RIR '+x.rir}`).join('<hr>')}</div>`}
+function renderHistory(){let name=$('history-select').value,rows=db.logs.filter(x=>x.name===name&&!x.excludedFromProgress).slice(-30).reverse();$('history').innerHTML=`<h3>${esc(name)}</h3><div class="history">${rows.map(x=>`${x.date} · ${x.weight} ${x.unit==='minutes'?'km':'lb'} × ${x.count} ${x.unit}${x.rir===null?'':' · RIR '+x.rir}`).join('<hr>')}</div>`}
 function body(){app.innerHTML=`<h2>Body composition</h2><p class="muted">Strength and waist trend matter more than a target weight.</p><div class="card"><div class="grid"><div><label>Waist (inches)</label><input id="waist" type="number" step="0.1"></div><div><label>Body weight (lb, optional)</label><input id="mass" type="number" step="0.1"></div></div><button class="primary full" id="save-body">Save measurement</button></div><div class="card"><h3>Measurement history</h3><div class="history">${db.body.slice().reverse().map(x=>`${x.date} · Waist ${x.waist??'—'} in · Weight ${x.mass??'—'} lb`).join('<hr>')||'No measurements yet.'}</div></div>`;$('save-body').onclick=()=>{let waist=$('waist').value,mass=$('mass').value;if(!waist&&!mass)return alert('Enter at least one measurement.');if((waist&&Number(waist)<=0)||(mass&&Number(mass)<=0))return alert('Enter positive measurements.');db.body.push({date:new Date().toISOString().slice(0,10),waist:waist?Number(waist):null,mass:mass?Number(mass):null});save();render()}}
 function backup(){app.innerHTML=`<h2>Backup and restore</h2><div class="card"><p>Data is stored locally on this device. Export backups regularly, especially before changing phones or clearing browser data.</p><button class="primary full" id="export">Download JSON backup</button><label style="margin-top:16px">Restore a previous Total Body backup</label><input type="file" id="import" accept=".json,application/json"></div><div class="card"><h3>About Total Body</h3><p>Works offline after the first successful visit on a hosted HTTPS site. No account, subscription or server database. Progression suggestions are rules of thumb, not medical or individualized coaching.</p></div>`;$('export').onclick=()=>{let blob=new Blob([JSON.stringify({version:1,...db},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='fitclimb-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};$('import').onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.logs)||!Array.isArray(d.body)||typeof d.session!=='object')throw Error('Invalid backup');if(confirm('Replace current data with this backup?')){db={logs:d.logs,body:d.body,session:d.session};save();render();alert('Backup restored')}}catch(e){alert('Could not import: '+e.message)}}}
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
@@ -185,12 +185,8 @@ function restoreWeeklyProgram(){
   PROGRAM[d].ex=db.weeklyProgram[d].map(name=>BASE_BY_NAME.get(name));
  });
 }
-// One-time testing reset: remove legacy preset assignments and old test records.
-// This flag ensures a refresh or future app launch never clears new selections.
+// Retire the legacy test reset. Preserve existing training and measurement records.
 if(db.totalBodyCleanStartVersion!==1){
- db.weeklyProgram=Object.fromEntries(WEEKDAYS.map(d=>[d,[]]));
- db.logs=[];db.body=[];db.session={};db.completed=[];db.started={};
- db.setTargets={};db.repDefaults={};
  db.totalBodyCleanStartVersion=1;
  save();
 }
@@ -239,7 +235,7 @@ function bodyAreaPicker(){
 // Original activity logs and completed sessions are never modified.
 function historicalTotalBodySessions(){
  const groups=new Map();
- for(const x of db.logs){if(!x||!WEEKDAYS.includes(x.day)||!BASE_BY_NAME.has(x.name))continue;
+ for(const x of db.logs){if(!x||x.excludedFromProgress||!WEEKDAYS.includes(x.day)||!BASE_BY_NAME.has(x.name))continue;
   const key=x.day+'|'+x.session;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(x);}
  return [...groups].map(([key,sets])=>{
   const [sourceDay,sourceSession]=key.split('|');
@@ -575,12 +571,12 @@ function undoSet(i){
  lastSetAction=null;save();render();
 }
 function renderHistory(){
- let name=$('history-select').value,rows=db.logs.filter(x=>x.name===name).slice(-30).reverse();
+ let name=$('history-select').value,rows=db.logs.filter(x=>x.name===name&&!x.excludedFromProgress).slice(-30).reverse();
  $('history').innerHTML=`<h3>${esc(exerciseName(name))}</h3><div class="history">${rows.map(x=>`${esc(x.date)} · ${x.unit==='minutes'?distanceShown(x.weight,distanceUnit(x.name)):toDisplay(x.weight,exerciseUnit(x.name))} ${x.unit==='minutes'?distanceUnit(x.name):exerciseUnit(x.name)} × ${x.count} ${esc(x.unit)}`).join('<hr>')}</div>`;
 }
 function progress(target=app){
- let exercises=[...new Set(db.logs.map(x=>x.name))];
- target.innerHTML=`<h2>${tr('Progress','Progreso')}</h2><div class="grid"><div class="card"><small>${tr('Logged sets','Series registradas')}</small><div class="stat">${db.logs.length}</div></div><div class="card"><small>${tr('Completed sessions','Sesiones finalizadas')}</small><div class="stat">${db.completed.length}</div></div></div>${exercises.length?`<label>${tr('Exercise history','Historial de ejercicio')}</label><select id="history-select">${exercises.map(x=>`<option value="${esc(x)}">${esc(exerciseName(x))}</option>`).join('')}</select><div class="card" id="history"></div>`:`<div class="card">${tr('Log your first workout to see progress.','Registra tu primer entrenamiento para ver el progreso.')}</div>`}`;
+ let exercises=[...new Set(db.logs.filter(x=>!x.excludedFromProgress).map(x=>x.name))];
+ target.innerHTML=`<h2>${tr('Progress','Progreso')}</h2><div class="grid"><div class="card"><small>${tr('Logged sets','Series registradas')}</small><div class="stat">${db.logs.filter(x=>!x.excludedFromProgress).length}</div></div><div class="card"><small>${tr('Completed sessions','Sesiones finalizadas')}</small><div class="stat">${db.completed.length}</div></div></div>${exercises.length?`<label>${tr('Exercise history','Historial de ejercicio')}</label><select id="history-select">${exercises.map(x=>`<option value="${esc(x)}">${esc(exerciseName(x))}</option>`).join('')}</select><div class="card" id="history"></div>`:`<div class="card">${tr('Log your first workout to see progress.','Registra tu primer entrenamiento para ver el progreso.')}</div>`}`;
  if($('history-select')){$('history-select').onchange=renderHistory;renderHistory()}
 }
 function body(target=app){
@@ -594,7 +590,7 @@ function body(target=app){
 function fuelLabReport(){
  const days=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
  const schedule=days.map(weekday=>({weekday,title:PROGRAM[weekday].title,exercises:PROGRAM[weekday].ex.map(e=>({name:e[0],equipment:e[1],measurement:e[2],plannedSets:e[2]==='minutes'?null:(db.setTargets?.[weekday+'|'+e[0]]??e[3]),targetMinimum:e[4],targetMaximum:e[5],durationUnit:e[2]==='minutes'?'minutes':null}))}));
- const activities=db.logs.map(x=>({date:x.date,recordedAt:x.timestamp?new Date(x.timestamp).toISOString():null,weekday:x.day,session:x.session,exercise:x.name,equipment:x.equipment,measurement:x.unit,amount:x.count, ...(x.name==='Stationary bike'?{durationMinutes:x.count}:x.unit==='minutes'?{durationMinutes:x.count,distanceKm:x.weight}:{loadLb:x.weight}), ...(x.intervals?{intervals:{peaks:x.intervals.cycles,peakSeconds:x.intervals.peak,recoverySeconds:x.intervals.recovery}}:{})}));
+ const activities=db.logs.filter(x=>!x.excludedFromProgress).map(x=>({date:x.date,recordedAt:x.timestamp?new Date(x.timestamp).toISOString():null,weekday:x.day,session:x.session,exercise:x.name,equipment:x.equipment,measurement:x.unit,amount:x.count, ...(x.name==='Stationary bike'?{durationMinutes:x.count}:x.unit==='minutes'?{durationMinutes:x.count,distanceKm:x.weight}:{loadLb:x.weight}), ...(x.intervals?{intervals:{peaks:x.intervals.cycles,peakSeconds:x.intervals.peak,recoverySeconds:x.intervals.recovery}}:{})}));
  const completedSessions=(db.completed||[]).map(x=>typeof x==='object'?{...x}:x);
  const measurements=db.body.map(x=>({date:x.date,waistInches:x.waist,weightLb:x.mass}));
  return {schema:'a1sc.trainlab.fuellab-export',schemaVersion:1,exportedAt:new Date().toISOString(),source:'A1SC Train Lab testing',scope:'This device and its locally stored FitClimb training data only',units:{distance:'km',weight:'lb',waist:'in',duration:'minutes',interval:'seconds'},weeklyPlan:schedule,loggedActivities:activities,completedSessions,bodyMeasurements:measurements,limitations:['No intensity, heart rate, energy expenditure, or nutrition requirements inferred','Weekly plan is a recurring template, not a dated future workout calendar','Other discipline modules are not represented unless their data is stored in this local dataset']};
@@ -660,3 +656,6 @@ function renderAthleteProfile(){
 #fitclimb .tb-compact-exercise>div[id^="tb-details-"][hidden]{display:none!important}
 #fitclimb .tb-view-actions button.active{background:#2b85ad!important;border:1px solid #ff4c9c!important}
 `;document.head.appendChild(st)})();
+
+window.TrainLabHistoryReloadTotal=function(next){db.logs=next.logs;lastSetAction=null;};
+window.TrainLabRefreshHistoryProgress=function(target){progress(target);};
