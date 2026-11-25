@@ -426,6 +426,7 @@ function workout(){
      updateRideSpeed(i);
    }
  });
+ document.querySelectorAll('[data-bike-unit]').forEach(el=>el.onchange=()=>{const i=Number(el.dataset.bikeUnit),f=$('bike-distance-'+i),prev=distanceUnit('Stationary bike');if(f.value!==''&&Number.isFinite(Number(f.value)))f.value=String(distanceShown(distanceKm(Number(f.value),prev),el.value));db.distanceUnits['Stationary bike']=el.value;save();});
  document.querySelectorAll('[data-ride-input]').forEach(el=>el.addEventListener('input',()=>updateRideSpeed(Number(el.dataset.rideInput))));
  document.querySelectorAll('[data-reps]').forEach(el=>el.onchange=()=>{
    const i=Number(el.dataset.reps),name=PROGRAM[day].ex[i][0],v=Number(el.value);
@@ -458,6 +459,8 @@ document.addEventListener('trainlab:timer-finished',event=>{
  pendingBikeTimer={seconds:detail.elapsedSeconds,day,session:session(day)};
  if(typeof render==='function')render();
 });
+const bikeTypes=[['spinning','Spinning','Spinning'],['endurance','Endurance','Resistencia aeróbica'],['intervals','Intervals','Intervalos'],['power','Power / Resistance','Potencia / Resistencia'],['recovery','Recovery','Recuperación'],['mixed','Mixed','Mixto']];
+function bikeSummary(x,u){return [x.count+' min',x.bikeDistanceKm!=null?distanceShown(x.bikeDistanceKm,u)+' '+u:'',x.bikeDistanceKm!=null&&x.count>0?distanceShown(x.bikeDistanceKm*60/x.count,u)+' '+(u==='mi'?'mph':'km/h'):'',...bikeTypes.filter(t=>t[0]===x.bikeType).map(t=>tr(t[1],t[2])),x.bikeRpe!=null?'RPE '+x.bikeRpe+'/10':''].filter(Boolean).join(' · ')}
 function updateRideSpeed(i){
  const distance=Number($('weight-'+i)?.value||0),hours=Number($('ride-hours-'+i)?.value||0),minutes=Number($('ride-minutes-'+i)?.value||0);
  const field=$('ride-speed-'+i);if(!field)return;
@@ -480,28 +483,32 @@ function exercise(e,i,locked){
  <div class="pill">${bike||elliptical||ride?`${completedSets} ${tr('activities logged','actividades registradas')}`:`${completedSets}/${count} ${tr('logged','registradas')}`}</div>
  ${!locked?`<div class="grid" style="margin-top:12px">${name==='Side plank'||bike?'':`<div><label>${cardio?tr('Distance','Distancia')+' ('+distUnit+')':tr('Weight','Peso')+' ('+exUnit+')'}</label><input id="weight-${i}" ${ride?`data-ride-input="${i}"`:``} type="number" step="0.5" min="0" value="${cardio?(last?distanceShown(last.weight,distUnit):''):weight}" placeholder="0"></div>`}${ride?`<div><label>${tr('Moving time','Tiempo en movimiento')}</label><div class="row"><input id="ride-hours-${i}" data-ride-input="${i}" type="number" min="0" step="1" placeholder="h" aria-label="${tr('Hours','Horas')}" style="width:75px" value=""><input id="ride-minutes-${i}" data-ride-input="${i}" type="number" min="0" max="59" step="1" placeholder="min" aria-label="${tr('Minutes','Minutos')}" style="width:85px" value=""></div></div>`:`<div><label>${bike?tr('Actual time (minutes) — enter manually or use timer','Tiempo real (minutos) — manual o con temporizador'):(cardio?tr('Time (minutes)','Tiempo (minutos)'):esc(unit))}</label><input id="count-${i}" data-reps="${i}" type="number" min="0.01" step="0.01" value="${bike?(pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===session(day)?(pendingBikeTimer.seconds/60).toFixed(2):''):(db.repDefaults[name]??(last?last.count:min))}"></div>`}</div>
 
+ ${bike&&!locked?`<div class="grid" style="margin-top:8px"><div><label>${tr('Hours (optional)','Horas (opcional)')}</label><input id="bike-hours-${i}" type="number" min="0" step="1" placeholder="0"></div><div><label>${tr('Estimated distance (optional)','Distancia estimada (opcional)')}</label><div class="row"><input id="bike-distance-${i}" type="number" min="0" step="0.01" placeholder="—"><select id="bike-unit-${i}" data-bike-unit="${i}"><option value="km" ${distUnit==='km'?'selected':''}>km</option><option value="mi" ${distUnit==='mi'?'selected':''}>mi</option></select></div></div><div><label>${tr('Training type (optional)','Tipo de entrenamiento (opcional)')}</label><select id="bike-type-${i}"><option value="">—</option>${bikeTypes.map(t=>`<option value="${t[0]}">${tr(t[1],t[2])}</option>`).join('')}</select></div><div><label>${tr('Effort (optional)','Esfuerzo (opcional)')}</label><select id="bike-rpe-${i}"><option value="">—</option>${Array.from({length:10},(_,j)=>`<option value="${j+1}">${j+1}${j===0?' — '+tr('Easy','Fácil'):j===9?' — '+tr('Maximum','Máximo'):''}</option>`).join('')}</select></div></div>`:''}
  ${ride&&!locked?`<details style="margin-top:12px;margin-bottom:22px;padding:10px 0;border-bottom:1px solid var(--border, #555)"><summary>${tr('Additional ride details (optional)','Detalles adicionales (opcional)')}</summary><div class="grid" style="margin-top:8px"><div><label>${tr('Elevation gain','Desnivel positivo')} (${distUnit==='mi'?'ft':'m'})</label><input id="ride-elevation-${i}" type="number" min="0" step="1" placeholder="0"></div><div><label>${tr('Average speed','Velocidad promedio')} (${distUnit==='mi'?'mph':'km/h'})</label><input id="ride-speed-${i}" type="number" min="0" step="0.01" placeholder="—" readonly aria-readonly="true"></div></div></details>`:''}
  <button class="primary full log-activity" data-log="${i}" ${!bike&&!elliptical&&!ride&&completedSets>=count?'disabled':''}>+ ${bike||elliptical||ride?tr('Log activity','Registrar actividad'):tr('Log set','Registrar serie')}</button>`:''}
- ${today.length?`<div class="set-list" aria-label="${tr('Recorded sets','Series registradas')}">${today.map((x,j)=>`<div class="set-row"><span class="set-text"><b>${elliptical||ride?tr('Activity','Actividad'):tr('Set','Serie')} ${j+1}</b> · ${bike?`${x.count} ${esc(unit)}`:ride?`${distanceShown(x.weight,distUnit)} ${distUnit} · ${Math.floor(x.count/60)}h ${Math.round(x.count%60)}m${x.elevationGainM!=null?' · ↑'+Number((distUnit==='mi'?x.elevationGainM/0.3048:x.elevationGainM).toFixed(distUnit==='mi'?0:1))+(distUnit==='mi'?'ft':'m'):''}${x.averageSpeedKmh!=null?' · '+Number((distUnit==='mi'?x.averageSpeedKmh/1.609344:x.averageSpeedKmh).toFixed(1))+' '+(distUnit==='mi'?'mph':'km/h'):''}`:`${cardio?distanceShown(x.weight,distUnit):toDisplay(x.weight,exUnit)} ${cardio?distUnit:exUnit} × ${x.count} ${esc(unit)}`}</span>${!locked?`<button class="set-edit" data-edit="${i}:${j}" aria-label="${tr('Edit set','Editar serie')} ${j+1}">✎</button><button class="set-delete" data-delete="${i}:${j}" aria-label="${tr('Delete set','Eliminar serie')} ${j+1}">✕</button>`:''}</div>`).join('')}</div>`:''}
+ ${today.length?`<div class="set-list" aria-label="${tr('Recorded sets','Series registradas')}">${today.map((x,j)=>`<div class="set-row"><span class="set-text"><b>${elliptical||ride?tr('Activity','Actividad'):tr('Set','Serie')} ${j+1}</b> · ${bike?`${esc(bikeSummary(x,distUnit))}`:ride?`${distanceShown(x.weight,distUnit)} ${distUnit} · ${Math.floor(x.count/60)}h ${Math.round(x.count%60)}m${x.elevationGainM!=null?' · ↑'+Number((distUnit==='mi'?x.elevationGainM/0.3048:x.elevationGainM).toFixed(distUnit==='mi'?0:1))+(distUnit==='mi'?'ft':'m'):''}${x.averageSpeedKmh!=null?' · '+Number((distUnit==='mi'?x.averageSpeedKmh/1.609344:x.averageSpeedKmh).toFixed(1))+' '+(distUnit==='mi'?'mph':'km/h'):''}`:`${cardio?distanceShown(x.weight,distUnit):toDisplay(x.weight,exUnit)} ${cardio?distUnit:exUnit} × ${x.count} ${esc(unit)}`}</span>${!locked?`<button class="set-edit" data-edit="${i}:${j}" aria-label="${tr('Edit set','Editar serie')} ${j+1}">✎</button><button class="set-delete" data-delete="${i}:${j}" aria-label="${tr('Delete set','Eliminar serie')} ${j+1}">✕</button>`:''}</div>`).join('')}</div>`:''}
  ${!locked&&lastSetAction&&lastSetAction.day===day&&lastSetAction.session===session(day)&&lastSetAction.name===name?`<button class="undo-set" data-undo="${i}">${tr('Undo last set change','Deshacer último cambio')}</button>`:''}</div></section>`;
 }
 function logExercise(i){
  const e=PROGRAM[day].ex[i],n=session(day);
  if(completed(day,n))return alert(tr('Session locked.','Sesión bloqueada.'));
  if(e[0]!=='Stationary bike'&&e[0]!=='Elliptical warm-up'&&e[0]!=='Outdoor ride'&&current(day,e[0]).length>=target(day,e[0]))return alert(tr('Planned sets reached.','Series planeadas completas.'));
- const ride=e[0]==='Outdoor ride';
+ const ride=e[0]==='Outdoor ride',bike=e[0]==='Stationary bike';
  const raw=e[0]==='Side plank'||e[0]==='Stationary bike'?0:Number($('weight-'+i).value||0);
  const hours=ride?Number($('ride-hours-'+i).value||0):0,minutes=ride?Number($('ride-minutes-'+i).value||0):0;
  if(ride&&(!Number.isInteger(hours)||hours<0||!Number.isInteger(minutes)||minutes<0||minutes>59))return alert(tr('Enter valid moving time.','Ingresa un tiempo en movimiento válido.'));
- const count=ride?hours*60+minutes:Number($('count-'+i).value);
+ const bh=bike?Number($('bike-hours-'+i).value||0):0;
+ const count=ride?hours*60+minutes:bh*60+Number($('count-'+i).value);
+ if(bike&&(!Number.isInteger(bh)||bh<0||Number($('count-'+i).value)<0))return alert(tr('Enter valid duration.','Ingresa una duración válida.'));
  if(!Number.isFinite(raw)||raw<0||!Number.isFinite(count)||count<=0)return alert(tr('Enter valid values.','Ingresa valores válidos.'));
- const bike=e[0]==='Stationary bike';
  const optionalNumber=id=>{const el=$(id),v=el?.value?.trim();return v===''||v==null?null:Number(v)};
+ const bd=bike?optionalNumber('bike-distance-'+i):null,br=bike?optionalNumber('bike-rpe-'+i):null,bt=bike?$('bike-type-'+i).value:'';
+ if(bike&&((bd!==null&&(!Number.isFinite(bd)||bd<0))||(br!==null&&(!Number.isInteger(br)||br<1||br>10))||(bt&&!bikeTypes.some(t=>t[0]===bt))))return alert(tr('Enter valid bike details.','Ingresa detalles válidos.'));
  const elev=ride?optionalNumber('ride-elevation-'+i):null;
  const speed=ride&&count>0?distanceKm(raw,distanceUnit(e[0]))/(count/60):null;
  if(ride&&((elev!==null&&(!Number.isFinite(elev)||elev<0))))return alert(tr('Enter valid ride details.','Ingresa detalles válidos de la rodada.'));
  if(!db.started[startKey(day,n)])db.started[startKey(day,n)]=new Date().toISOString();
- const record={date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:n,name:e[0],equipment:e[1],unit:e[2],weight:bike?0:e[2]==='minutes'?distanceKm(raw,distanceUnit(e[0])):toLbs(raw,exerciseUnit(e[0])),count,...(ride?{...(elev!==null?{elevationGainM:elev*(distanceUnit(e[0])==='mi'?0.3048:1)}:{}),...(speed!==null&&Number.isFinite(speed)?{averageSpeedKmh:speed}:{})}:{}),...(bike&&pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===n&&Math.abs(count-pendingBikeTimer.seconds/60)<0.02?{timerRecordedSeconds:pendingBikeTimer.seconds}:{})};
+ const record={date:new Date().toISOString().slice(0,10),timestamp:Date.now(),day,session:n,name:e[0],equipment:e[1],unit:e[2],weight:bike?0:e[2]==='minutes'?distanceKm(raw,distanceUnit(e[0])):toLbs(raw,exerciseUnit(e[0])),count,...(bike?{bikeDistanceKm:bd===null?null:distanceKm(bd,distanceUnit(e[0])),bikeRpe:br,bikeType:bt||null}:{}),...(ride?{...(elev!==null?{elevationGainM:elev*(distanceUnit(e[0])==='mi'?0.3048:1)}:{}),...(speed!==null&&Number.isFinite(speed)?{averageSpeedKmh:speed}:{})}:{}),...(bike&&pendingBikeTimer&&pendingBikeTimer.day===day&&pendingBikeTimer.session===n&&Math.abs(count-pendingBikeTimer.seconds/60)<0.02?{timerRecordedSeconds:pendingBikeTimer.seconds}:{})};
  db.logs.push(record);
  if(bike)pendingBikeTimer=null;
  if(!bike&&!ride)db.repDefaults[e[0]]=count;
@@ -519,6 +526,14 @@ function setRef(code){
 }
 function editSet(code){
  const x=setRef(code);if(!x)return;
+ if(x.name==='Stationary bike'){
+  const u=distanceUnit(x.name),d=prompt(tr('Estimated distance (optional)','Distancia estimada (opcional)')+' ('+u+')',x.bikeDistanceKm==null?'':String(distanceShown(x.bikeDistanceKm,u)));if(d===null)return;
+  const m=prompt(tr('Duration (total minutes)','Duración (minutos totales)'),String(x.count));if(m===null)return;
+  const r=prompt(tr('Effort 1–10 (optional)','Esfuerzo 1–10 (opcional)'),x.bikeRpe??'');if(r===null)return;
+  const v=d.trim()===''?null:Number(d),c=Number(m),rp=r.trim()===''?null:Number(r);
+  if(!Number.isFinite(c)||c<=0||(v!==null&&(!Number.isFinite(v)||v<0))||(rp!==null&&(!Number.isInteger(rp)||rp<1||rp>10)))return alert(tr('Invalid values.','Valores inválidos.'));
+  const before={...db.logs[x._index]};db.logs[x._index]={...before,count:c,bikeDistanceKm:v===null?null:distanceKm(v,u),bikeRpe:rp,...(c!==before.count?{timerRecordedSeconds:null}:{})};lastSetAction={type:'edit',record:before,index:x._index,day,session:session(day),name:x.name};save();render();return;
+ }
  const cardio=x.unit==='minutes';
  const exUnit=exerciseUnit(x.name),distUnit=distanceUnit(x.name);
  const weight=prompt(tr('Correct weight / distance','Corregir peso / distancia')+` (${cardio?distUnit:exUnit})`,String(cardio?distanceShown(x.weight,distUnit):toDisplay(x.weight,exUnit)));

@@ -11,7 +11,11 @@ const dateOf=(v,fallback)=>safeDate(v)||safeDate(fallback);
 const formatDuration=seconds=>{const n=Number(seconds);if(!Number.isFinite(n)||n<0)return '';const m=Math.floor(n/60),s=Math.round(n%60);return m+'m'+(s?' '+s+'s':'');};
 function totalDetail(s,tb){
  const name=str(s.name),minutes=Number(s.count);
- if(name==='Stationary bike')return name+' · '+(Number.isFinite(minutes)?formatDuration(minutes*60):'');
+ if(name==='Stationary bike'){
+ const u=tb?.distanceUnits?.[name]==='mi'?'mi':'km',factor=u==='mi'?1.609344:1;
+ const types={spinning:tr('Spinning','Spinning'),endurance:tr('Endurance','Resistencia aeróbica'),intervals:tr('Intervals','Intervalos'),power:tr('Power / Resistance','Potencia / Resistencia'),recovery:tr('Recovery','Recuperación'),mixed:tr('Mixed','Mixto')};
+ return [tr('Stationary bike','Bicicleta estática'),formatDuration(minutes*60),s.bikeDistanceKm!=null?Number((s.bikeDistanceKm/factor).toFixed(2))+' '+u:'',s.bikeDistanceKm!=null&&minutes>0?Number((s.bikeDistanceKm/factor*60/minutes).toFixed(1))+' '+(u==='mi'?'mph':'km/h'):'',types[s.bikeType],s.bikeRpe!=null?'RPE '+s.bikeRpe+'/10':''].filter(Boolean).join(' · ');
+ }
  if(name==='Outdoor ride'){
   const unit=tb?.distanceUnits?.[name]==='mi'?'mi':'km';
   const km=Number(s.weight),distance=Number.isFinite(km)?Number((unit==='mi'?km/1.609344:km).toFixed(2)):null;
@@ -106,6 +110,7 @@ function correctionSpec(x){
  const r=entryOf(x),fields=[];const add=(key,en,es,value,min=0,integer=false,max=1e7)=>fields.push({key,label:tr(en,es),value,min:integer?Math.ceil(min):min,integer,max});
  const t=x.source;
  if(t==='total'){
+  if(r.name==='Stationary bike'){if(r.bikeDistanceKm!=null)add('bikeDistanceKm','Distance (km)','Distancia (km)',r.bikeDistanceKm);if(r.bikeRpe!=null)add('bikeRpe','Effort (RPE 1–10)','Esfuerzo (RPE 1–10)',r.bikeRpe,1,true,10);}
   if(r.name!=='Stationary bike'&&r.name!=='Side plank')add('weight',r.unit==='minutes'?'Distance (km)':'Weight (lb)',r.unit==='minutes'?'Distancia (km)':'Peso (lb)',r.weight);
   add('count',r.unit==='minutes'?'Duration (minutes)':r.unit?.includes('seconds')?'Duration (seconds)':'Repetitions',r.unit==='minutes'?'Duración (minutos)':r.unit?.includes('seconds')?'Duración (segundos)':'Repeticiones',r.count,0.01,r.unit!=='minutes');
   if(r.name==='Outdoor ride'&&r.elevationGainM!=null)add('elevationGainM','Elevation gain (m)','Desnivel (m)',r.elevationGainM);
