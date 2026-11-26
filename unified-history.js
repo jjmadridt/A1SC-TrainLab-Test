@@ -23,9 +23,9 @@ function totalDetail(s,tb){
   const duration=Number.isFinite(minutes)?Math.floor(minutes/60)+'h '+Math.round(minutes%60)+'m':'';
   const extras=[];
   if(s.elevationGainM!=null)extras.push('↑'+Number((unit==='mi'?s.elevationGainM/0.3048:s.elevationGainM).toFixed(unit==='mi'?0:1))+' '+(unit==='mi'?'ft':'m'));
-  const avg=Number.isFinite(km)&&km>=0&&Number.isFinite(minutes)&&minutes>0?km/(minutes/60):(s.averageSpeedKmh!=null?Number(s.averageSpeedKmh):null);
+  const avg=s.rideSpeedManual&&s.averageSpeedKmh!=null?Number(s.averageSpeedKmh):Number.isFinite(km)&&km>=0&&Number.isFinite(minutes)&&minutes>0?km/(minutes/60):(s.averageSpeedKmh!=null?Number(s.averageSpeedKmh):null);
   if(avg!=null&&Number.isFinite(avg))extras.push(Number((unit==='mi'?avg/1.609344:avg).toFixed(1))+' '+(unit==='mi'?'mph':'km/h'));
-  return name+' · '+[duration,distance!==null?distance+' '+unit:'',...extras].filter(Boolean).join(' · ');
+  return tr('Outdoor ride','Rodada al aire libre')+' · '+[duration,distance!==null?distance+' '+unit:'',...extras,s.rideRpe!=null?'RPE '+s.rideRpe+'/10':''].filter(Boolean).join(' · ');
  }
  if(name==='Elliptical warm-up'){
   const km=Number(s.weight),unit=tb?.distanceUnits?.[name]==='mi'?'mi':'km';
@@ -114,6 +114,8 @@ function correctionSpec(x){
   if(r.name==='Stationary bike'){if(r.bikeDistanceKm!=null)add('bikeDistanceKm','Distance (km)','Distancia (km)',r.bikeDistanceKm);if(r.bikeRpe!=null)add('bikeRpe','Effort (RPE 1–10)','Esfuerzo (RPE 1–10)',r.bikeRpe,1,true,10);}
   if(r.name!=='Stationary bike'&&r.name!=='Side plank')add('weight',r.unit==='minutes'?'Distance (km)':'Weight (lb)',r.unit==='minutes'?'Distancia (km)':'Peso (lb)',r.weight);
   add('count',r.unit==='minutes'?'Duration (minutes)':r.unit?.includes('seconds')?'Duration (seconds)':'Repetitions',r.unit==='minutes'?'Duración (minutos)':r.unit?.includes('seconds')?'Duración (segundos)':'Repeticiones',r.count,0.01,r.unit!=='minutes');
+  if(r.name==='Outdoor ride'&&r.rideRpe!=null)add('rideRpe','Effort (RPE 1–10)','Esfuerzo (RPE 1–10)',r.rideRpe,1,true,10);
+  if(r.name==='Outdoor ride'&&r.rideSpeedManual)add('averageSpeedKmh','Reported average speed (km/h)','Velocidad promedio reportada (km/h)',r.averageSpeedKmh,0.01);
   if(r.name==='Outdoor ride'&&r.elevationGainM!=null)add('elevationGainM','Elevation gain (m)','Desnivel (m)',r.elevationGainM);
  }else if(t==='cycle'){add('actualSeconds','Duration (minutes)','Duración (minutos)',Number(r.actualSeconds??Number(r.actualMinutes)*60)/60,0.01,false,1440);if(r.rpe!=null)add('rpe','Effort (RPE 1–10)','Esfuerzo (RPE 1–10)',r.rpe,1,true,10);}
  else if(t==='swim'){add('distance','Distance ('+str(r.unit)+')','Distancia ('+str(r.unit)+')',r.distance,0,true);add('completedSets','Completed sets','Series completadas',r.completedSets,0,true);add('durationSeconds','Duration (minutes)','Duración (minutos)',Number(r.durationSeconds)/60,0,false,1440);}
@@ -126,7 +128,7 @@ function correctionSpec(x){
 }
 function correctionPatch(x,values){
  const r=entryOf(x),t=x.source;
- if(t==='total'){if(r.name==='Outdoor ride')values.averageSpeedKmh=(values.weight??r.weight)/((values.count??r.count)/60);if(r.timerRecordedSeconds!=null&&values.count!==r.count)values.timerRecordedSeconds=null;return values;}
+ if(t==='total'){if(r.name==='Outdoor ride'&&!r.rideSpeedManual)values.averageSpeedKmh=(values.weight??r.weight)/((values.count??r.count)/60);if(r.timerRecordedSeconds!=null&&values.count!==r.count)values.timerRecordedSeconds=null;return values;}
  if(t==='cycle'){values.actualSeconds=Math.round(values.actualSeconds*60);values.actualMinutes=Math.floor(values.actualSeconds/60);return values;}
  if(t==='swim'){values.durationSeconds=Math.round(values.durationSeconds*60);if(!values.distance&&!values.completedSets&&!values.durationSeconds)throw Error('invalid');return values;}
  if(t==='run'){const data={...r.data};for(const [k,v] of Object.entries(values))data[k]=String(v);let duration=r.durationSeconds,distance=r.distance,pace=r.pace;if(r.kind==='run'||(!r.kind&&data.minutes!=null)){if(values.minutes!=null&&Number(values.minutes)!==Number(r.data?.minutes))duration=Math.round(Number(data.minutes)*60);else if(values.completedSeconds!=null&&Number(values.completedSeconds)!==Number(r.data?.completedSeconds))duration=Number(values.completedSeconds);else if(!Number.isFinite(Number(duration))||Number(duration)<=0)duration=Math.round(Number(data.minutes)*60);distance=Number(data.distance)||0;const km=distance*(data.unit==='mi'?1.609344:1);const seconds=km>0?Math.round(duration/km):0;pace=seconds?`${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} /km`:'';}else if(values.completedSeconds!=null)duration=values.completedSeconds;return {data,durationSeconds:duration,distance,pace};}
